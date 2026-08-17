@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Admin;
+use App\Models\AppRelease;
 use App\Models\Banner;
 use App\Models\DeliveryOrder;
 use App\Models\DeviceToken;
@@ -19,6 +20,23 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class AppController extends Controller
 {
+    public function appRelease(Request $request)
+    {
+        $data = $request->validate([
+            'app' => ['required', 'in:delivery,passenger,driver,courier,seller'],
+            'platform' => ['required', 'in:android,ios'],
+        ]);
+
+        $release = AppRelease::where('app', $data['app'])
+            ->where('platform', $data['platform'])
+            ->where('is_active', true)
+            ->first();
+
+        return apiResponse('app_release', 'success', ['Configuración de versión'], [
+            'release' => $release,
+        ]);
+    }
+
     public function generalSetting()
     {
         $notify[]       = 'General setting data';

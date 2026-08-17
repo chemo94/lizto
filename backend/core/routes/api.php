@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Route;
 Route::namespace("Api")->group(function () {
     Route::controller('AppController')->group(function () {
         Route::any('general-setting', 'generalSetting');
+        Route::get('app-release', 'appRelease');
         Route::get('get-countries', 'getCountries');
         Route::get('language/{key}', 'getLanguage');
         Route::get('policies', 'policies');
