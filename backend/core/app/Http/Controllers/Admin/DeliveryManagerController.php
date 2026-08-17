@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\DeliveryCommission;
+use App\Models\AppRelease;
 use App\Models\DeliveryOrder;
 use App\Models\DeliveryRefund;
 use App\Models\Favor;
@@ -42,6 +43,34 @@ use Illuminate\Support\Facades\DB;
 
 class DeliveryManagerController extends Controller
 {
+    public function appReleases()
+    {
+        $pageTitle = 'Versiones de aplicaciones';
+        $releases = AppRelease::orderBy('app')->orderBy('platform')->get();
+        return view('admin.delivery.app_releases', compact('pageTitle', 'releases'));
+    }
+
+    public function appReleaseSave(Request $request, $id = null)
+    {
+        $data = $request->validate([
+            'app' => ['required', 'in:delivery,passenger,driver,courier,seller'],
+            'platform' => ['required', 'in:android,ios'],
+            'latest_version' => ['required', 'string', 'max:30'],
+            'latest_build' => ['required', 'integer', 'min:1'],
+            'minimum_build' => ['required', 'integer', 'min:1', 'lte:latest_build'],
+            'store_url' => ['nullable', 'url', 'max:1000'],
+            'release_notes' => ['nullable', 'string', 'max:5000'],
+        ]);
+        $data['force_update'] = $request->boolean('force_update');
+        $data['is_active'] = $request->boolean('is_active', true);
+
+        $release = $id
+            ? AppRelease::findOrFail($id)
+            : AppRelease::firstOrNew(['app' => $data['app'], 'platform' => $data['platform']]);
+        $release->fill($data)->save();
+        return back()->withNotify([['success', 'Versión de aplicación guardada.']]);
+    }
+
     // ── Dashboard ──
 
     public function dashboard()
