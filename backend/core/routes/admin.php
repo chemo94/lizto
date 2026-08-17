@@ -541,6 +541,8 @@ Route::middleware('admin')->group(function () {
     // ── Delivery Management ──
     Route::controller('DeliveryManagerController')->prefix('delivery')->name('delivery.')->group(function () {
         Route::get('dashboard', 'dashboard')->name('dashboard');
+        Route::get('app-releases', 'appReleases')->name('app.releases');
+        Route::post('app-releases/{id?}', 'appReleaseSave')->name('app.releases.save');
         Route::get('orders', 'orders')->name('orders');
         Route::get('orders/{id}', 'orderDetail')->name('order.detail');
         Route::post('orders/{id}/status', 'orderStatus')->name('order.status');
