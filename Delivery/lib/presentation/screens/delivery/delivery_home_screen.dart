@@ -13,7 +13,6 @@ import 'package:lizto_delivery/data/model/delivery/delivery_models.dart';
 import 'package:lizto_delivery/data/services/api_client.dart';
 import 'package:lizto_delivery/presentation/components/image/my_network_image_widget.dart';
 import 'package:lizto_delivery/presentation/components/shimmer_loaders.dart';
-import 'package:lizto_delivery/presentation/screens/delivery/favor_home_screen.dart';
 import 'package:lizto_delivery/presentation/screens/delivery/notification_inbox_screen.dart';
 import 'package:lizto_delivery/presentation/screens/delivery/service_home_screen.dart';
 import 'package:lizto_delivery/presentation/screens/delivery/store_screen.dart';
@@ -667,7 +666,7 @@ class _PromoSliderState extends State<_PromoSlider> {
                                       case _BannerAction.promos:
                                         Get.to(() => const AllCategoriesScreen());
                                       case _BannerAction.favor:
-                                        Get.to(() => const FavorHomeScreen());
+                                        Get.offAllNamed('/dashboard_screen', arguments: 1);
                                       case _BannerAction.stores:
                                         Get.to(() => const AllStoresScreen());
                                       case _BannerAction.courier:
@@ -814,7 +813,7 @@ class _MarketplaceCategoryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final isFavor = category.isFavorCategory == true;
     return GestureDetector(
-      onTap: () => isFavor ? Get.to(() => const FavorHomeScreen()) : Get.to(() => ServiceHomeScreen(categoryId: category.id ?? 0, categoryName: category.name ?? '', categoryImageUrl: '${controller.categoryImagePath}/${category.image}')),
+      onTap: () => isFavor ? Get.offAllNamed('/dashboard_screen', arguments: 1) : Get.to(() => ServiceHomeScreen(categoryId: category.id ?? 0, categoryName: category.name ?? '', categoryImageUrl: '${controller.categoryImagePath}/${category.image}')),
       child: Container(
         width: compact ? 94 : null,
         height: compact ? 100 : 152,
