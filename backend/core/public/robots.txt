@@ -1,0 +1,38 @@
+# robots.txt - Lizto Delivery
+# https://www.liztodelivery.com
+
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /driver/
+Disallow: /delivery/
+Disallow: /taxi/
+Disallow: /user/
+Disallow: /storage/
+Disallow: /assets/images/
+Disallow: /*.json$
+Disallow: /*?sort=
+Disallow: /*?filter=
+Disallow: /*?page=
+
+Sitemap: https://www.liztodelivery.com/sitemap.xml
+
+# Google
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+# Bing
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+# Image bots
+User-agent: Googlebot-Image
+Allow: /storage/
+Allow: /assets/
+
+User-agent: Bingbot-Image
+Allow: /storage/
+Allow: /assets/

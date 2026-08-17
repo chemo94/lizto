@@ -1,0 +1,311 @@
+{
+  "project_info": {
+    "project_number": "714316853778",
+    "firebase_url": "https://services-c8c8d-default-rtdb.firebaseio.com",
+    "project_id": "services-c8c8d",
+    "storage_bucket": "services-c8c8d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:714316853778:android:7d6c7051f71ea3c5885ecb",
+        "android_client_info": {
+          "package_name": "com.jsoft.proveedor"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "714316853778-huo0838a1j55m5nsvhtdps9qpedatovr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jsoft.proveedor",
+            "certificate_hash": "8ea2c4bbcd9fc1c65e17c500e281fe84c02ac6d3"
+          }
+        },
+        {
+          "client_id": "714316853778-n78emv46s2fsjimibqoe2sfd8s42inr8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jsoft.proveedor",
+            "certificate_hash": "f46bbace1aa4b112cbec5e5e8248f50cc110901f"
+          }
+        },
+        {
+          "client_id": "714316853778-ncrspogk4lhon9svsvhcrcduh2keban2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jsoft.proveedor",
+            "certificate_hash": "59ca407e2c98ed9949c42d3b8b8aa220ba8d0c96"
+          }
+        },
+        {
+          "client_id": "714316853778-t7q3aecjcgeljj820bknm0q9iimi2sav.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKRXWlmeYZFW0nYPWo5GctEW-6-G3F3ug"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "714316853778-7646p58u35v2en4oejt46h07cu23g0k1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "714316853778-3rhr5bihbmu9te6g6lushq8s69uji9p6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.jsoft.service"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:714316853778:android:8a24fb17b51cc71c885ecb",
+        "android_client_info": {
+          "package_name": "com.jsoft.service"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "714316853778-g1h7cka1p33rihqs4dbasreecl4289t5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jsoft.service",
+            "certificate_hash": "59ca407e2c98ed9949c42d3b8b8aa220ba8d0c96"
+          }
+        },
+        {
+          "client_id": "714316853778-iqbl9uhi1vfsv2n0io5kloddvb1k0uri.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jsoft.service",
+            "certificate_hash": "fa2c64a44ed6bc8051eaab71812594728cffb4f2"
+          }
+        },
+        {
+          "client_id": "714316853778-rkl6oh94230comatb7j2vrpt7nn00kfb.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jsoft.service",
+            "certificate_hash": "8ea2c4bbcd9fc1c65e17c500e281fe84c02ac6d3"
+          }
+        },
+        {
+          "client_id": "714316853778-t7q3aecjcgeljj820bknm0q9iimi2sav.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKRXWlmeYZFW0nYPWo5GctEW-6-G3F3ug"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "714316853778-7646p58u35v2en4oejt46h07cu23g0k1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "714316853778-3rhr5bihbmu9te6g6lushq8s69uji9p6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.jsoft.service"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:714316853778:android:d4c891f872e5695f885ecb",
+        "android_client_info": {
+          "package_name": "com.liztogo.deliveryuser"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "714316853778-ekch0b8pnfoetiru0kldr5n3lrd7fvb6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.liztogo.deliveryuser",
+            "certificate_hash": "a960d7c2bea0a1174bee2b3784ce68bd83e6acb9"
+          }
+        },
+        {
+          "client_id": "714316853778-fckg1g5osmo6pgpp93tprn3upk5ip7st.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.liztogo.deliveryuser",
+            "certificate_hash": "6a0cb484a94a3fb9182c4608baf0962a682c970f"
+          }
+        },
+        {
+          "client_id": "714316853778-l59b4rnj0d5clir3n5rv1uktsskhm5he.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.liztogo.deliveryuser",
+            "certificate_hash": "59ca407e2c98ed9949c42d3b8b8aa220ba8d0c96"
+          }
+        },
+        {
+          "client_id": "714316853778-t7q3aecjcgeljj820bknm0q9iimi2sav.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKRXWlmeYZFW0nYPWo5GctEW-6-G3F3ug"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "714316853778-7646p58u35v2en4oejt46h07cu23g0k1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "714316853778-3rhr5bihbmu9te6g6lushq8s69uji9p6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.jsoft.service"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:714316853778:android:0815975be4ecbe22885ecb",
+        "android_client_info": {
+          "package_name": "com.liztogo.repartidor"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "714316853778-b3ghn9lnv9e0im684vndenm6q4sc8qdn.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.liztogo.repartidor",
+            "certificate_hash": "6a0cb484a94a3fb9182c4608baf0962a682c970f"
+          }
+        },
+        {
+          "client_id": "714316853778-eg3ncuc4t2mrcl8sf6bcgsrhu15i85uu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.liztogo.repartidor",
+            "certificate_hash": "e68be8880ceb6480f70dac500bab326183551dd6"
+          }
+        },
+        {
+          "client_id": "714316853778-u42b47bi3j1167ohes5ece3q262u513n.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.liztogo.repartidor",
+            "certificate_hash": "59ca407e2c98ed9949c42d3b8b8aa220ba8d0c96"
+          }
+        },
+        {
+          "client_id": "714316853778-t7q3aecjcgeljj820bknm0q9iimi2sav.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKRXWlmeYZFW0nYPWo5GctEW-6-G3F3ug"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "714316853778-7646p58u35v2en4oejt46h07cu23g0k1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "714316853778-3rhr5bihbmu9te6g6lushq8s69uji9p6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.jsoft.service"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:714316853778:android:7a273042f4987dc3885ecb",
+        "android_client_info": {
+          "package_name": "com.liztogo.restaurant"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "714316853778-0totmvo1b33merl58qekkoi6sf5cuj81.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.liztogo.restaurant",
+            "certificate_hash": "59ca407e2c98ed9949c42d3b8b8aa220ba8d0c96"
+          }
+        },
+        {
+          "client_id": "714316853778-8nvit5ru4fpl88a0vt404sa2et0go0hi.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.liztogo.restaurant",
+            "certificate_hash": "55bd87d57988c7fc02ccb25ba662e4bedecd2a09"
+          }
+        },
+        {
+          "client_id": "714316853778-9bfkg9gmh4mnijnp1pj71p5kakcmh4v1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.liztogo.restaurant",
+            "certificate_hash": "6a0cb484a94a3fb9182c4608baf0962a682c970f"
+          }
+        },
+        {
+          "client_id": "714316853778-t7q3aecjcgeljj820bknm0q9iimi2sav.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKRXWlmeYZFW0nYPWo5GctEW-6-G3F3ug"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "714316853778-7646p58u35v2en4oejt46h07cu23g0k1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "714316853778-3rhr5bihbmu9te6g6lushq8s69uji9p6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.jsoft.service"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,1783 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lizto - Una ciudad conectada. Una sola plataforma.</title>
+    <link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #16a34a;
+            --primary-dark: #0a4d19;
+            --primary-light: #effbef;
+            --secondary: #0f172a;
+            --text: #334155;
+            --text-light: #64748b;
+            --white: #ffffff;
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Albert Sans', sans-serif;
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* HEADER */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            padding: 1rem 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .logo span {
+            color: var(--secondary);
+        }
+
+        .nav {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav a {
+            text-decoration: none;
+            color: var(--text);
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav a:hover {
+            color: var(--primary);
+        }
+
+        .nav-cta {
+            background: var(--primary);
+            color: var(--white) !important;
+            padding: 0.6rem 1.5rem;
+            border-radius: 8px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .nav-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+        }
+
+        /* HERO */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 8rem 5% 4rem;
+            background: linear-gradient(135deg, var(--white) 0%, var(--primary-light) 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-content {
+            max-width: 600px;
+            z-index: 2;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--white);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: var(--secondary);
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+        }
+
+        .hero h1 span {
+            color: var(--primary);
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--text-light);
+            margin-bottom: 2rem;
+            max-width: 500px;
+        }
+
+        .hero-cta {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(22, 163, 74, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--white);
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary-light);
+        }
+
+        /* DIAGRAMA HERO */
+        .hero-visual {
+            position: absolute;
+            right: 5%;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 500px;
+            height: 500px;
+        }
+
+        .ecosystem-diagram {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .center-node {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 140px;
+            height: 140px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-weight: 700;
+            font-size: 1.1rem;
+            box-shadow: 0 10px 40px rgba(22, 163, 74, 0.4);
+            z-index: 10;
+        }
+
+        .center-node i {
+            font-size: 2rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .outer-node {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            background: var(--white);
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .outer-node:hover {
+            transform: scale(1.05);
+        }
+
+        .outer-node i {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .outer-node span {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--secondary);
+        }
+
+        .node-users { top: 10%; left: 50%; transform: translateX(-50%); }
+        .node-business { top: 50%; right: 5%; }
+        .node-delivery { bottom: 10%; left: 50%; transform: translateX(-50%); }
+        .node-drivers { top: 50%; left: 5%; }
+
+        .connection-line {
+            position: absolute;
+            background: var(--primary);
+            opacity: 0.3;
+        }
+
+        .line-top {
+            top: 25%;
+            left: 50%;
+            width: 3px;
+            height: 20%;
+            transform: translateX(-50%);
+        }
+
+        .line-right {
+            top: 50%;
+            right: 20%;
+            width: 20%;
+            height: 3px;
+            transform: translateY(-50%);
+        }
+
+        .line-bottom {
+            bottom: 25%;
+            left: 50%;
+            width: 3px;
+            height: 20%;
+            transform: translateX(-50%);
+        }
+
+        .line-left {
+            top: 50%;
+            left: 20%;
+            width: 20%;
+            height: 3px;
+            transform: translateY(-50%);
+        }
+
+        /* SECCIONES */
+        section {
+            padding: 6rem 5%;
+        }
+
+        .section-header {
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto 4rem;
+        }
+
+        .section-header h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--secondary);
+            margin-bottom: 1rem;
+        }
+
+        .section-header p {
+            font-size: 1.1rem;
+            color: var(--text-light);
+        }
+
+        /* ECOSSISTEMA */
+        .ecosystem {
+            background: var(--gray-50);
+        }
+
+        .ecosystem-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .pillar-card {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative;
+        }
+
+        .pillar-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+        }
+
+        .pillar-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--primary-light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+        }
+
+        .pillar-icon i {
+            font-size: 2rem;
+            color: var(--primary);
+        }
+
+        .pillar-card h3 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--secondary);
+            margin-bottom: 0.8rem;
+        }
+
+        .pillar-card p {
+            font-size: 0.95rem;
+            color: var(--text-light);
+            margin-bottom: 1rem;
+        }
+
+        .pillar-apps {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .app-tag {
+            background: var(--primary-light);
+            color: var(--primary);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        /* SERVICIOS */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .service-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 24px;
+            padding: 3rem 2rem;
+            color: var(--white);
+            position: relative;
+            overflow: hidden;
+            min-height: 320px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+
+        .service-card i.service-icon {
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .service-card h3 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 0.8rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .service-card p {
+            font-size: 1rem;
+            opacity: 0.9;
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .service-features {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
+        }
+
+        .service-feature {
+            background: rgba(255,255,255,0.2);
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        /* NEGOCIOS */
+        .business {
+            background: var(--white);
+        }
+
+        .business-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            align-items: center;
+        }
+
+        .business-text h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--secondary);
+            margin-bottom: 1rem;
+        }
+
+        .business-text > p {
+            font-size: 1.1rem;
+            color: var(--text-light);
+            margin-bottom: 2rem;
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+
+        .benefit-item {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .benefit-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .benefit-icon i {
+            color: var(--primary);
+            font-size: 1.2rem;
+        }
+
+        .benefit-text h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--secondary);
+            margin-bottom: 0.3rem;
+        }
+
+        .benefit-text p {
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+
+        .business-visual {
+            background: var(--gray-100);
+            border-radius: 24px;
+            padding: 3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mockup-laptop {
+            width: 100%;
+            max-width: 400px;
+            background: var(--white);
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+
+        .mockup-header {
+            background: var(--secondary);
+            padding: 0.8rem 1rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .mockup-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .dot-red { background: #ff5f57; }
+        .dot-yellow { background: #ffbd2e; }
+        .dot-green { background: #28ca42; }
+
+        .mockup-body {
+            padding: 1.5rem;
+            min-height: 200px;
+            background: var(--gray-50);
+        }
+
+        .mockup-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .mockup-card {
+            flex: 1;
+            background: var(--white);
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .mockup-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .mockup-card-title {
+            font-size: 0.7rem;
+            color: var(--text-light);
+        }
+
+        .mockup-card-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--secondary);
+        }
+
+        .mockup-card-bar {
+            height: 4px;
+            background: var(--gray-200);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .mockup-card-bar-fill {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        /* MARKETPLACE */
+        .marketplace {
+            background: var(--white);
+            overflow: hidden;
+        }
+
+        .marketplace-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            align-items: center;
+        }
+
+        .marketplace-text h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--secondary);
+            margin-bottom: 1rem;
+        }
+
+        .marketplace-text > p {
+            font-size: 1.1rem;
+            color: var(--text-light);
+            margin-bottom: 1.5rem;
+        }
+
+        .marketplace-highlight {
+            background: var(--primary-light);
+            border-left: 4px solid var(--primary);
+            padding: 1.5rem;
+            border-radius: 0 12px 12px 0;
+            margin-bottom: 2rem;
+        }
+
+        .marketplace-highlight p {
+            font-size: 1rem;
+            color: var(--secondary);
+            font-weight: 500;
+            margin: 0;
+        }
+
+        .marketplace-features {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .marketplace-feature {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .marketplace-feature i {
+            color: var(--primary);
+            font-size: 1.2rem;
+        }
+
+        .marketplace-feature span {
+            font-size: 0.95rem;
+            color: var(--text);
+        }
+
+        .marketplace-visual {
+            position: relative;
+        }
+
+        .marketplace-mockup {
+            background: var(--gray-100);
+            border-radius: 24px;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .mockup-browser {
+            background: var(--white);
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+
+        .mockup-browser-header {
+            background: var(--gray-100);
+            padding: 0.8rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .mockup-url-bar {
+            flex: 1;
+            background: var(--white);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            color: var(--text-light);
+        }
+
+        .mockup-browser-body {
+            padding: 1.5rem;
+            min-height: 300px;
+            background: linear-gradient(180deg, var(--primary-light) 0%, var(--white) 100%);
+        }
+
+        .mockup-search {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 1.5rem;
+        }
+
+        .mockup-search-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            padding: 0.6rem 1rem;
+            background: var(--gray-50);
+            border-radius: 8px;
+        }
+
+        .mockup-search-bar i {
+            color: var(--text-light);
+        }
+
+        .mockup-search-bar span {
+            color: var(--text-light);
+            font-size: 0.85rem;
+        }
+
+        .mockup-categories {
+            display: flex;
+            gap: 1rem;
+            overflow: hidden;
+        }
+
+        .mockup-category {
+            flex-shrink: 0;
+            width: 60px;
+            text-align: center;
+        }
+
+        .mockup-category-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--white);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 0.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .mockup-category-icon i {
+            font-size: 1.2rem;
+            color: var(--primary);
+        }
+
+        .mockup-category span {
+            font-size: 0.65rem;
+            color: var(--text-light);
+        }
+
+        .floating-badge {
+            position: absolute;
+            background: var(--white);
+            border-radius: 12px;
+            padding: 0.8rem 1.2rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .floating-badge.badge-1 {
+            top: -20px;
+            right: -20px;
+        }
+
+        .floating-badge.badge-2 {
+            bottom: -20px;
+            left: -20px;
+            animation-delay: 1.5s;
+        }
+
+        .floating-badge i {
+            font-size: 1.2rem;
+            color: var(--primary);
+        }
+
+        .floating-badge span {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--secondary);
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* CÓMO FUNCIONA */
+        .how-it-works {
+            background: var(--gray-50);
+        }
+
+        .flow-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+        }
+
+        .flow-step {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            width: 220px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            position: relative;
+        }
+
+        .flow-step-number {
+            width: 48px;
+            height: 48px;
+            background: var(--primary);
+            color: var(--white);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin: 0 auto 1rem;
+        }
+
+        .flow-step i {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .flow-step h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .flow-step p {
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+
+        .flow-arrow {
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+
+        /* NÚMEROS */
+        .numbers {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .numbers .section-header h2 {
+            color: var(--white);
+        }
+
+        .numbers .section-header p {
+            color: rgba(255,255,255,0.8);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        /* APPS */
+        .apps-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .app-card {
+            background: var(--white);
+            border: 2px solid var(--gray-200);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .app-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 8px 30px rgba(22, 163, 74, 0.15);
+        }
+
+        .app-card i {
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .app-card h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--secondary);
+            margin-bottom: 0.3rem;
+        }
+
+        .app-card p {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-bottom: 1rem;
+        }
+
+        .app-stores {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .store-badge {
+            background: var(--secondary);
+            color: var(--white);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        /* CTA FINAL */
+        .cta-final {
+            background: linear-gradient(135deg, var(--secondary) 0%, #1e293b 100%);
+            color: var(--white);
+            text-align: center;
+        }
+
+        .cta-final h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .cta-final p {
+            font-size: 1.1rem;
+            opacity: 0.8;
+            margin-bottom: 2rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-white {
+            background: var(--white);
+            color: var(--secondary);
+        }
+
+        .btn-white:hover {
+            background: var(--gray-100);
+            transform: translateY(-2px);
+        }
+
+        /* FOOTER */
+        .footer {
+            background: var(--secondary);
+            color: rgba(255,255,255,0.7);
+            padding: 3rem 5% 1.5rem;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 3rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .footer-brand .logo {
+            display: block;
+            margin-bottom: 1rem;
+        }
+
+        .footer-brand p {
+            font-size: 0.9rem;
+            line-height: 1.8;
+        }
+
+        .footer-col h4 {
+            color: var(--white);
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .footer-col a {
+            display: block;
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            transition: color 0.3s;
+        }
+
+        .footer-col a:hover {
+            color: var(--primary);
+        }
+
+        .footer-bottom {
+            max-width: 1200px;
+            margin: 1.5rem auto 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .social-links a {
+            color: rgba(255,255,255,0.7);
+            font-size: 1.2rem;
+            transition: color 0.3s;
+        }
+
+        .social-links a:hover {
+            color: var(--primary);
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 1024px) {
+            .hero-visual {
+                display: none;
+            }
+
+            .hero-content {
+                max-width: 100%;
+                text-align: center;
+            }
+
+            .hero p {
+                max-width: 100%;
+            }
+
+            .hero-cta {
+                justify-content: center;
+            }
+
+            .ecosystem-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .business-content {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+            }
+
+            .nav {
+                display: none;
+            }
+
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .section-header h2 {
+                font-size: 2rem;
+            }
+
+            .ecosystem-grid,
+            .services-grid,
+            .apps-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .flow-container {
+                flex-direction: column;
+            }
+
+            .flow-arrow {
+                transform: rotate(90deg);
+            }
+
+            .footer-content {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .footer-bottom {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- HEADER -->
+    <header class="header">
+        <a href="#" class="logo">liz<span>to</span></a>
+        <nav class="nav">
+            <a href="#ecosistema">Ecosistema</a>
+            <a href="#marketplace">Delivery</a>
+            <a href="#servicios">Taxi</a>
+            <a href="#negocios">Negocios</a>
+            <a href="#como-funciona">Cómo funciona</a>
+            <a href="#contacto">Contacto</a>
+            <a href="#" class="nav-cta">Soy negocio</a>
+        </nav>
+    </header>
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <i class="fas fa-circle-check"></i>
+                Plataforma urbana conectada
+            </div>
+            <h1>Una ciudad conectada. <span>Una sola plataforma.</span></h1>
+            <p>Lizto une personas, negocios, repartidores y conductores en un mismo ecosistema. Todo funciona en tiempo real, todo está conectado.</p>
+            <div class="hero-cta">
+                <a href="#servicios" class="btn btn-primary">
+                    <i class="fas fa-rocket"></i>
+                    Explorar ecosistema
+                </a>
+                <a href="#negocios" class="btn btn-secondary">
+                    <i class="fas fa-store"></i>
+                    Soy negocio
+                </a>
+            </div>
+        </div>
+
+        <div class="hero-visual">
+            <div class="ecosystem-diagram">
+                <div class="connection-line line-top"></div>
+                <div class="connection-line line-right"></div>
+                <div class="connection-line line-bottom"></div>
+                <div class="connection-line line-left"></div>
+                
+                <div class="center-node">
+                    <i class="fas fa-network-wired"></i>
+                    LIZTO
+                </div>
+                
+                <div class="outer-node node-users">
+                    <i class="fas fa-users"></i>
+                    <span>Usuarios</span>
+                </div>
+                
+                <div class="outer-node node-business">
+                    <i class="fas fa-store"></i>
+                    <span>Negocios</span>
+                </div>
+                
+                <div class="outer-node node-delivery">
+                    <i class="fas fa-motorcycle"></i>
+                    <span>Repartidores</span>
+                </div>
+                
+                <div class="outer-node node-drivers">
+                    <i class="fas fa-car"></i>
+                    <span>Conductores</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ECOSSISTEMA -->
+    <section class="ecosystem" id="ecosistema">
+        <div class="section-header">
+            <h2>Cuatro pilares. Una plataforma.</h2>
+            <p>Cada actor del ecosistema tiene su herramienta. Todos están conectados en tiempo real.</p>
+        </div>
+
+        <div class="ecosystem-grid">
+            <div class="pillar-card">
+                <div class="pillar-icon">
+                    <i class="fas fa-user"></i>
+                </div>
+                <h3>Usuarios</h3>
+                <p>Compra y solicita servicios desde una sola app</p>
+                <div class="pillar-apps">
+                    <span class="app-tag">Delivery</span>
+                    <span class="app-tag">Taxi</span>
+                    <span class="app-tag">Favor</span>
+                </div>
+            </div>
+
+            <div class="pillar-card">
+                <div class="pillar-icon">
+                    <i class="fas fa-briefcase"></i>
+                </div>
+                <h3>Negocios</h3>
+                <p>Administra tu operación con herramientas profesionales</p>
+                <div class="pillar-apps">
+                    <span class="app-tag">Panel Web</span>
+                    <span class="app-tag">App</span>
+                    <span class="app-tag">POS</span>
+                    <span class="app-tag">QR</span>
+                </div>
+            </div>
+
+            <div class="pillar-card">
+                <div class="pillar-icon">
+                    <i class="fas fa-box"></i>
+                </div>
+                <h3>Repartidores</h3>
+                <p>Realiza entregas y gana dinero a tu ritmo</p>
+                <div class="pillar-apps">
+                    <span class="app-tag">App Repartidor</span>
+                </div>
+            </div>
+
+            <div class="pillar-card">
+                <div class="pillar-icon">
+                    <i class="fas fa-taxi"></i>
+                </div>
+                <h3>Conductores</h3>
+                <p>Brinda servicio de taxi con tarifas transparentes</p>
+                <div class="pillar-apps">
+                    <span class="app-tag">App Conductor</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SERVICIOS -->
+    <section class="services" id="servicios">
+        <div class="section-header">
+            <h2>Lo que puedes hacer con Lizto</h2>
+            <p>Tres servicios principales, una sola experiencia conectada</p>
+        </div>
+
+        <div class="services-grid">
+            <div class="service-card">
+                <i class="fas fa-motorcycle service-icon"></i>
+                <h3>Delivery</h3>
+                <p>Restaurantes, farmacias, licorerías, tiendas y más. Tu pedido llega en minutos.</p>
+                <div class="service-features">
+                    <span class="service-feature">24/7</span>
+                    <span class="service-feature">Envío gratis</span>
+                    <span class="service-feature">+100 tiendas</span>
+                </div>
+            </div>
+
+            <div class="service-card">
+                <i class="fas fa-car service-icon"></i>
+                <h3>Taxi</h3>
+                <p>Viaja seguro por tu ciudad. Conductores verificados y tarifas transparentes.</p>
+                <div class="service-features">
+                    <span class="service-feature">GPS</span>
+                    <span class="service-feature">Tarifa justa</span>
+                    <span class="service-feature">Seguimiento</span>
+                </div>
+            </div>
+
+            <div class="service-card">
+                <i class="fas fa-hands-helping service-icon"></i>
+                <h3>Favor</h3>
+                <p>¿Necesitas que te compren algo? ¿O enviar un paquete? Un favor lo hace por ti.</p>
+                <div class="service-features">
+                    <span class="service-feature">Personalizado</span>
+                    <span class="service-feature">Urgente</span>
+                    <span class="service-feature">Flexible</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- MARKETPLACE -->
+    <section class="marketplace" id="marketplace">
+        <div class="marketplace-content">
+            <div class="marketplace-text">
+                <h2>El marketplace que conecta todo</h2>
+                <p>Más de 100 tiendas, restaurantes y farmacias a un clic de distancia. Delivery en minutos con seguimiento en tiempo real.</p>
+                
+                <div class="marketplace-highlight">
+                    <p>"El marketplace es el corazón del ecosistema. Aquí es donde los usuarios compran, los negocios venden y los repartidores entregan."</p>
+                </div>
+
+                <div class="marketplace-features">
+                    <div class="marketplace-feature">
+                        <i class="fas fa-store"></i>
+                        <span>150+ tiendas activas</span>
+                    </div>
+                    <div class="marketplace-feature">
+                        <i class="fas fa-clock"></i>
+                        <span>Entrega en minutos</span>
+                    </div>
+                    <div class="marketplace-feature">
+                        <i class="fas fa-motorcycle"></i>
+                        <span>Repartidores verificados</span>
+                    </div>
+                    <div class="marketplace-feature">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Pago seguro</span>
+                    </div>
+                    <div class="marketplace-feature">
+                        <i class="fas fa-tag"></i>
+                        <span>Envío gratis disponible</span>
+                    </div>
+                    <div class="marketplace-feature">
+                        <i class="fas fa-headset"></i>
+                        <span>Soporte 24/7</span>
+                    </div>
+                </div>
+
+                <a href="#" class="btn btn-primary">
+                    <i class="fas fa-shopping-bag"></i>
+                    Explorar marketplace
+                </a>
+            </div>
+
+            <div class="marketplace-visual">
+                <div class="marketplace-mockup">
+                    <div class="floating-badge badge-1">
+                        <i class="fas fa-bolt"></i>
+                        <span>Entrega rápida</span>
+                    </div>
+                    <div class="floating-badge badge-2">
+                        <i class="fas fa-percentage"></i>
+                        <span>0% comisión</span>
+                    </div>
+                    <div class="mockup-browser">
+                        <div class="mockup-browser-header">
+                            <div class="mockup-dot dot-red"></div>
+                            <div class="mockup-dot dot-yellow"></div>
+                            <div class="mockup-dot dot-green"></div>
+                            <div class="mockup-url-bar">lizto.pe/delivery</div>
+                        </div>
+                        <div class="mockup-browser-body">
+                            <div class="mockup-search">
+                                <div class="mockup-search-bar">
+                                    <i class="fas fa-search"></i>
+                                    <span>¿Qué se te antoja? Busca tiendas, platos...</span>
+                                </div>
+                            </div>
+                            <div class="mockup-categories">
+                                <div class="mockup-category">
+                                    <div class="mockup-category-icon">
+                                        <i class="fas fa-utensils"></i>
+                                    </div>
+                                    <span>Restaurantes</span>
+                                </div>
+                                <div class="mockup-category">
+                                    <div class="mockup-category-icon">
+                                        <i class="fas fa-pills"></i>
+                                    </div>
+                                    <span>Farmacias</span>
+                                </div>
+                                <div class="mockup-category">
+                                    <div class="mockup-category-icon">
+                                        <i class="fas fa-wine-bottle"></i>
+                                    </div>
+                                    <span>Licorerías</span>
+                                </div>
+                                <div class="mockup-category">
+                                    <div class="mockup-category-icon">
+                                        <i class="fas fa-shopping-cart"></i>
+                                    </div>
+                                    <span>Tiendas</span>
+                                </div>
+                                <div class="mockup-category">
+                                    <div class="mockup-category-icon">
+                                        <i class="fas fa-dog"></i>
+                                    </div>
+                                    <span>Mascotas</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- NEGOCIOS -->
+    <section class="business" id="negocios">
+        <div class="business-content">
+            <div class="business-text">
+                <h2>Haz crecer tu negocio con Lizto</h2>
+                <p>Herramientas profesionales para vender más, administrar mejor y conectar con miles de clientes.</p>
+                
+                <div class="benefits-grid">
+                    <div class="benefit-item">
+                        <div class="benefit-icon">
+                            <i class="fas fa-percent"></i>
+                        </div>
+                        <div class="benefit-text">
+                            <h4>0% Comisión</h4>
+                            <p>No pagas por cada venta</p>
+                        </div>
+                    </div>
+
+                    <div class="benefit-item">
+                        <div class="benefit-icon">
+                            <i class="fas fa-mobile-alt"></i>
+                        </div>
+                        <div class="benefit-text">
+                            <h4>App Propia</h4>
+                            <p>Tu marca en App Store y Google Play</p>
+                        </div>
+                    </div>
+
+                    <div class="benefit-item">
+                        <div class="benefit-icon">
+                            <i class="fas fa-cash-register"></i>
+                        </div>
+                        <div class="benefit-text">
+                            <h4>POS Profesional</h4>
+                            <p>Punto de venta integrado</p>
+                        </div>
+                    </div>
+
+                    <div class="benefit-item">
+                        <div class="benefit-icon">
+                            <i class="fas fa-qrcode"></i>
+                        </div>
+                        <div class="benefit-text">
+                            <h4>QR en Mesas</h4>
+                            <p>Tus clientes piden desde su celular</p>
+                        </div>
+                    </div>
+
+                    <div class="benefit-item">
+                        <div class="benefit-icon">
+                            <i class="fas fa-truck"></i>
+                        </div>
+                        <div class="benefit-text">
+                            <h4>Delivery Propio</h4>
+                            <p>Gestiona tus repartidores</p>
+                        </div>
+                    </div>
+
+                    <div class="benefit-item">
+                        <div class="benefit-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="benefit-text">
+                            <h4>Analytics Premium</h4>
+                            <p>Dashboards con tendencias</p>
+                        </div>
+                    </div>
+                </div>
+
+                <a href="#" class="btn btn-primary" style="margin-top: 2rem;">
+                    <i class="fab fa-whatsapp"></i>
+                    Crear mi tienda gratis
+                </a>
+            </div>
+
+            <div class="business-visual">
+                <div class="mockup-laptop">
+                    <div class="mockup-header">
+                        <div class="mockup-dot dot-red"></div>
+                        <div class="mockup-dot dot-yellow"></div>
+                        <div class="mockup-dot dot-green"></div>
+                    </div>
+                    <div class="mockup-body">
+                        <div class="mockup-row">
+                            <div class="mockup-card">
+                                <div class="mockup-card-header">
+                                    <span class="mockup-card-title">Ventas hoy</span>
+                                    <i class="fas fa-arrow-up" style="color: var(--primary); font-size: 0.8rem;"></i>
+                                </div>
+                                <div class="mockup-card-value">S/ 2,450</div>
+                                <div class="mockup-card-bar">
+                                    <div class="mockup-card-bar-fill" style="width: 75%;"></div>
+                                </div>
+                            </div>
+                            <div class="mockup-card">
+                                <div class="mockup-card-header">
+                                    <span class="mockup-card-title">Pedidos</span>
+                                    <i class="fas fa-arrow-up" style="color: var(--primary); font-size: 0.8rem;"></i>
+                                </div>
+                                <div class="mockup-card-value">48</div>
+                                <div class="mockup-card-bar">
+                                    <div class="mockup-card-bar-fill" style="width: 60%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mockup-row">
+                            <div class="mockup-card">
+                                <div class="mockup-card-header">
+                                    <span class="mockup-card-title">Ticket promedio</span>
+                                </div>
+                                <div class="mockup-card-value">S/ 51</div>
+                            </div>
+                            <div class="mockup-card">
+                                <div class="mockup-card-header">
+                                    <span class="mockup-card-title">Productos</span>
+                                </div>
+                                <div class="mockup-card-value">124</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CÓMO FUNCIONA -->
+    <section class="how-it-works" id="como-funciona">
+        <div class="section-header">
+            <h2>Todo conectado en 4 pasos</h2>
+            <p>Detrás de cada pedido hay un ecosistema funcionando en tiempo real</p>
+        </div>
+
+        <div class="flow-container">
+            <div class="flow-step">
+                <div class="flow-step-number">1</div>
+                <i class="fas fa-hand-pointer"></i>
+                <h4>Elige</h4>
+                <p>El usuario abre la app y selecciona tienda o servicio</p>
+            </div>
+
+            <div class="flow-arrow">
+                <i class="fas fa-arrow-right"></i>
+            </div>
+
+            <div class="flow-step">
+                <div class="flow-step-number">2</div>
+                <i class="fas fa-bell"></i>
+                <h4>Pide</h4>
+                <p>El pedido llega al negocio en tiempo real</p>
+            </div>
+
+            <div class="flow-arrow">
+                <i class="fas fa-arrow-right"></i>
+            </div>
+
+            <div class="flow-step">
+                <div class="flow-step-number">3</div>
+                <i class="fas fa-cogs"></i>
+                <h4>Gestiona</h4>
+                <p>El negocio prepara y asigna un repartidor</p>
+            </div>
+
+            <div class="flow-arrow">
+                <i class="fas fa-arrow-right"></i>
+            </div>
+
+            <div class="flow-step">
+                <div class="flow-step-number">4</div>
+                <i class="fas fa-check-circle"></i>
+                <h4>Recibe</h4>
+                <p>El repartidor entrega en minutos</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- NÚMEROS -->
+    <section class="numbers">
+        <div class="section-header">
+            <h2>El impacto de Lizto en tu ciudad</h2>
+            <p>Números que hablan por sí solos</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-number">150+</div>
+                <div class="stat-label">Tiendas activas</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">15K+</div>
+                <div class="stat-label">Pedidos entregados</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">200+</div>
+                <div class="stat-label">Repartidores</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">50+</div>
+                <div class="stat-label">Conductores</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- APPS -->
+    <section class="apps" id="apps">
+        <div class="section-header">
+            <h2>Descarga la app que necesitas</h2>
+            <p>Una app para cada rol del ecosistema</p>
+        </div>
+
+        <div class="apps-grid">
+            <div class="app-card">
+                <i class="fas fa-shopping-bag"></i>
+                <h4>Lizto - Delivery y Taxi</h4>
+                <p>Para usuarios que compran y viajan</p>
+                <div class="app-stores">
+                    <a href="#" class="store-badge"><i class="fab fa-apple"></i> iOS</a>
+                    <a href="#" class="store-badge"><i class="fab fa-google-play"></i> Android</a>
+                </div>
+            </div>
+
+            <div class="app-card">
+                <i class="fas fa-store"></i>
+                <h4>Lizto Negocios</h4>
+                <p>Para dueños de tiendas</p>
+                <div class="app-stores">
+                    <a href="#" class="store-badge"><i class="fab fa-apple"></i> iOS</a>
+                    <a href="#" class="store-badge"><i class="fab fa-google-play"></i> Android</a>
+                </div>
+            </div>
+
+            <div class="app-card">
+                <i class="fas fa-motorcycle"></i>
+                <h4>Lizto Repartidor</h4>
+                <p>Para personas que hacen entregas</p>
+                <div class="app-stores">
+                    <a href="#" class="store-badge"><i class="fab fa-apple"></i> iOS</a>
+                    <a href="#" class="store-badge"><i class="fab fa-google-play"></i> Android</a>
+                </div>
+            </div>
+
+            <div class="app-card">
+                <i class="fas fa-car"></i>
+                <h4>Lizto Conductor</h4>
+                <p>Para personas que dan taxi</p>
+                <div class="app-stores">
+                    <a href="#" class="store-badge"><i class="fab fa-apple"></i> iOS</a>
+                    <a href="#" class="store-badge"><i class="fab fa-google-play"></i> Android</a>
+                </div>
+            </div>
+
+            <div class="app-card">
+                <i class="fas fa-cash-register"></i>
+                <h4>Lizto Vendedor</h4>
+                <p>Para vendedores con POS</p>
+                <div class="app-stores">
+                    <a href="#" class="store-badge"><i class="fas fa-globe"></i> Web</a>
+                </div>
+            </div>
+
+            <div class="app-card">
+                <i class="fas fa-cog"></i>
+                <h4>Lizto Admin</h4>
+                <p>Para administradores</p>
+                <div class="app-stores">
+                    <a href="#" class="store-badge"><i class="fas fa-globe"></i> Web</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA FINAL -->
+    <section class="cta-final">
+        <h2>Únete al ecosistema que conecta tu ciudad</h2>
+        <p>Ya sea que quieras comprar, vender, entregar o conducir, Lizto tiene tu lugar.</p>
+        <div class="cta-buttons">
+            <a href="#" class="btn btn-primary">
+                <i class="fas fa-user"></i>
+                Soy usuario
+            </a>
+            <a href="#" class="btn btn-white">
+                <i class="fas fa-store"></i>
+                Soy negocio
+            </a>
+            <a href="#" class="btn btn-white">
+                <i class="fas fa-motorcycle"></i>
+                Quiero repartir
+            </a>
+            <a href="#" class="btn btn-white">
+                <i class="fas fa-car"></i>
+                Quiero conducir
+            </a>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <a href="#" class="logo">liz<span>to</span></a>
+                <p>La plataforma tecnológica que conecta personas, negocios, repartidores y conductores en una sola red en tiempo real.</p>
+            </div>
+
+            <div class="footer-col">
+                <h4>Plataforma</h4>
+                <a href="#">Delivery</a>
+                <a href="#">Taxi</a>
+                <a href="#">Favor</a>
+                <a href="#">Negocios</a>
+            </div>
+
+            <div class="footer-col">
+                <h4>Empresa</h4>
+                <a href="#">Sobre nosotros</a>
+                <a href="#">Blog</a>
+                <a href="#">Contacto</a>
+                <a href="#">Carreras</a>
+            </div>
+
+            <div class="footer-col">
+                <h4>Legal</h4>
+                <a href="#">Términos</a>
+                <a href="#">Privacidad</a>
+                <a href="#">Cookies</a>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p>&copy; 2024 Lizto. Todos los derechos reservados.</p>
+            <div class="social-links">
+                <a href="#"><i class="fab fa-facebook"></i></a>
+                <a href="#"><i class="fab fa-instagram"></i></a>
+                <a href="#"><i class="fab fa-tiktok"></i></a>
+                <a href="#"><i class="fab fa-whatsapp"></i></a>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lizto - Diagrama del Ecosistema</title>
+    <link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #16a34a;
+            --primary-dark: #0a4d19;
+            --primary-light: #effbef;
+            --secondary: #0f172a;
+            --text: #334155;
+            --text-light: #64748b;
+            --white: #ffffff;
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --orange: #f97316;
+            --blue: #3b82f6;
+            --purple: #8b5cf6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Albert Sans', sans-serif;
+            background: linear-gradient(135deg, var(--gray-50) 0%, var(--white) 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .header h1 span {
+            color: var(--primary);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: var(--text-light);
+        }
+
+        .ecosystem-diagram {
+            position: relative;
+            background: var(--white);
+            border-radius: 32px;
+            padding: 3rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+        }
+
+        .diagram-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            grid-template-rows: auto auto auto;
+            gap: 2rem;
+            min-height: 600px;
+        }
+
+        /* Columna Izquierda - Usuarios */
+        .left-column {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* Columna Central - Marketplace */
+        .center-column {
+            grid-row: 1 / 4;
+            grid-column: 2;
+        }
+
+        /* Columna Derecha - Servicios */
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* Nodos de_actor */
+        .actor-node {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative;
+        }
+
+        .actor-node:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+        }
+
+        .actor-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+        }
+
+        .actor-icon i {
+            font-size: 2rem;
+            color: var(--white);
+        }
+
+        .actor-node h3 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .actor-node p {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin-bottom: 1rem;
+        }
+
+        .actor-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .users .actor-icon { background: var(--primary); }
+        .users .actor-badge { background: var(--primary-light); color: var(--primary); }
+
+        .business .actor-icon { background: var(--orange); }
+        .business .actor-badge { background: #fff7ed; color: var(--orange); }
+
+        .delivery .actor-icon { background: var(--blue); }
+        .delivery .actor-badge { background: #eff6ff; color: var(--blue); }
+
+        .drivers .actor-icon { background: var(--purple); }
+        .drivers .actor-badge { background: #f5f3ff; color: var(--purple); }
+
+        /* Marketplace Central */
+        .marketplace-node {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 24px;
+            padding: 2rem;
+            color: var(--white);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .marketplace-node::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+
+        .marketplace-node::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -30%;
+            width: 80%;
+            height: 80%;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50%;
+        }
+
+        .marketplace-header {
+            position: relative;
+            z-index: 1;
+            margin-bottom: 1.5rem;
+        }
+
+        .marketplace-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--white);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+        }
+
+        .marketplace-icon i {
+            font-size: 2.5rem;
+            color: var(--primary);
+        }
+
+        .marketplace-node h2 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+
+        .marketplace-node > p {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .marketplace-features {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .marketplace-feature {
+            background: rgba(255,255,255,0.15);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: left;
+        }
+
+        .marketplace-feature i {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .marketplace-feature h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+        }
+
+        .marketplace-feature p {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        /* Categorías del Marketplace */
+        .marketplace-categories {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .category-chip {
+            background: rgba(255,255,255,0.2);
+            border-radius: 30px;
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .category-chip i {
+            font-size: 0.9rem;
+        }
+
+        /* Flechas de conexión */
+        .connection-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray-300);
+            font-size: 1.5rem;
+        }
+
+        .arrow-right {
+            transform: translateX(0);
+        }
+
+        .arrow-left {
+            transform: translateX(0) rotate(180deg);
+        }
+
+        .arrow-down {
+            transform: rotate(90deg);
+        }
+
+        .arrow-up {
+            transform: rotate(-90deg);
+        }
+
+        /* Flujo de datos */
+        .data-flow {
+            background: var(--gray-50);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .data-flow h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--secondary);
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .flow-steps {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+
+        .flow-step {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 0.8rem;
+            text-align: center;
+            flex: 1;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .flow-step i {
+            font-size: 1.2rem;
+            color: var(--primary);
+            margin-bottom: 0.3rem;
+        }
+
+        .flow-step span {
+            font-size: 0.7rem;
+            color: var(--text-light);
+            display: block;
+        }
+
+        .flow-arrow {
+            color: var(--primary);
+            font-size: 1rem;
+        }
+
+        /* Leyenda */
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .legend-dot.users { background: var(--primary); }
+        .legend-dot.business { background: var(--orange); }
+        .legend-dot.delivery { background: var(--blue); }
+        .legend-dot.drivers { background: var(--purple); }
+        .legend-dot.marketplace { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); }
+
+        .legend-item span {
+            font-size: 0.85rem;
+            color: var(--text);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .diagram-grid {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto;
+            }
+
+            .center-column {
+                grid-row: auto;
+                grid-column: auto;
+            }
+
+            .marketplace-features {
+                grid-template-columns: 1fr;
+            }
+
+            .flow-steps {
+                flex-direction: column;
+            }
+
+            .flow-arrow {
+                transform: rotate(90deg);
+            }
+
+            .legend {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Ecosistema <span>Lizto</span></h1>
+            <p>Cómo todo se conecta en una sola plataforma</p>
+        </div>
+
+        <div class="ecosystem-diagram">
+            <div class="diagram-grid">
+                <!-- Columna Izquierda - Usuarios -->
+                <div class="left-column">
+                    <div class="actor-node users">
+                        <div class="actor-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <h3>Usuarios</h3>
+                        <p>Personas que compran y solicitan servicios</p>
+                        <span class="actor-badge">App de Delivery y Taxi</span>
+                    </div>
+
+                    <div class="actor-node business">
+                        <div class="actor-icon">
+                            <i class="fas fa-store"></i>
+                        </div>
+                        <h3>Negocios</h3>
+                        <p>Tiendas, restaurantes, farmacias</p>
+                        <span class="actor-badge">Panel Web + App + POS</span>
+                    </div>
+                </div>
+
+                <!-- Columna Central - Marketplace -->
+                <div class="center-column">
+                    <div class="marketplace-node">
+                        <div class="marketplace-header">
+                            <div class="marketplace-icon">
+                                <i class="fas fa-network-wired"></i>
+                            </div>
+                            <h2>MARKETPLACE LIZTO</h2>
+                            <p>El corazón del ecosistema donde todo conecta</p>
+                        </div>
+
+                        <div class="marketplace-features">
+                            <div class="marketplace-feature">
+                                <i class="fas fa-shopping-bag"></i>
+                                <h4>150+ Tiendas</h4>
+                                <p>Restaurantes, farmacias, licorerías y más</p>
+                            </div>
+                            <div class="marketplace-feature">
+                                <i class="fas fa-motorcycle"></i>
+                                <h4>200+ Repartidores</h4>
+                                <p>Red verificada de entrega</p>
+                            </div>
+                            <div class="marketplace-feature">
+                                <i class="fas fa-clock"></i>
+                                <h4>Entrega en Minutos</h4>
+                                <p>Seguimiento en tiempo real</p>
+                            </div>
+                            <div class="marketplace-feature">
+                                <i class="fas fa-shield-alt"></i>
+                                <h4>Pago Seguro</h4>
+                                <p>Múltiples métodos de pago</p>
+                            </div>
+                        </div>
+
+                        <div class="marketplace-categories">
+                            <div class="category-chip">
+                                <i class="fas fa-utensils"></i>
+                                Restaurantes
+                            </div>
+                            <div class="category-chip">
+                                <i class="fas fa-pills"></i>
+                                Farmacias
+                            </div>
+                            <div class="category-chip">
+                                <i class="fas fa-wine-bottle"></i>
+                                Licorerías
+                            </div>
+                            <div class="category-chip">
+                                <i class="fas fa-shopping-cart"></i>
+                                Tiendas
+                            </div>
+                            <div class="category-chip">
+                                <i class="fas fa-dog"></i>
+                                Mascotas
+                            </div>
+                        </div>
+
+                        <!-- Flujo de datos dentro del marketplace -->
+                        <div class="data-flow">
+                            <h3>Flujo de un Pedido en Tiempo Real</h3>
+                            <div class="flow-steps">
+                                <div class="flow-step">
+                                    <i class="fas fa-user"></i>
+                                    <span>Usuario pide</span>
+                                </div>
+                                <div class="flow-arrow">
+                                    <i class="fas fa-arrow-right"></i>
+                                </div>
+                                <div class="flow-step">
+                                    <i class="fas fa-bell"></i>
+                                    <span>Negocio recibe</span>
+                                </div>
+                                <div class="flow-arrow">
+                                    <i class="fas fa-arrow-right"></i>
+                                </div>
+                                <div class="flow-step">
+                                    <i class="fas fa-motorcycle"></i>
+                                    <span>Repartidor asignado</span>
+                                </div>
+                                <div class="flow-arrow">
+                                    <i class="fas fa-arrow-right"></i>
+                                </div>
+                                <div class="flow-step">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>Entrega completada</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Columna Derecha - Servicios -->
+                <div class="right-column">
+                    <div class="actor-node delivery">
+                        <div class="actor-icon">
+                            <i class="fas fa-motorcycle"></i>
+                        </div>
+                        <h3>Repartidores</h3>
+                        <p>Personas que realizan entregas</p>
+                        <span class="actor-badge">App de Repartidor</span>
+                    </div>
+
+                    <div class="actor-node drivers">
+                        <div class="actor-icon">
+                            <i class="fas fa-car"></i>
+                        </div>
+                        <h3>Conductores</h3>
+                        <p>Personas que dan servicio de taxi</p>
+                        <span class="actor-badge">App de Conductor</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Leyenda -->
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-dot users"></div>
+                    <span>Usuarios</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot business"></div>
+                    <span>Negocios</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot marketplace"></div>
+                    <span>Marketplace Central</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot delivery"></div>
+                    <span>Repartidores</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot drivers"></div>
+                    <span>Conductores</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

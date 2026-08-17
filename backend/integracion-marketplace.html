@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lizto - Integración Completa del Marketplace</title>
+    <link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #16a34a;
+            --primary-dark: #0a4d19;
+            --primary-light: #effbef;
+            --secondary: #0f172a;
+            --text: #334155;
+            --text-light: #64748b;
+            --white: #ffffff;
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --orange: #f97316;
+            --blue: #3b82f6;
+            --purple: #8b5cf6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Albert Sans', sans-serif;
+            background: linear-gradient(135deg, var(--gray-50) 0%, var(--white) 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .header h1 span {
+            color: var(--primary);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: var(--text-light);
+        }
+
+        /* NAVEGACIÓN */
+        .navigation-section {
+            background: var(--white);
+            border-radius: 24px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        }
+
+        .navigation-section h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--secondary);
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .url-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .url-card {
+            background: var(--gray-50);
+            border-radius: 16px;
+            padding: 1.5rem;
+            border-left: 4px solid var(--primary);
+        }
+
+        .url-card.highlight {
+            background: var(--primary-light);
+            border-left-color: var(--primary-dark);
+        }
+
+        .url-path {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            font-family: monospace;
+        }
+
+        .url-description {
+            font-size: 0.95rem;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+
+        .url-badge {
+            display: inline-block;
+            background: var(--primary);
+            color: var(--white);
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        /* FLUJO */
+        .flow-section {
+            background: var(--white);
+            border-radius: 24px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        }
+
+        .flow-section h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--secondary);
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            padding: 1rem;
+        }
+
+        .flow-box {
+            background: var(--gray-50);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            min-width: 150px;
+            position: relative;
+        }
+
+        .flow-box.landing {
+            background: var(--primary-light);
+            border: 2px solid var(--primary);
+        }
+
+        .flow-box.marketplace {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: var(--white);
+            min-width: 200px;
+        }
+
+        .flow-box.service {
+            background: var(--white);
+            border: 2px solid var(--gray-200);
+        }
+
+        .flow-box i {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .flow-box.landing i { color: var(--primary); }
+        .flow-box.marketplace i { color: var(--white); }
+        .flow-box.service i { color: var(--primary); }
+
+        .flow-box h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+        }
+
+        .flow-box.landing h4 { color: var(--primary); }
+        .flow-box.marketplace h4 { color: var(--white); }
+        .flow-box.service h4 { color: var(--secondary); }
+
+        .flow-box p {
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+
+        .flow-box.marketplace p {
+            color: rgba(255,255,255,0.8);
+        }
+
+        .flow-arrow {
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+
+        /* ECOSISTEMA */
+        .ecosystem-section {
+            background: var(--white);
+            border-radius: 24px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        }
+
+        .ecosystem-section h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--secondary);
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .ecosystem-visual {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .actor-column {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .actor-card {
+            background: var(--gray-50);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .actor-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .actor-card i {
+            font-size: 2rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .actor-card h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--secondary);
+            margin-bottom: 0.3rem;
+        }
+
+        .actor-card p {
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+
+        .actor-card.users { border-top: 4px solid var(--primary); }
+        .actor-card.users i { color: var(--primary); }
+
+        .actor-card.business { border-top: 4px solid var(--orange); }
+        .actor-card.business i { color: var(--orange); }
+
+        .actor-card.delivery { border-top: 4px solid var(--blue); }
+        .actor-card.delivery i { color: var(--blue); }
+
+        .actor-card.drivers { border-top: 4px solid var(--purple); }
+        .actor-card.drivers i { color: var(--purple); }
+
+        .marketplace-center {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 24px;
+            padding: 2rem;
+            color: var(--white);
+            text-align: center;
+            position: relative;
+        }
+
+        .marketplace-center::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-bottom: 20px solid var(--primary);
+        }
+
+        .marketplace-center i.main-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: var(--white);
+        }
+
+        .marketplace-center h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .marketplace-center > p {
+            font-size: 0.95rem;
+            opacity: 0.9;
+            margin-bottom: 1.5rem;
+        }
+
+        .marketplace-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .stat-box {
+            background: rgba(255,255,255,0.15);
+            border-radius: 12px;
+            padding: 1rem;
+        }
+
+        .stat-box i {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-box h5 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.2rem;
+        }
+
+        .stat-box p {
+            font-size: 0.75rem;
+            opacity: 0.8;
+        }
+
+        /* MENSAJES */
+        .messages-section {
+            background: var(--white);
+            border-radius: 24px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        }
+
+        .messages-section h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--secondary);
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .messages-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .message-card {
+            background: var(--gray-50);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .message-card i {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .message-card h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .message-card p {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            font-style: italic;
+        }
+
+        /* RESUMEN */
+        .summary-section {
+            background: linear-gradient(135deg, var(--secondary) 0%, #1e293b 100%);
+            border-radius: 24px;
+            padding: 2rem;
+            color: var(--white);
+            text-align: center;
+        }
+
+        .summary-section h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .summary-section > p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .summary-points {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .summary-point {
+            background: rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+            min-width: 200px;
+        }
+
+        .summary-point i {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 0.8rem;
+        }
+
+        .summary-point h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+        }
+
+        .summary-point p {
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 1024px) {
+            .ecosystem-visual {
+                grid-template-columns: 1fr;
+            }
+
+            .marketplace-center::before {
+                display: none;
+            }
+
+            .flow-diagram {
+                flex-direction: column;
+            }
+
+            .flow-arrow {
+                transform: rotate(90deg);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .url-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .marketplace-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-points {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Integración del <span>Marketplace</span> en el Ecosistema</h1>
+            <p>Cómo el marketplace se conecta con todos los componentes de Lizto</p>
+        </div>
+
+        <!-- NAVEGACIÓN -->
+        <div class="navigation-section">
+            <h2>Estructura de URLs</h2>
+            <div class="url-grid">
+                <div class="url-card highlight">
+                    <div class="url-path">/ (raíz)</div>
+                    <div class="url-description">Landing principal que muestra el ecosistema completo</div>
+                    <span class="url-badge">NUEVA</span>
+                </div>
+                <div class="url-card">
+                    <div class="url-path">/delivery</div>
+                    <div class="url-description">Marketplace de delivery con banner del ecosistema</div>
+                    <span class="url-badge">ACTUALIZADA</span>
+                </div>
+                <div class="url-card">
+                    <div class="url-path">/taxi</div>
+                    <div class="url-description">Servicio de taxi con cálculo de tarifa</div>
+                    <span class="url-badge">ACTUAL</span>
+                </div>
+                <div class="url-card">
+                    <div class="url-path">/favor</div>
+                    <div class="url-description">Servicio de compras por encargo</div>
+                    <span class="url-badge">ACTUAL</span>
+                </div>
+                <div class="url-card">
+                    <div class="url-path">/negocios</div>
+                    <div class="url-description">Landing B2B para captar comercios</div>
+                    <span class="url-badge">ACTUAL</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- FLUJO -->
+        <div class="flow-section">
+            <h2>Flujo del Usuario</h2>
+            <div class="flow-diagram">
+                <div class="flow-box landing">
+                    <i class="fas fa-home"></i>
+                    <h4>Landing Principal</h4>
+                    <p>Primera impresión del ecosistema</p>
+                </div>
+                <div class="flow-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+                <div class="flow-box marketplace">
+                    <i class="fas fa-shopping-bag"></i>
+                    <h4>Marketplace</h4>
+                    <p>Donde ocurre la acción de compra</p>
+                </div>
+                <div class="flow-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+                <div class="flow-box service">
+                    <i class="fas fa-motorcycle"></i>
+                    <h4>Repartidor</h4>
+                    <p>Entrega el pedido</p>
+                </div>
+                <div class="flow-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+                <div class="flow-box service">
+                    <i class="fas fa-check-circle"></i>
+                    <h4>Entrega</h4>
+                    <p>Usuario recibe su pedido</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ECOSISTEMA -->
+        <div class="ecosystem-section">
+            <h2>El Marketplace en el Ecosistema</h2>
+            <div class="ecosystem-visual">
+                <div class="actor-column">
+                    <div class="actor-card users">
+                        <i class="fas fa-users"></i>
+                        <h4>Usuarios</h4>
+                        <p>Compran productos y solicitan servicios</p>
+                    </div>
+                    <div class="actor-card business">
+                        <i class="fas fa-store"></i>
+                        <h4>Negocios</h4>
+                        <p>Venden productos y gestionan operaciones</p>
+                    </div>
+                </div>
+
+                <div class="marketplace-center">
+                    <i class="fas fa-network-wired main-icon"></i>
+                    <h3>MARKETPLACE LIZTO</h3>
+                    <p>El corazón del ecosistema donde todo conecta</p>
+                    <div class="marketplace-stats">
+                        <div class="stat-box">
+                            <i class="fas fa-store"></i>
+                            <h5>150+ Tiendas</h5>
+                            <p>Restaurantes, farmacias y más</p>
+                        </div>
+                        <div class="stat-box">
+                            <i class="fas fa-motorcycle"></i>
+                            <h5>200+ Repartidores</h5>
+                            <p>Red verificada de entrega</p>
+                        </div>
+                        <div class="stat-box">
+                            <i class="fas fa-clock"></i>
+                            <h5>Entrega en Minutos</h5>
+                            <p>Seguimiento en tiempo real</p>
+                        </div>
+                        <div class="stat-box">
+                            <i class="fas fa-shield-alt"></i>
+                            <h5>Pago Seguro</h5>
+                            <p>Múltiples métodos de pago</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="actor-column">
+                    <div class="actor-card delivery">
+                        <i class="fas fa-motorcycle"></i>
+                        <h4>Repartidores</h4>
+                        <p>Realizan entregas y ganan dinero</p>
+                    </div>
+                    <div class="actor-card drivers">
+                        <i class="fas fa-car"></i>
+                        <h4>Conductores</h4>
+                        <p>Dan servicio de taxi</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MENSAJES -->
+        <div class="messages-section">
+            <h2>Mensajes Clave</h2>
+            <div class="messages-grid">
+                <div class="message-card">
+                    <i class="fas fa-user"></i>
+                    <h4>Para el Usuario</h4>
+                    <p>"Puedo comprar de CUALQUIER tienda en una sola app"</p>
+                </div>
+                <div class="message-card">
+                    <i class="fas fa-store"></i>
+                    <h4>Para el Negocio</h4>
+                    <p>"Mis productos llegan a miles de clientes sin invertir en delivery"</p>
+                </div>
+                <div class="message-card">
+                    <i class="fas fa-motorcycle"></i>
+                    <h4>Para el Repartidor</h4>
+                    <p>"Tengo pedidos constantes y puedo ganar dinero a mi ritmo"</p>
+                </div>
+                <div class="message-card">
+                    <i class="fas fa-network-wired"></i>
+                    <h4>Para la Plataforma</h4>
+                    <p>"Cada transición fortalece la red"</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- RESUMEN -->
+        <div class="summary-section">
+            <h2>Resumen: El Marketplace es el Corazón</h2>
+            <p>El marketplace no es solo un lugar para pedir comida. Es el punto donde la ciudad se conecta.</p>
+            <div class="summary-points">
+                <div class="summary-point">
+                    <i class="fas fa-handshake"></i>
+                    <h4>Conecta</h4>
+                    <p>Usuarios con negocios</p>
+                </div>
+                <div class="summary-point">
+                    <i class="fas fa-sync-alt"></i>
+                    <h4>Sincroniza</h4>
+                    <p>Todos en tiempo real</p>
+                </div>
+                <div class="summary-point">
+                    <i class="fas fa-arrow-up"></i>
+                    <h4>Crecimiento</h4>
+                    <p>Fortalece la red</p>
+                </div>
+                <div class="summary-point">
+                    <i class="fas fa-city"></i>
+                    <h4>Ciudad</h4>
+                    <p>Conecta tu ciudad</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

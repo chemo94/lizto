@@ -1,0 +1,27 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# PHP / Laravel dependencies and runtime files
+**/vendor/
+**/node_modules/
+**/storage/logs/
+**/storage/framework/cache/
+**/storage/framework/sessions/
+**/storage/framework/views/
+backend/error_log
+backend/response.txt
+
+# Flutter and Dart build artifacts
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/build/
+**/.packages
+
+# IDE and operating-system files
+.vscode/
+**/.idea/
+**/.DS_Store
+**/._*
