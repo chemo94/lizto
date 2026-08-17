@@ -36,8 +36,9 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
 
   @override
   void initState() {
-    int index = Get.arguments ?? 0;
     super.initState();
+    final routeArgument = Get.arguments;
+    final index = routeArgument is int ? routeArgument : 0;
 
     if (!Get.isRegistered<GeneralSettingRepo>()) {
       Get.put(GeneralSettingRepo(apiClient: Get.find()));
@@ -93,6 +94,7 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
   }
 
   void changeScreen(int val) {
+    if (val < 0 || val >= _widgets.length || val == selectedIndex) return;
     setState(() {
       selectedIndex = val;
     });
