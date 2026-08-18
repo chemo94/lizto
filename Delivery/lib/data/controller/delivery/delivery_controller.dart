@@ -84,6 +84,7 @@ class DeliveryController extends GetxController {
   bool categoryHomeLoading = false;
   String categoryHomeSearchQuery = '';
   String categoryHomeStoreImagePath = '';
+  String categoryHomeSubCategoryImagePath = '';
   String categoryHomeProductImagePath = '';
 
   // Cart state
@@ -215,6 +216,7 @@ class DeliveryController extends GetxController {
           categoryHomeSections = data['sections'] ?? [];
           categoryHomeSubCategories = data['sub_categories'] != null ? (data['sub_categories'] as List).map((x) => SubCategoryModel.fromJson(x)).toList() : [];
           categoryHomeStoreImagePath = data['store_image_path'] ?? storeImagePath;
+          categoryHomeSubCategoryImagePath = data['sub_category_image_path'] ?? subCategoryImagePath;
           categoryHomeProductImagePath = data['product_image_path'] ?? productImagePath;
 
           // Also grab flat store list if backend provides one
@@ -250,7 +252,7 @@ class DeliveryController extends GetxController {
         if (json['status'] == MyStrings.success && json['data'] != null) {
           final data = json['data'];
           categoryHomeSubCategories = (data['sub_categories'] as List).map((x) => SubCategoryModel.fromJson(x)).toList();
-          categoryHomeStoreImagePath = data['sub_category_image_path'] ?? storeImagePath;
+          categoryHomeSubCategoryImagePath = data['sub_category_image_path'] ?? subCategoryImagePath;
         }
       }
 

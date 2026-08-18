@@ -244,6 +244,7 @@ class DeliveryController extends Controller
             'sub_categories' => $subCategories,
             'stores' => $stores,
             'sections' => $sections,
+            'sub_category_image_path' => getFilePath('sub_category'),
             'store_image_path' => getFilePath('store'),
             'store_cover_path' => getFilePath('store_cover'),
             'product_image_path' => 'storage',
