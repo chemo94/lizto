@@ -57,11 +57,11 @@ class DeliveryController extends GetxController {
   bool isLoadingStories = false;
   StoreModel? selectedStore;
   List<StoreCategoryModel> storeCategories = [];
-  String categoryImagePath = '';
-  String subCategoryImagePath = '';
-  String storeImagePath = '';
-  String storeCoverPath = '';
-  String productImagePath = '';
+  String categoryImagePath = 'assets/images/general_category';
+  String subCategoryImagePath = 'assets/images/sub_category';
+  String storeImagePath = 'assets/images/store';
+  String storeCoverPath = 'assets/images/store_cover';
+  String productImagePath = 'storage';
   String? paymentRedirectUrl;
   Map<String, dynamic>? mpCheckoutData;
   int? pendingOrderId;
@@ -83,9 +83,9 @@ class DeliveryController extends GetxController {
   List<StoreModel> categoryHomeStores = [];
   bool categoryHomeLoading = false;
   String categoryHomeSearchQuery = '';
-  String categoryHomeStoreImagePath = '';
-  String categoryHomeSubCategoryImagePath = '';
-  String categoryHomeProductImagePath = '';
+  String categoryHomeStoreImagePath = 'assets/images/store';
+  String categoryHomeSubCategoryImagePath = 'assets/images/sub_category';
+  String categoryHomeProductImagePath = 'storage';
 
   // Cart state
   List<CartItemModel> cartItems = [];
@@ -145,7 +145,9 @@ class DeliveryController extends GetxController {
         if (json['status'] == MyStrings.success && json['data'] != null) {
           var data = json['data'];
           generalCategories = (data['general_categories'] as List).map((x) => GeneralCategoryModel.fromJson(x)).toList();
-          categoryImagePath = data['general_category_image_path'] ?? '';
+          categoryImagePath = data['general_category_image_path'] ?? categoryImagePath;
+          subCategoryImagePath = data['sub_category_image_path'] ?? subCategoryImagePath;
+          categoryHomeSubCategoryImagePath = data['sub_category_image_path'] ?? categoryHomeSubCategoryImagePath;
           premiumSections = data['sections'] ?? [];
           storeImagePath = data['store_image_path'] ?? storeImagePath;
           storeCoverPath = data['store_cover_path'] ?? storeCoverPath;

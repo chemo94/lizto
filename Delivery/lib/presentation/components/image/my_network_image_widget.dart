@@ -31,7 +31,7 @@ class MyImageWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (imageUrl.isEmpty || imageUrl == 'null' || imageUrl.endsWith('/null')) {
+    if (imageUrl.isEmpty || imageUrl == 'null' || imageUrl.endsWith('/null') || imageUrl.trim().endsWith('/')) {
       printX('Image SKIP (null/empty): $imageUrl');
       return errorWidget ?? SizedBox(height: height, width: width, child: isProfile ? ProfileWidget(imagePath: '', onClicked: () {}) : ClipRRect(borderRadius: BorderRadius.circular(radius), child: Center(child: Icon(Icons.store_rounded, color: MyColor.colorGrey.withValues(alpha: 0.3)))));
     }
