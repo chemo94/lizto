@@ -2,95 +2,166 @@
 
 @section('content')
 @php
-    $categoryIcons = [
-        'restaurantes' => 'las la-utensils',
-        'farmacia' => 'las la-prescription-bottle-alt',
-        'servicio-de-favores' => 'las la-hand-holding-heart',
-        'mascotas' => 'las la-paw',
-        'licorerias' => 'las la-wine-bottle',
-        'super-mini-markets' => 'las la-shopping-basket',
-    ];
+    $openStores = $stores->filter(fn($s) => $s->is_open_now);
+    $closedStores = $stores->filter(fn($s) => !$s->is_open_now);
 @endphp
 
-<main class="mp-marketplace">
+<main class="lz-marketplace-page">
+    <div class="container">
 
-    {{-- HERO --}}
-    <section class="mp-marketplace-hero">
-        <div class="container">
-            <div class="mp-hero-copy">
-                <span class="mp-hero-kicker"><i class="las la-bolt"></i> Marketplace local conectado</span>
-                <h1>Pide comida, compras y servicios cerca de ti.</h1>
-                <p>{{ $storeCount }}+ negocios conectados a Lizto para comprar, pagar y recibir sin complicarte.</p>
-            </div>
-            <h1>¿Qué quieres pedir hoy?</h1>
-            <p>{{ $storeCount }}+ tiendas, restaurantes y farmacias cerca de ti. Todo en una sola app.</p>
-            <div class="mp-search-bar">
-                <div class="mp-search-input">
-                    <i class="las la-search"></i>
-                    <form action="{{ route('delivery.marketplace') }}" method="GET" style="flex:1;display:flex">
-                        <input name="q" value="{{ request('q') }}" placeholder="¿Qué se te antoja? Busca tiendas, platos...">
-                        @if(request('category'))<input type="hidden" name="category" value="{{ request('category') }}">@endif
-                    </form>
+        {{-- 1. HERO & UNIVERSAL SEARCH (MOBILE-FIRST) --}}
+        <section class="lz-hero-section" id="buscar">
+            <div class="row align-items-center mb-3">
+                <div class="col-12 col-md-8">
+                    <span class="lz-brand-city mb-2"><i class="las la-bolt"></i> Superapp de Tarapoto</span>
+                    <h1 style="font-size: clamp(22px, 3.2vw, 34px); font-weight: 800; color: var(--lz-text); margin: 0 0 6px; letter-spacing: -0.5px;">
+                        ¿Qué quieres pedir hoy?
+                    </h1>
+                    <p style="font-size: 14.5px; color: var(--lz-text-muted); margin: 0;">
+                        Restaurantes, compras, favores y movilidad en un solo lugar.
+                    </p>
                 </div>
-                <button class="mp-search-btn" onclick="document.querySelector('.mp-search-input form').submit()">Buscar</button>
             </div>
-        </div>
-    </section>
 
-    {{-- CATEGORÍAS --}}
-    <section class="mp-categories">
-        <div class="container">
-            <h2>Categorías</h2>
-            <div class="mp-categories-grid">
-                @foreach($categories as $category)
-                    @if($category->slug === 'servicio-de-favores')
-                    <a class="mp-category-item" href="{{ route('favor') }}">
-                        <div class="mp-category-icon">
-                            @if($category->image)<img src="{{ getImage(getFilePath('general_category') . '/' . $category->image) }}" alt="{{ $category->name }}" style="width:40px;height:40px;object-fit:cover;border-radius:8px">@else<i class="{{ $categoryIcons[$category->slug] ?? 'las la-store' }}"></i>@endif
-                        </div>
-                        <span>{{ $category->name }}</span>
-                    </a>
-                    @else
-                    <a class="mp-category-item {{ request('category') == $category->id ? 'is-active' : '' }}" href="{{ route('delivery.marketplace', ['category' => $category->id]) }}">
-                        <div class="mp-category-icon">
-                            @if($category->image)<img src="{{ getImage(getFilePath('general_category') . '/' . $category->image) }}" alt="{{ $category->name }}" style="width:40px;height:40px;object-fit:cover;border-radius:8px">@else<i class="{{ $categoryIcons[$category->slug] ?? 'las la-store' }}"></i>@endif
-                        </div>
-                        <span>{{ $category->name }}</span>
-                    </a>
+            {{-- Mobile & Tablet Universal Search Bar --}}
+            <div class="lz-hero-search-wrapper mb-4">
+                <form action="{{ route('delivery.marketplace') }}" method="GET" id="heroSearchForm" class="lz-search-box">
+                    <i class="las la-search lz-search-icon"></i>
+                    <input type="text" name="q" id="universalSearchInput" class="lz-search-input" value="{{ request('q') }}" placeholder="Busca platos, restaurantes, tiendas o productos..." autocomplete="off">
+                    @if(request('category'))
+                        <input type="hidden" name="category" value="{{ request('category') }}">
                     @endif
-                @endforeach
-                <a class="mp-category-item {{ request()->is('taxi') ? 'is-active' : '' }}" href="{{ route('taxi') }}">
-                    <div class="mp-category-icon">
-                        <img src="{{ asset('assets/images/taxi.png') }}" alt="Taxi" style="width:40px;height:40px;object-fit:cover;border-radius:8px">
+                    @if(request('subcategory'))
+                        <input type="hidden" name="subcategory" value="{{ request('subcategory') }}">
+                    @endif
+                    @if(request('q') || request('subcategory'))
+                        <a href="{{ route('delivery.marketplace') }}" class="lz-search-clear" title="Limpiar búsqueda">
+                            <i class="las la-times-circle"></i>
+                        </a>
+                    @endif
+                </form>
+            </div>
+
+            {{-- 2. HIGH HIERARCHY SERVICE SHORTCUTS --}}
+            <div class="lz-services-grid">
+                <a href="{{ route('delivery.marketplace') }}#restaurantes" class="lz-service-card lz-svc-food">
+                    <div class="lz-service-icon">
+                        <i class="las la-utensils"></i>
                     </div>
-                    <span>Taxi</span>
+                    <span class="lz-service-title">Comida</span>
+                    <span class="lz-service-sub">Restaurantes</span>
+                </a>
+
+                <a href="{{ route('delivery.marketplace', ['category' => 'markets']) }}" class="lz-service-card lz-svc-stores">
+                    <div class="lz-service-icon">
+                        <i class="las la-shopping-basket"></i>
+                    </div>
+                    <span class="lz-service-title">Tiendas</span>
+                    <span class="lz-service-sub">Markets & Farmacias</span>
+                </a>
+
+                <a href="{{ route('favor') }}" class="lz-service-card lz-svc-favor">
+                    <div class="lz-service-icon">
+                        <i class="las la-hand-holding-heart"></i>
+                    </div>
+                    <span class="lz-service-title">Lizto Favor</span>
+                    <span class="lz-service-sub">Mandados & Envíos</span>
+                </a>
+
+                <a href="{{ route('taxi') }}" class="lz-service-card lz-svc-taxi">
+                    <div class="lz-service-icon">
+                        <i class="las la-taxi"></i>
+                    </div>
+                    <span class="lz-service-title">Taxi Seguro</span>
+                    <span class="lz-service-sub">Viajes directos</span>
                 </a>
             </div>
-        </div>
-    </section>
+        </section>
 
-    {{-- BANNERS DE LA BASE DE DATOS --}}
-    @if(isset($banners) && $banners->count() > 0)
-    <section class="mp-banners-section">
-        <div class="container">
+        {{-- 3. HORIZONTAL CATEGORIES CAROUSEL --}}
+        <section class="lz-categories-strip">
+            <div class="lz-section-head">
+                <h2 class="lz-section-title">
+                    <i class="las la-th-large" style="color:var(--lz-primary)"></i> Categorías
+                </h2>
+                @if(request('category') || request('subcategory') || request('q'))
+                    <a href="{{ route('delivery.marketplace') }}" class="lz-section-link">Ver todas</a>
+                @endif
+            </div>
+
+            <div class="lz-chips-scroll">
+                <a href="{{ route('delivery.marketplace') }}" class="lz-cat-chip {{ !request('category') && !request('subcategory') && !request('q') ? 'active' : '' }}">
+                    <i class="las la-border-all lz-cat-chip-icon"></i>
+                    <span>Todo</span>
+                </a>
+
+                @foreach($categories as $category)
+                    @if($category->slug === 'servicio-de-favores')
+                        <a href="{{ route('favor') }}" class="lz-cat-chip">
+                            <i class="las la-hand-holding-heart lz-cat-chip-icon"></i>
+                            <span>{{ $category->name }}</span>
+                        </a>
+                    @else
+                        <a href="{{ route('delivery.marketplace', ['category' => $category->id]) }}" class="lz-cat-chip {{ request('category') == $category->id ? 'active' : '' }}">
+                            @if($category->image)
+                                <img src="{{ getImage(getFilePath('general_category') . '/' . $category->image) }}" alt="{{ $category->name }}" style="width:20px;height:20px;object-fit:cover;border-radius:4px">
+                            @else
+                                <i class="las la-store lz-cat-chip-icon"></i>
+                            @endif
+                            <span>{{ $category->name }}</span>
+                        </a>
+                    @endif
+                @endforeach
+            </div>
+        </section>
+
+        {{-- 4. ¿QUÉ SE TE ANTOJA? (SUBCATEGORÍAS REALES DEL BACKEND) --}}
+        @if(isset($subCategories) && $subCategories->count() > 0)
+        <section class="lz-categories-strip" style="margin-top:0;">
+            <div class="lz-section-head">
+                <h2 class="lz-section-title" style="font-size:16px;">
+                    ✨ ¿Qué se te antoja hoy?
+                </h2>
+                @if(request('subcategory'))
+                    <a href="{{ route('delivery.marketplace') }}" class="lz-section-link">Limpiar</a>
+                @endif
+            </div>
+            <div class="lz-chips-scroll">
+                @foreach($subCategories as $subCat)
+                    <a href="{{ route('delivery.marketplace', ['subcategory' => $subCat->id]) }}" class="lz-cat-chip {{ request('subcategory') == $subCat->id ? 'active' : '' }}">
+                        @if($subCat->image)
+                            <img src="{{ getImage('assets/images/sub_category/' . $subCat->image) }}" alt="{{ $subCat->name }}" style="width:20px;height:20px;object-fit:cover;border-radius:4px">
+                        @else
+                            <i class="las la-utensils lz-cat-chip-icon"></i>
+                        @endif
+                        <span>{{ $subCat->name }}</span>
+                    </a>
+                @endforeach
+            </div>
+        </section>
+        @endif
+
+        {{-- 5. BANNERS PROMOCIONALES --}}
+        @if(isset($banners) && $banners->count() > 0)
+        <section class="mb-4">
             <div class="mp-banners-slider">
                 @foreach($banners as $banner)
                 <a href="{{ $banner->link ?? '#' }}" class="mp-banner-slide">
-                    <img src="{{ getImage(getFilePath('banner') . '/' . $banner->image) }}" alt="{{ $banner->title }}">
+                    <img src="{{ getImage(getFilePath('banner') . '/' . $banner->image) }}" alt="{{ $banner->title }}" loading="lazy">
                 </a>
                 @endforeach
             </div>
-        </div>
-    </section>
-    @endif
+        </section>
+        @endif
 
-    {{-- CUPONES DE DESCUENTO --}}
-    @if(isset($coupons) && $coupons->count() > 0)
-    <section class="mp-coupons-section">
-        <div class="container">
-            <div class="mp-section-header">
-                <h2>Cupones de Descuento <span class="mp-badge-count">{{ $coupons->count() }} activos</span></h2>
-                <p>Usa estos códigos al finalizar tu pedido para obtener descuentos exclusivos</p>
+        {{-- 6. CUPONES DE DESCUENTO --}}
+        @if(isset($coupons) && $coupons->count() > 0)
+        <section class="mb-5">
+            <div class="lz-section-head">
+                <h2 class="lz-section-title">
+                    🎁 Cupones y Promociones
+                    <span class="lz-brand-city" style="font-size:10.5px;">{{ $coupons->count() }} ACTIVOS</span>
+                </h2>
             </div>
             <div class="mp-coupons-grid">
                 @foreach($coupons as $coupon)
@@ -99,18 +170,22 @@
                         <span class="coupon-value">
                             @if($coupon->type === 'percentage')
                                 {{ round($coupon->value) }}% OFF
+                            @elseif($coupon->type === 'free_delivery')
+                                ENVÍO GRATIS
                             @else
-                                S/ {{ number_format($coupon->value, 2) }} OFF
+                                S/ {{ number_format($coupon->value, 2) }}
                             @endif
                         </span>
-                        <span class="coupon-min">Min. S/ {{ number_format($coupon->min_order, 2) }}</span>
+                        @if($coupon->min_order > 0)
+                            <span class="coupon-min">Min. S/ {{ number_format($coupon->min_order, 2) }}</span>
+                        @endif
                     </div>
                     <div class="coupon-right">
                         <strong>{{ $coupon->name }}</strong>
-                        <p class="coupon-desc">{{ $coupon->description ?? '¡Aprovecha este descuento especial!' }}</p>
+                        <p class="coupon-desc">{{ $coupon->description ?? '¡Válido para tu próximo pedido en Lizto!' }}</p>
                         <div class="coupon-code-wrapper">
                             <span class="coupon-code">{{ $coupon->code }}</span>
-                            <button class="copy-coupon-btn" onclick="copyCouponCode('{{ $coupon->code }}', this)">
+                            <button type="button" class="copy-coupon-btn" onclick="copyCouponCode('{{ $coupon->code }}', this)">
                                 <i class="las la-copy"></i> Copiar
                             </button>
                         </div>
@@ -118,281 +193,240 @@
                 </div>
                 @endforeach
             </div>
-        </div>
-    </section>
-    @endif
+        </section>
+        @endif
 
-    {{-- OFERTAS DEL DÍA (PRODUCTOS CON DESCUENTO) --}}
-    @if(isset($discountedProducts) && $discountedProducts->count() > 0)
-    <section class="mp-discounted-products-section">
-        <div class="container">
-            <div class="mp-section-header">
-                <h2>Ofertas del Día <span class="mp-badge-tag">Descuentos</span></h2>
-                <p>Ahorra con los mejores precios de nuestras tiendas asociadas</p>
+        {{-- 7. OFERTAS DEL DÍA (PRODUCTOS CON DESCUENTO) --}}
+        @if(isset($discountedProducts) && $discountedProducts->count() > 0)
+        <section class="mb-5">
+            <div class="lz-section-head">
+                <h2 class="lz-section-title">
+                    ⚡ Ofertas del Día
+                    <span class="mp-badge-tag">AHORRA</span>
+                </h2>
             </div>
-            <div class="mp-discounted-products-grid">
-                @foreach($discountedProducts as $product)
-                <div class="mp-discount-product-card">
-                    <div class="product-image-wrapper">
-                        @if($product->image)
-                            <img src="{{ getImage(getFilePath('product') . '/' . $product->image) }}" alt="{{ $product->name }}">
-                        @else
-                            <div class="product-placeholder-icon"><i class="las la-hamburger"></i></div>
-                        @endif
-                        <span class="discount-badge">
-                            @if($product->price > 0 && $product->discount_price > 0)
-                                -{{ round((($product->price - $product->discount_price) / $product->price) * 100) }}%
-                            @endif
-                        </span>
-                    </div>
-                    <div class="product-info-wrapper">
-                        <span class="product-store-name"><i class="las la-store"></i> {{ $product->store->name }}</span>
-                        <h4 class="product-title">{{ $product->name }}</h4>
-                        <p class="product-desc">{{ \Illuminate\Support\Str::limit($product->description, 60) }}</p>
-                        <div class="product-price-row">
-                            <div class="prices">
-                                <span class="price-discount">S/ {{ number_format($product->discount_price, 2) }}</span>
-                                <del class="price-original">S/ {{ number_format($product->price, 2) }}</del>
-                            </div>
-                            <a href="{{ route('delivery.store', $product->store) }}" class="view-store-btn">
-                                Pedir <i class="las la-arrow-right"></i>
-                            </a>
+            <div class="lz-products-grid">
+                @foreach($discountedProducts->take(6) as $product)
+                <div class="lz-product-card" onclick="window.location.href='{{ route('delivery.store', $product->store) }}'">
+                    <div class="lz-product-info">
+                        <div>
+                            <span style="font-size:11px;font-weight:700;color:var(--lz-primary-dark);display:flex;align-items:center;gap:4px;margin-bottom:3px">
+                                <i class="las la-store"></i> {{ $product->store->name }}
+                            </span>
+                            <h3 class="lz-product-name">{{ $product->name }}</h3>
+                            <p class="lz-product-desc">{{ $product->description }}</p>
                         </div>
+                        <div class="lz-product-price-row">
+                            <span class="lz-product-price">S/ {{ number_format($product->finalPrice(), 2) }}</span>
+                            @if($product->discount_price > 0 && $product->price > $product->discount_price)
+                                <span class="lz-product-old-price">S/ {{ number_format($product->price, 2) }}</span>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="lz-product-thumb">
+                        @if($product->image)
+                            <img src="{{ getImage(getFilePath('product') . '/' . $product->image) }}" alt="{{ $product->name }}" loading="lazy">
+                        @else
+                            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#cbd5e1;font-size:28px">
+                                <i class="las la-hamburger"></i>
+                            </div>
+                        @endif
+                        <button type="button" class="lz-product-add-btn" title="Ver producto">
+                            <i class="las la-arrow-right"></i>
+                        </button>
                     </div>
                 </div>
                 @endforeach
             </div>
-        </div>
-    </section>
-    @endif
+        </section>
+        @endif
 
-    {{-- TIENDAS POPULARES --}}
-    <section class="mp-stores">
-        <div class="container">
-            <h2>Tiendas populares <small>{{ $stores->count() }} disponibles</small></h2>
-            <div class="mp-stores-grid">
-                @forelse($stores as $store)
-                <a class="mp-store-card" href="{{ route('delivery.store', $store) }}" data-store-id="{{ $store->id }}">
-                    <div class="mp-store-cover">
+        {{-- 8. TIENDAS Y RESTAURANTES (ABIERTOS AHORA) --}}
+        <section class="mb-5" id="restaurantes">
+            <div class="lz-section-head">
+                <h2 class="lz-section-title">
+                    🔥 Restaurantes y Tiendas
+                    <span class="lz-brand-city">{{ $openStores->count() }} ABIERTOS</span>
+                </h2>
+                <div class="d-none d-sm-flex align-items-center gap-2">
+                    <span style="font-size:12.5px;color:var(--lz-text-muted);">En Tarapoto</span>
+                </div>
+            </div>
+
+            @if($openStores->count() > 0)
+            <div class="lz-stores-grid">
+                @foreach($openStores as $store)
+                <a href="{{ route('delivery.store', $store) }}" class="lz-store-card" data-store-id="{{ $store->id }}">
+                    {{-- Cover --}}
+                    <div class="lz-store-cover">
                         @if($store->cover_image)
-                            <img src="{{ getImage(getFilePath('store_cover') . '/' . $store->cover_image) }}" alt="{{ $store->name }}">
+                            <img src="{{ getImage(getFilePath('store_cover') . '/' . $store->cover_image) }}" alt="{{ $store->name }}" loading="lazy">
                         @else
-                            <i class="las la-store"></i>
+                            <div style="width:100%;height:100%;background:linear-gradient(135deg, #10b981 0%, #047857 100%);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.4);font-size:40px">
+                                <i class="las la-utensils"></i>
+                            </div>
                         @endif
-                        <span class="mp-store-badge {{ $store->is_open_now ? 'mp-store-badge--open' : 'mp-store-badge--closed' }}">{{ $store->is_open_now ? 'Abierto' : 'Cerrado' }}</span>
+
+                        {{-- Open Badge --}}
+                        <div class="lz-store-badge-open lz-badge-live">
+                            <span style="width:6px;height:6px;border-radius:50%;background:#fff;display:inline-block"></span>
+                            Abierto
+                        </div>
                     </div>
-                    <div class="mp-store-info">
-                        <div class="mp-store-name">{{ $store->name }}</div>
-                        <div class="mp-store-category">{{ $store->description }}</div>
-                        <div class="mp-store-meta">
-                            <span><i class="las la-star"></i> {{ $store->rating > 0 ? number_format($store->rating, 1) : '—' }}</span>
-                            <span><i class="las la-clock"></i> {{ $store->preparation_time ?? 20 }} min</span>
-                            <span><i class="las la-motorcycle"></i>
-                                @if($hasFreeDelivery)
-                                <span style="text-decoration:line-through;color:#999;font-size:11px">S/ {{ number_format($store->display_fee, 2) }}</span>
-                                <span style="background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:800;margin-left:4px">GRATIS</span>
-                                @else
-                                S/ <span class="store-fee-amount">{{ number_format($store->display_fee, 2) }}</span>
-                                @endif
-                                @if($store->latitude && $store->longitude)<span class="store-distance" style="font-size:10px;color:#64748b;margin-left:4px"></span>@endif
-                            </span>
+
+                    {{-- Body --}}
+                    <div class="lz-store-body">
+                        <div class="lz-store-logo">
+                            @if($store->image)
+                                <img src="{{ getImage(getFilePath('store') . '/' . $store->image) }}" alt="{{ $store->name }}" loading="lazy">
+                            @else
+                                <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#ecfdf5;color:var(--lz-primary);font-size:20px">
+                                    <i class="las la-store"></i>
+                                </div>
+                            @endif
+                        </div>
+                        <div class="lz-store-content">
+                            <h3 class="lz-store-name">{{ $store->name }}</h3>
+                            <div class="lz-store-meta">
+                                <span>{{ $store->description ? \Illuminate\Support\Str::limit($store->description, 35) : 'Comida & Delivery' }}</span>
+                            </div>
+                            <div class="lz-store-footer">
+                                <div class="lz-store-delivery">
+                                    <i class="las la-motorcycle"></i>
+                                    @if($hasFreeDelivery)
+                                        <span style="text-decoration:line-through;color:#94a3b8;font-size:11px">S/ {{ number_format($store->display_fee, 2) }}</span>
+                                        <span style="color:var(--lz-primary-dark);font-weight:800">GRATIS</span>
+                                    @else
+                                        S/ <span class="store-fee-amount">{{ number_format($store->display_fee, 2) }}</span>
+                                    @endif
+                                    <span class="store-distance" style="font-size:10.5px;color:var(--lz-text-muted);margin-left:4px"></span>
+                                </div>
+                                <div class="lz-store-rating">
+                                    <i class="las la-star"></i>
+                                    <span>{{ $store->rating > 0 ? number_format($store->rating, 1) : '4.8' }}</span>
+                                    <span style="color:var(--lz-text-subtle);font-weight:400;font-size:11px">({{ $store->preparation_time ?? 25 }} min)</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </a>
-                @empty
-                <div class="mp-empty">
-                    <i class="las la-search"></i>
-                    <h3>No encontramos tiendas</h3>
-                    <p>Prueba otra búsqueda o revisa todas las categorías.</p>
-                </div>
-                @endforelse
+                @endforeach
             </div>
-        </div>
-    </section>
-
-    {{-- CÓMO FUNCIONA --}}
-    <section class="mp-how-it-works">
-        <div class="container">
-            <h2>¿Cómo funciona?</h2>
-            <div class="mp-steps">
-                <div class="mp-step">
-                    <div class="mp-step-number">1</div>
-                    <h4>Elige tu tienda</h4>
-                    <p>Explora categorías y encuentra lo que buscas</p>
+            @else
+            <div class="text-center py-5" style="background:#fff;border-radius:16px;border:1px solid var(--lz-border);padding:40px 20px;">
+                <div style="font-size:48px;color:#94a3b8;margin-bottom:12px">
+                    <i class="las la-store-alt-slash"></i>
                 </div>
-                <div class="mp-step">
-                    <div class="mp-step-number">2</div>
-                    <h4>Arma tu pedido</h4>
-                    <p>Agrega productos al carrito y personaliza</p>
-                </div>
-                <div class="mp-step">
-                    <div class="mp-step-number">3</div>
-                    <h4>Recibe en minutos</h4>
-                    <p>Sigue tu pedido en tiempo real</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    {{-- BENEFICIOS --}}
-    <section class="mp-benefits">
-        <div class="container">
-            <h2>¿Por qué elegir Lizto Delivery?</h2>
-            <div class="mp-benefits-grid">
-                <div class="mp-benefit-card">
-                    <i class="las la-percent"></i>
-                    <h4>0% Comisión</h4>
-                    <p>No pagamos comisiones ocultas</p>
-                </div>
-                <div class="mp-benefit-card">
-                    <i class="las la-user-shield"></i>
-                    <h4>Repartidores verificados</h4>
-                    <p>Tu seguridad es nuestra prioridad</p>
-                </div>
-                <div class="mp-benefit-card">
-                    <i class="las la-bolt"></i>
-                    <h4>Entrega express</h4>
-                    <p>Tu pedido llega en minutos</p>
-                </div>
-                <div class="mp-benefit-card">
-                    <i class="las la-credit-card"></i>
-                    <h4>Paga como quieras</h4>
-                    <p>Efectivo, tarjeta o billetera digital</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    {{-- CTA FINAL --}}
-    <section class="mp-cta-final">
-        <div class="container">
-            <h2>¿Quieres vender en Lizto?</h2>
-            <p>Únete a más de {{ $storeCount }} tiendas que ya venden en nuestra plataforma. Sin comisiones, sin mensualidades.</p>
-            <div class="mp-cta-buttons">
-                <a href="{{ route('negocios') }}" class="mp-btn-white">
-                    <i class="las la-store"></i> Crear mi tienda gratis
-                </a>
-                <a href="{{ route('seller.login') }}" class="mp-btn-outline">
-                    <i class="las la-info-circle"></i> Más información
+                <h3 style="font-size:18px;font-weight:800;color:var(--lz-text);margin-bottom:6px">No encontramos tiendas abiertas en este momento</h3>
+                <p style="color:var(--lz-text-muted);font-size:14px;max-width:400px;margin:0 auto 18px">
+                    Prueba otra búsqueda, revisa los negocios cerrados abajo o solicita un mandado directo.
+                </p>
+                <a href="{{ route('favor') }}" class="lz-btn-cta d-inline-flex align-items-center gap-2" style="max-width:240px;margin:0 auto;">
+                    <i class="las la-hand-holding-heart"></i> Pedir con Lizto Favor
                 </a>
             </div>
-        </div>
-    </section>
+            @endif
+        </section>
 
+        {{-- 9. TIENDAS CERRADAS (VISUALMENTE SEPARADAS) --}}
+        @if($closedStores->count() > 0)
+        <section class="mb-5" style="opacity: 0.85;">
+            <div class="lz-section-head">
+                <h2 class="lz-section-title" style="color:var(--lz-text-muted);font-size:18px;">
+                    <i class="las la-clock"></i> Cerrados por ahora · Abren más tarde
+                    <span class="lz-brand-city" style="background:#f1f5f9;color:#64748b;">{{ $closedStores->count() }}</span>
+                </h2>
+            </div>
+            <div class="lz-stores-grid">
+                @foreach($closedStores as $store)
+                <a href="{{ route('delivery.store', $store) }}" class="lz-store-card" style="filter: grayscale(30%);">
+                    <div class="lz-store-cover">
+                        @if($store->cover_image)
+                            <img src="{{ getImage(getFilePath('store_cover') . '/' . $store->cover_image) }}" alt="{{ $store->name }}" loading="lazy">
+                        @else
+                            <div style="width:100%;height:100%;background:#475569;display:flex;align-items:center;justify-content:center;color:#fff;font-size:40px">
+                                <i class="las la-store"></i>
+                            </div>
+                        @endif
+                        <div class="lz-store-badge-open lz-badge-closed">
+                            <i class="las la-clock"></i> Cerrado
+                        </div>
+                    </div>
+                    <div class="lz-store-body">
+                        <div class="lz-store-logo">
+                            @if($store->image)
+                                <img src="{{ getImage(getFilePath('store') . '/' . $store->image) }}" alt="{{ $store->name }}" loading="lazy">
+                            @else
+                                <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#f1f5f9;color:#94a3b8;font-size:20px">
+                                    <i class="las la-store"></i>
+                                </div>
+                            @endif
+                        </div>
+                        <div class="lz-store-content">
+                            <h3 class="lz-store-name">{{ $store->name }}</h3>
+                            <div class="lz-store-meta">
+                                <span>{{ $store->description ? \Illuminate\Support\Str::limit($store->description, 35) : 'Comida & Delivery' }}</span>
+                            </div>
+                            <div class="lz-store-footer">
+                                <span style="font-size:12px;color:var(--lz-text-muted);">Ver menú y horarios</span>
+                                <span style="font-size:12px;font-weight:700;color:var(--lz-primary-dark);"><i class="las la-eye"></i> Explorar</span>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+                @endforeach
+            </div>
+        </section>
+        @endif
+
+    </div>
 </main>
 @endsection
 
 @push('style')
 <style>
-/* MARKETPLACE - Tal cual prototipo-marketplace.html */
-.mp-marketplace{background:#f8fafc;color:#334155;padding-top:44px}
-.mp-marketplace *{box-sizing:border-box}
-
-/* HERO */
-.mp-marketplace-hero{background:linear-gradient(135deg,#effbef 0%,#fff 100%);padding:60px 0;text-align:center}
-.mp-marketplace-hero h1{font-size:2.5rem;font-weight:700;color:#0f172a;margin-bottom:1rem}
-.mp-marketplace-hero p{font-size:1.1rem;color:#64748b;margin-bottom:2rem;max-width:600px;margin-left:auto;margin-right:auto}
-
-/* SEARCH */
-.mp-search-bar{max-width:600px;margin:0 auto;background:#fff;border-radius:12px;padding:8px;box-shadow:0 4px 20px rgba(0,0,0,.1);display:flex;gap:8px}
-.mp-search-input{flex:1;display:flex;align-items:center;gap:12px;padding:12px 16px;background:#f8fafc;border-radius:8px}
-.mp-search-input i{color:#64748b;font-size:18px}
-.mp-search-input input{border:none;background:none;font-size:1rem;color:#334155;outline:none;width:100%}
-.mp-search-input input::placeholder{color:#64748b}
-.mp-search-btn{background:#16a34a;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-weight:600;cursor:pointer;font-size:14px;transition:background .3s}
-.mp-search-btn:hover{background:#0a4d19}
-
-/* CATEGORIES */
-.mp-categories{padding:40px 0}
-.mp-categories h2{font-size:1.3rem;font-weight:600;color:#0f172a;margin-bottom:24px}
-.mp-categories-grid{display:flex;gap:24px;overflow-x:auto;padding-bottom:16px;scrollbar-width:none}
-.mp-categories-grid::-webkit-scrollbar{display:none}
-.mp-category-item{flex-shrink:0;text-align:center;cursor:pointer;transition:transform .3s;text-decoration:none;color:#334155}
-.mp-category-item:hover{transform:translateY(-5px)}
-.mp-category-item.is-active .mp-category-icon{border:2px solid #16a34a}
-.mp-category-icon{width:80px;height:80px;background:#fff;border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;box-shadow:0 4px 15px rgba(0,0,0,.08);border:2px solid transparent}
-.mp-category-icon i{font-size:2rem;color:#16a34a}
-.mp-category-item span{font-size:.85rem;font-weight:500}
-
-/* STORES */
-.mp-stores{padding:40px 0}
-.mp-stores h2{font-size:1.3rem;font-weight:600;color:#0f172a;margin-bottom:24px}
-.mp-stores h2 small{font-size:.85rem;font-weight:400;color:#64748b;margin-left:8px}
-.mp-stores-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:24px}
-.mp-store-card{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 15px rgba(0,0,0,.08);transition:transform .3s,box-shadow .3s;cursor:pointer;text-decoration:none;color:#334155;display:block}
-.mp-store-card:hover{transform:translateY(-5px);box-shadow:0 8px 25px rgba(0,0,0,.12)}
-.mp-store-cover{height:150px;background:linear-gradient(135deg,#16a34a 0%,#0a4d19 100%);position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.mp-store-cover img{width:100%;height:100%;object-fit:cover}
-.mp-store-cover i{font-size:3rem;color:rgba(255,255,255,.3)}
-.mp-store-badge{position:absolute;top:10px;right:10px;background:#fff;padding:4px 10px;border-radius:20px;font-size:.7rem;font-weight:600}
-.mp-store-badge--open{color:#16a34a}
-.mp-store-badge--closed{color:#dc2626}
-.mp-store-info{padding:18px}
-.mp-store-name{font-size:1.1rem;font-weight:600;color:#0f172a;margin-bottom:4px}
-.mp-store-category{font-size:.85rem;color:#64748b;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
-.mp-store-meta{display:flex;gap:16px;font-size:.8rem;color:#64748b;flex-wrap:wrap}
-.mp-store-meta span{display:flex;align-items:center;gap:4px}
-.mp-store-meta i{color:#16a34a}
-
-/* EMPTY */
-.mp-empty{grid-column:1/-1;text-align:center;padding:60px 20px}
-.mp-empty i{font-size:48px;color:#e2e8f0;margin-bottom:16px;display:block}
-.mp-empty h3{font-size:20px;font-weight:700;color:#0f172a;margin-bottom:8px}
-.mp-empty p{color:#64748b}
-
-/* HOW IT WORKS */
-.mp-how-it-works{padding:60px 0;background:#fff;margin-top:32px}
-.mp-how-it-works h2{font-size:1.5rem;font-weight:700;color:#0f172a;text-align:center;margin-bottom:32px}
-.mp-steps{display:flex;justify-content:center;gap:48px;flex-wrap:wrap}
-.mp-step{text-align:center;max-width:200px}
-.mp-step-number{width:60px;height:60px;background:#effbef;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:1.5rem;font-weight:700;color:#16a34a}
-.mp-step h4{font-size:1rem;font-weight:600;color:#0f172a;margin-bottom:8px}
-.mp-step p{font-size:.9rem;color:#64748b}
-
-/* BENEFITS */
-.mp-benefits{padding:60px 0;background:#f8fafc}
-.mp-benefits h2{font-size:1.5rem;font-weight:700;color:#0f172a;text-align:center;margin-bottom:32px}
-.mp-benefits-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:24px;max-width:1000px;margin:0 auto}
-.mp-benefit-card{background:#fff;border-radius:16px;padding:24px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,.05)}
-.mp-benefit-card i{font-size:2rem;color:#16a34a;margin-bottom:16px;display:block}
-.mp-benefit-card h4{font-size:1rem;font-weight:600;color:#0f172a;margin-bottom:8px}
-.mp-benefit-card p{font-size:.9rem;color:#64748b}
-
-/* CTA */
-.mp-cta-final{padding:64px 0;background:#16a34a;text-align:center;color:#fff}
-.mp-cta-final h2{font-size:2rem;font-weight:700;margin-bottom:16px;color:#fff}
-.mp-cta-final p{font-size:1.1rem;opacity:.9;margin-bottom:32px;max-width:600px;margin-left:auto;margin-right:auto}
-.mp-cta-buttons{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
-.mp-btn-white{padding:16px 32px;border-radius:10px;font-weight:600;text-decoration:none;transition:all .3s;display:inline-flex;align-items:center;gap:8px;background:#fff;color:#16a34a}
-.mp-btn-white:hover{background:#f1f5f9;transform:translateY(-2px)}
-.mp-btn-outline{padding:16px 32px;border-radius:10px;font-weight:600;text-decoration:none;transition:all .3s;display:inline-flex;align-items:center;gap:8px;background:transparent;color:#fff;border:2px solid rgba(255,255,255,.5)}
-.mp-btn-outline:hover{background:rgba(255,255,255,.1);border-color:#fff}
-
-/* BANNER SECTION */
-.mp-banners-section {
-    padding: 20px 0;
+.lz-marketplace-page {
+    padding: 16px 0 40px;
+    background-color: var(--lz-bg);
+}
+.lz-hero-search-wrapper {
+    max-width: 100%;
+}
+.lz-search-clear {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--lz-text-subtle);
+    font-size: 20px;
+}
+.lz-search-clear:hover {
+    color: var(--lz-danger);
 }
 .mp-banners-slider {
     display: flex;
-    gap: 20px;
+    gap: 14px;
     overflow-x: auto;
     scrollbar-width: none;
-    padding-bottom: 8px;
+    padding-bottom: 4px;
 }
 .mp-banners-slider::-webkit-scrollbar {
     display: none;
 }
 .mp-banner-slide {
-    flex: 0 0 45%;
-    min-width: 320px;
-    height: 180px;
-    border-radius: 16px;
+    flex: 0 0 85%;
+    max-width: 480px;
+    height: 160px;
+    border-radius: var(--lz-r-lg);
     overflow: hidden;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.06);
-    transition: transform 0.2s;
+    box-shadow: var(--lz-shadow-sm);
+    transition: var(--lz-transition);
 }
-.mp-banner-slide:hover {
-    transform: translateY(-2px);
+@media (min-width: 768px) {
+    .mp-banner-slide {
+        flex: 0 0 45%;
+        height: 180px;
+    }
 }
 .mp-banner-slide img {
     width: 100%;
@@ -400,325 +434,104 @@
     object-fit: cover;
 }
 
-/* SECTION HEADER */
-.mp-section-header {
-    margin-bottom: 24px;
-}
-.mp-section-header h2 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #0f172a;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 0 0 6px 0 !important;
-}
-.mp-section-header p {
-    font-size: 0.95rem;
-    color: #64748b;
-    margin: 0 !important;
-}
-.mp-badge-count {
-    background: rgba(34, 197, 94, 0.1);
-    color: #15803d;
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 4px 10px;
-    border-radius: 20px;
-    text-transform: uppercase;
-}
-.mp-badge-tag {
-    background: #fee2e2;
-    color: #dc2626;
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 4px 10px;
-    border-radius: 20px;
-    text-transform: uppercase;
-}
-
-/* COUPONS */
-.mp-coupons-section {
-    padding: 40px 0;
-}
+/* Coupon styling */
 .mp-coupons-grid {
     display: flex;
-    gap: 20px;
+    gap: 14px;
     overflow-x: auto;
     scrollbar-width: none;
-    padding-bottom: 12px;
+    padding-bottom: 8px;
 }
 .mp-coupons-grid::-webkit-scrollbar {
     display: none;
 }
 .mp-coupon-card {
-    flex: 0 0 320px;
+    flex: 0 0 290px;
     display: flex;
-    background: #fff;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 16px;
+    background: var(--lz-surface);
+    border: 1.5px solid var(--lz-border);
+    border-radius: var(--lz-r-md);
     overflow: hidden;
-    position: relative;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+    box-shadow: var(--lz-shadow-xs);
 }
 .coupon-left {
-    background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+    background: linear-gradient(135deg, var(--lz-primary) 0%, var(--lz-primary-dark) 100%);
     color: #fff;
-    width: 100px;
+    width: 90px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 16px;
+    padding: 12px;
     text-align: center;
-    position: relative;
-}
-.coupon-left::after {
-    content: '';
-    position: absolute;
-    right: -6px;
-    top: 50%;
-    transform: translateY(-50%);
-    border-top: 6px solid transparent;
-    border-bottom: 6px solid transparent;
-    border-left: 6px solid #15803d;
 }
 .coupon-value {
-    font-size: 18px;
+    font-size: 15px;
     font-weight: 800;
     line-height: 1.1;
 }
 .coupon-min {
     font-size: 9px;
     opacity: 0.9;
-    margin: 4px 0 0 0;
+    margin-top: 4px;
     font-weight: 600;
-    display: block;
 }
 .coupon-right {
     flex: 1;
-    padding: 16px;
+    padding: 12px 14px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
 }
 .coupon-right strong {
-    font-size: 14px;
-    color: #0f172a;
-    display: block;
+    font-size: 13.5px;
+    color: var(--lz-text);
     margin-bottom: 2px;
 }
 .coupon-desc {
     font-size: 11px;
-    color: #64748b;
-    margin: 0 0 8px 0;
+    color: var(--lz-text-muted);
+    margin: 0 0 6px 0;
+    line-height: 1.3;
 }
 .coupon-code-wrapper {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #f1f5f9;
-    border-radius: 8px;
+    background: var(--lz-surface-muted);
+    border-radius: var(--lz-r-xs);
     padding: 4px 8px;
 }
 .coupon-code {
     font-family: monospace;
     font-weight: 700;
     font-size: 12px;
-    color: #334155;
+    color: var(--lz-text);
 }
 .copy-coupon-btn {
     background: none;
     border: none;
-    color: #16a34a;
+    color: var(--lz-primary-dark);
     font-size: 11px;
     font-weight: 700;
     cursor: pointer;
-    padding: 2px 6px;
+    padding: 2px 4px;
     display: flex;
     align-items: center;
     gap: 4px;
-    transition: color 0.2s;
 }
-.copy-coupon-btn:hover {
-    color: #15803d;
-}
-
-/* DISCOUNTED PRODUCTS */
-.mp-discounted-products-section {
-    padding: 40px 0;
-}
-.mp-discounted-products-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 24px;
-}
-.mp-discount-product-card {
-    background: #fff;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 16px;
-    overflow: hidden;
-    transition: transform 0.2s, box-shadow 0.2s;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.02);
-}
-.mp-discount-product-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.05);
-}
-.product-image-wrapper {
-    height: 160px;
-    position: relative;
-    background: #f8fafc;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-}
-.product-image-wrapper img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-.product-placeholder-icon {
-    font-size: 48px;
-    color: #cbd5e1;
-}
-.discount-badge {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    background: #dc2626;
-    color: #fff;
-    font-size: 11px;
-    font-weight: 800;
-    padding: 4px 8px;
-    border-radius: 6px;
-}
-.product-info-wrapper {
-    padding: 16px;
-}
-.product-store-name {
-    font-size: 11px;
-    font-weight: 700;
-    color: #16a34a;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    margin-bottom: 6px;
-}
-.product-title {
-    font-size: 14px;
-    font-weight: 800;
-    color: #0f172a;
-    margin: 0 0 4px 0;
-}
-.product-desc {
-    font-size: 12px;
-    color: #64748b;
-    margin: 0 0 16px 0;
-    height: 36px;
-    overflow: hidden;
-}
-.product-price-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.prices {
-    display: flex;
-    flex-direction: column;
-}
-.price-discount {
-    font-size: 15px;
-    font-weight: 800;
+.mp-badge-tag {
+    background: #fee2e2;
     color: #dc2626;
-}
-.price-original {
-    font-size: 11px;
-    color: #94a3b8;
-    text-decoration: line-through;
-}
-.view-store-btn {
-    padding: 8px 14px;
-    background: #16a34a;
-    color: #fff !important;
-    font-size: 12px;
-    font-weight: 700;
-    border-radius: 8px;
-    text-decoration: none;
-    transition: background 0.2s;
-}
-.view-store-btn:hover {
-    background: #15803d;
-}
-
-.mp-marketplace{background:#fff;color:#101828}
-.mp-marketplace-hero{position:relative;overflow:hidden;padding:96px 0 68px!important;background:linear-gradient(180deg,#f6fbf7 0%,#fff 82%)!important}
-.mp-marketplace-hero:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 84% 12%,rgba(34,197,94,.2),transparent 30%),linear-gradient(90deg,rgba(22,163,74,.1),transparent 42%);pointer-events:none}
-.mp-marketplace-hero .container{position:relative;z-index:1}
-.mp-marketplace-hero>.container>h1,.mp-marketplace-hero>.container>p{display:none}
-.mp-hero-kicker{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid rgba(22,163,74,.22);color:#137b3b;border-radius:999px;padding:9px 14px;font-size:13px;font-weight:900;margin-bottom:18px}
-.mp-hero-copy h1{font-family:Outfit,Inter,sans-serif;font-size:clamp(36px,4.8vw,62px)!important;line-height:1!important;font-weight:900!important;max-width:780px;margin:0 auto 18px!important;color:#101828!important;letter-spacing:0!important}
-.mp-hero-copy p{font-size:18px!important;line-height:1.65!important;color:#475467!important;max-width:680px!important;margin:0 auto 28px!important}
-.mp-search-bar{border:1px solid #e7eaee!important;border-radius:8px!important;box-shadow:0 18px 45px rgba(16,24,40,.1)!important;max-width:760px!important}
-.mp-search-input input{font-size:15px!important;color:#101828!important}
-.mp-search-btn{border-radius:8px!important;background:#16a34a!important;font-weight:900!important}
-.mp-categories,.mp-stores,.mp-how-it-works,.mp-benefits{background:#fff!important}
-.mp-categories h2,.mp-section-header h2,.mp-stores h2,.mp-how-it-works h2,.mp-benefits h2{font-family:Outfit,Inter,sans-serif;color:#101828!important;font-weight:900!important;letter-spacing:0!important}
-.mp-category-icon,.mp-store-card,.mp-coupon-card,.mp-product-card{border-radius:8px!important}
-.mp-category-item:hover .mp-category-icon,.mp-store-card:hover,.mp-product-card:hover{box-shadow:0 18px 36px rgba(16,24,40,.09)!important}
-.mp-store-card{border:1px solid #e7eaee!important;box-shadow:none!important}
-.mp-cta-final{background:linear-gradient(135deg,#16a34a,#0f7a39)!important}
-
-/* RESPONSIVE */
-@media(max-width:768px){
-    .mp-marketplace-hero h1{font-size:1.8rem}
-    .mp-search-bar{flex-direction:column}
-    .mp-steps{flex-direction:column;align-items:center}
-    .mp-stores-grid{grid-template-columns:1fr}
-    .mp-banner-slide {
-        flex: 0 0 80%;
-    }
+    font-size: 10px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: var(--lz-r-full);
 }
 </style>
 @endpush
 
-@if(gs('google_maps_api'))
-@push('script-lib')
-<script src="https://maps.googleapis.com/maps/api/js?key={{ gs('google_maps_api') }}&libraries=places" defer></script>
-@endpush
-@endif
-
 @push('script')
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  "name": "Lizto Delivery",
-  "url": "{{ route('delivery.marketplace') }}",
-  "description": "Delivery en Tarapoto. Pide comida, restaurantes, farmacia, licores y más.",
-  "potentialAction": {
-    "@type": "SearchAction",
-    "target": "{{ route('delivery.marketplace') }}?q={search_term_string}",
-    "query-input": "required name=search_term_string"
-  }
-}
-</script>
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "LocalBusiness",
-  "name": "Lizto Delivery Tarapoto",
-  "image": "{{ siteLogo() }}",
-  "@id": "{{ route('delivery.marketplace') }}",
-  "url": "{{ route('delivery.marketplace') }}",
-  "telephone": "+51997428341",
-  "description": "Plataforma de delivery y taxi en Tarapoto.",
-  "address": { "@type": "PostalAddress", "addressLocality": "Tarapoto", "addressRegion": "San Martín", "addressCountry": "PE" },
-  "geo": { "@type": "GeoCoordinates", "latitude": -6.4833, "longitude": -76.3667 },
-  "openingHoursSpecification": { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"], "opens": "00:00", "closes": "23:59" }
-}
-</script>
 <script>
 window.addEventListener('load', function () {
     var csrfMeta = document.querySelector('meta[name="csrf-token"]');
@@ -726,23 +539,9 @@ window.addEventListener('load', function () {
     var locationLat = null;
     var locationLng = null;
 
-    function saveLocation(lat, lng, label) {
-        locationLat = lat;
-        locationLng = lng;
-        fetch('/location/save', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
-            body: JSON.stringify({ lat: lat, lng: lng, label: label })
-        }).then(function(){ 
-            refreshFees(); 
-            if (typeof window.updateHeaderLocation === 'function') window.updateHeaderLocation();
-        }).catch(function(){});
-    }
-
     function refreshFees() {
         if (!locationLat || !locationLng) return;
-        document.querySelectorAll('.mp-store-card').forEach(function(card) {
+        document.querySelectorAll('.lz-store-card').forEach(function(card) {
             var storeId = card.getAttribute('data-store-id');
             var feeEl = card.querySelector('.store-fee-amount');
             var distEl = card.querySelector('.store-distance');
@@ -752,7 +551,7 @@ window.addEventListener('load', function () {
                 .then(function(d) {
                     if (d && d.delivery_fee != null) {
                         feeEl.textContent = d.delivery_fee.toFixed(2);
-                        if (distEl && d.distance_km != null) distEl.textContent = d.distance_km.toFixed(1) + ' km';
+                        if (distEl && d.distance_km != null) distEl.textContent = '· ' + d.distance_km.toFixed(1) + ' km';
                     }
                 }).catch(function(){});
         });
@@ -761,7 +560,11 @@ window.addEventListener('load', function () {
     fetch('/location/get', { headers: { 'Accept': 'application/json' } })
         .then(function(r) { return r.json(); })
         .then(function(data) {
-            if (data.lat && data.lng) { locationLat = data.lat; locationLng = data.lng; refreshFees(); }
+            if (data.lat && data.lng) {
+                locationLat = data.lat;
+                locationLng = data.lng;
+                refreshFees();
+            }
         }).catch(function(){});
 });
 
@@ -770,28 +573,12 @@ function copyCouponCode(code, element) {
         navigator.clipboard.writeText(code).then(function() {
             var originalHTML = element.innerHTML;
             element.innerHTML = '<i class="las la-check"></i> ¡Copiado!';
-            element.style.color = '#15803d';
+            element.style.color = 'var(--lz-primary-dark)';
             setTimeout(function() {
                 element.innerHTML = originalHTML;
                 element.style.color = '';
             }, 2000);
         });
-    } else {
-        var textArea = document.createElement("textarea");
-        textArea.value = code;
-        document.body.appendChild(textArea);
-        textArea.select();
-        try {
-            document.execCommand('copy');
-            var originalHTML = element.innerHTML;
-            element.innerHTML = '<i class="las la-check"></i> ¡Copiado!';
-            element.style.color = '#15803d';
-            setTimeout(function() {
-                element.innerHTML = originalHTML;
-                element.style.color = '';
-            }, 2000);
-        } catch (err) {}
-        document.body.removeChild(textArea);
     }
 }
 </script>

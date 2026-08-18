@@ -53,7 +53,7 @@ class AdminDeliveryRequestDispatchService
         $courier = Driver::query()
             ->where('status', Status::ENABLE)
             ->where('online_status', 1)
-            ->whereIn('service_type', ['delivery', 'both'])
+            ->where('service_type', 'delivery')
             ->whereHas('wallet', fn ($query) => $query->where('balance', '>', 0))
             ->when($attemptedIds, fn ($query) => $query->whereNotIn('id', $attemptedIds))
             ->orderBy('id')
@@ -65,7 +65,7 @@ class AdminDeliveryRequestDispatchService
             $courier = Driver::query()
                 ->where('status', Status::ENABLE)
                 ->where('online_status', 1)
-                ->whereIn('service_type', ['delivery', 'both'])
+                ->where('service_type', 'delivery')
                 ->whereHas('wallet', fn ($query) => $query->where('balance', '>', 0))
                 ->orderBy('id')
                 ->first();
@@ -92,12 +92,16 @@ class AdminDeliveryRequestDispatchService
             [
                 'type'         => 'targeted_delivery_request',
                 'favor_id'     => (string) $favor->id,
+                'order_id'     => (string) $favor->id,
+                'job_id'       => (string) $favor->id,
                 'order_no'     => $favor->order_no,
+                'for_app'      => 'courier_job_detail-' . $favor->id,
                 'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
             ]
         );
 
         event(new FavorStatusUpdated($favor->fresh(), 'waiting_courier_response'));
+        event(new \App\Events\NewJobAvailable($favor->fresh(), '¿Puedes realizar este envío? #' . $favor->order_no));
 
         return $courier;
     }

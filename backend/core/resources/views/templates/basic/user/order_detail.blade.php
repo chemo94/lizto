@@ -1,202 +1,347 @@
 @extends('Template::layouts.frontend')
+
 @section('content')
-<style>
-.upanel{padding:100px 0 60px;min-height:100vh;background:#f8fdf8}
-.upanel .container{max-width:900px}
-.upanel-back{display:inline-flex;align-items:center;gap:6px;color:#16a34a;font-weight:700;font-size:13px;text-decoration:none;margin-bottom:20px}
-.upanel-back:hover{color:#15803d}
-.upanel-head{margin-bottom:24px}
-.upanel-head h1{font-size:26px;font-weight:800;color:#1a2e1a;margin:0 0 4px}
-.upanel-head p{color:#68736c;margin:0;font-size:14px}
-.upanel-card{background:#fff;border:1px solid #e0eee2;border-radius:16px;padding:24px;margin-bottom:20px}
-.upanel-card h3{font-size:16px;font-weight:800;color:#1a2e1a;margin:0 0 16px;display:flex;align-items:center;gap:8px}
-.upanel-card h3 i{color:#16a34a}
-.status-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;text-transform:uppercase}
-.status-pending{background:#fef3c7;color:#92400e}
-.status-confirmed{background:#dbeafe;color:#1e40af}
-.status-preparing{background:#fef3c7;color:#92400e}
-.status-on_the_way{background:#dcfce7;color:#166534}
-.status-delivered{background:#d1fae5;color:#065f46}
-.status-cancelled{background:#fee2e2;color:#991b1b}
-.order-map{width:100%;height:350px;border-radius:12px;border:1px solid #e0eee2;margin-bottom:16px}
-.order-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.order-info-item{padding:14px;background:#f8fdf8;border-radius:12px}
-.order-info-item label{font-size:11px;font-weight:700;color:#68736c;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px}
-.order-info-item span{font-size:14px;color:#1a2e1a;font-weight:600}
-.order-items{list-style:0;padding:0;margin:0}
-.order-items li{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f5f0;font-size:14px}
-.order-items li:last-child{border:0}
-.order-items .item-name{color:#1a2e1a;font-weight:600}
-.order-items .item-detail{color:#68736c;font-size:12px}
-.order-items .item-price{font-weight:700;color:#1a2e1a}
-.order-totals{border-top:2px solid #e0eee2;padding-top:12px;margin-top:8px}
-.order-totals div{display:flex;justify-content:space-between;padding:4px 0;font-size:14px}
-.order-totals .total-row{font-weight:800;font-size:16px;color:#16a34a;padding-top:8px;border-top:1px solid #e0eee2;margin-top:4px}
-.driver-card{display:flex;align-items:center;gap:14px;padding:14px;background:#f0fdf4;border-radius:12px}
-.driver-avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;display:grid;place-items:center;font-size:20px;overflow:hidden}
-.driver-avatar img{width:100%;height:100%;object-fit:cover}
-.driver-info strong{font-size:14px;color:#1a2e1a;display:block}
-.driver-info small{color:#68736c;font-size:12px}
-.no-driver{text-align:center;padding:20px;color:#68736c;font-size:13px}
-.no-driver i{font-size:32px;color:#d1d5db;display:block;margin-bottom:8px}
-.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px}
-.legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:#374151}
-.legend-dot{width:12px;height:12px;border-radius:50%}
-.dot-store{background:#ea4335}
-.dot-user{background:#4285f4}
-.dot-driver{background:#16a34a}
-</style>
+@php
+    $statusMap = [
+        'pending'          => ['label' => 'Pedido Recibido', 'step' => 1, 'icon' => 'las la-clock', 'color' => '#f59e0b'],
+        'confirmed'        => ['label' => 'Tienda Confirmó', 'step' => 2, 'icon' => 'las la-store', 'color' => '#3b82f6'],
+        'preparing'        => ['label' => 'En Preparación', 'step' => 3, 'icon' => 'las la-utensils', 'color' => '#8b5cf6'],
+        'driver_assigned'  => ['label' => 'Repartidor Asignado', 'step' => 3, 'icon' => 'las la-user-check', 'color' => '#10b981'],
+        'on_the_way'       => ['label' => 'En Camino', 'step' => 4, 'icon' => 'las la-motorcycle', 'color' => '#10b981'],
+        'delivered'        => ['label' => 'Entregado con Éxito', 'step' => 5, 'icon' => 'las la-check-circle', 'color' => '#059669'],
+        'cancelled'        => ['label' => 'Pedido Cancelado', 'step' => 0, 'icon' => 'las la-times-circle', 'color' => '#ef4444'],
+    ];
 
-<div class="upanel">
+    $curStatus = $statusMap[$order->status] ?? ['label' => ucfirst($order->status), 'step' => 1, 'icon' => 'las la-clock', 'color' => '#10b981'];
+    $step = $curStatus['step'];
+@endphp
+
+<main class="lz-order-detail-page">
     <div class="container">
-        <a href="{{ route('user.dashboard') }}" class="upanel-back"><i class="las la-arrow-left"></i> Volver al Panel</a>
-
-        <div class="upanel-head">
-            <h1>Pedido {{ $order->order_no }}</h1>
-            <p>{{ $order->created_at->format('d/m/Y H:i') }}</p>
+        {{-- Back & Actions --}}
+        <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+            <a href="{{ route('user.dashboard') }}" class="lz-back-btn">
+                <i class="las la-arrow-left"></i> Mis pedidos
+            </a>
+            @if($order->store)
+                <a href="{{ route('delivery.store', $order->store) }}" class="btn btn-outline-success btn-sm rounded-pill fw-bold">
+                    <i class="las la-redo"></i> Volver a pedir en esta tienda
+                </a>
+            @endif
         </div>
 
-        <!-- Status -->
-        <div class="upanel-card">
-            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
-                <div>
-                    <span class="status-badge status-{{ $order->status }}">
-                        @if($order->status === 'pending') <i class="las la-clock"></i>
-                        @elseif(in_array($order->status, ['confirmed','preparing'])) <i class="las la-utensils"></i>
-                        @elseif($order->status === 'on_the_way') <i class="las la-truck"></i>
-                        @elseif($order->status === 'delivered') <i class="las la-check-circle"></i>
-                        @elseif($order->status === 'cancelled') <i class="las la-times-circle"></i>
-                        @endif
-                        {{ ucfirst(str_replace('_', ' ', $order->status)) }}
-                    </span>
+        {{-- Top Success Card --}}
+        <div class="lz-order-card mb-4 text-center py-4">
+            <div class="lz-order-status-icon-wrap" style="background: {{ $curStatus['color'] }}20; color: {{ $curStatus['color'] }};">
+                <i class="{{ $curStatus['icon'] }}"></i>
+            </div>
+            <h1 class="lz-order-headline mt-3 mb-1">¡{{ $curStatus['label'] }}!</h1>
+            <p class="text-muted mb-0 font-monospace">Orden #{{ $order->order_no }} · {{ $order->created_at->format('d/m/Y h:i A') }}</p>
+            @if($order->status !== 'delivered' && $order->status !== 'cancelled')
+                <div class="lz-eta-badge mt-3">
+                    <i class="las la-stopwatch"></i> Tiempo estimado de entrega: <strong>25–35 min</strong>
                 </div>
-                <div style="text-align:right">
-                    <small style="color:#68736c">Total</small><br>
-                    <strong style="font-size:20px;color:#16a34a">S/ {{ number_format($order->total, 2) }}</strong>
+            @endif
+        </div>
+
+        {{-- Visual Timeline (5 Steps) --}}
+        @if($order->status !== 'cancelled')
+        <div class="lz-order-card mb-4">
+            <h3 class="lz-card-title mb-4"><i class="las la-stream text-success"></i> Estado del Pedido</h3>
+            <div class="lz-timeline-steps">
+                <div class="lz-t-step {{ $step >= 1 ? 'completed' : '' }} {{ $step == 1 ? 'current' : '' }}">
+                    <div class="lz-t-icon"><i class="las la-receipt"></i></div>
+                    <span class="lz-t-label">Recibido</span>
+                </div>
+                <div class="lz-t-line {{ $step >= 2 ? 'completed' : '' }}"></div>
+
+                <div class="lz-t-step {{ $step >= 2 ? 'completed' : '' }} {{ $step == 2 ? 'current' : '' }}">
+                    <div class="lz-t-icon"><i class="las la-store"></i></div>
+                    <span class="lz-t-label">Confirmado</span>
+                </div>
+                <div class="lz-t-line {{ $step >= 3 ? 'completed' : '' }}"></div>
+
+                <div class="lz-t-step {{ $step >= 3 ? 'completed' : '' }} {{ $step == 3 ? 'current' : '' }}">
+                    <div class="lz-t-icon"><i class="las la-utensils"></i></div>
+                    <span class="lz-t-label">Preparando</span>
+                </div>
+                <div class="lz-t-line {{ $step >= 4 ? 'completed' : '' }}"></div>
+
+                <div class="lz-t-step {{ $step >= 4 ? 'completed' : '' }} {{ $step == 4 ? 'current' : '' }}">
+                    <div class="lz-t-icon"><i class="las la-motorcycle"></i></div>
+                    <span class="lz-t-label">En camino</span>
+                </div>
+                <div class="lz-t-line {{ $step >= 5 ? 'completed' : '' }}"></div>
+
+                <div class="lz-t-step {{ $step >= 5 ? 'completed' : '' }} {{ $step == 5 ? 'current' : '' }}">
+                    <div class="lz-t-icon"><i class="las la-home"></i></div>
+                    <span class="lz-t-label">Entregado</span>
                 </div>
             </div>
         </div>
+        @endif
 
-        <!-- Map -->
+        {{-- Tracking Map & Driver Info --}}
         @if($order->delivery_lat && $order->delivery_lng && $order->store?->latitude && $order->store?->longitude)
-        <div class="upanel-card">
-            <h3><i class="las la-map-marked-alt"></i> Ubicación del Pedido</h3>
-            <div id="order-map" class="order-map"></div>
-            <div class="legend">
-                <div class="legend-item"><div class="legend-dot dot-store"></div> Tienda</div>
-                <div class="legend-item"><div class="legend-dot dot-user"></div> Tu ubicación</div>
+        <div class="lz-order-card mb-4">
+            <h3 class="lz-card-title mb-3"><i class="las la-map-marked-alt text-success"></i> Seguimiento en Mapa</h3>
+            <div id="order-map" class="lz-tracking-map"></div>
+            <div class="d-flex gap-3 mt-2 flex-wrap" style="font-size:12px;font-weight:600;">
+                <span class="d-flex align-items-center gap-1"><span class="lz-dot" style="background:#ea4335"></span> Tienda: {{ $order->store->name }}</span>
+                <span class="d-flex align-items-center gap-1"><span class="lz-dot" style="background:#4285f4"></span> Tu ubicación de entrega</span>
                 @if($order->driver)
-                <div class="legend-item"><div class="legend-dot dot-driver"></div> Repartidor</div>
+                    <span class="d-flex align-items-center gap-1"><span class="lz-dot" style="background:#10b981"></span> Repartidor: {{ $order->driver->fullname }}</span>
                 @endif
             </div>
         </div>
         @endif
 
-        <!-- Driver -->
-        <div class="upanel-card">
-            <h3><i class="las la-motorcycle"></i> Repartidor</h3>
+        {{-- Repartidor Card --}}
+        <div class="lz-order-card mb-4">
+            <h3 class="lz-card-title mb-3"><i class="las la-user-astronaut text-success"></i> Repartidor Asignado</h3>
             @if($order->driver)
-            <div class="driver-card">
-                <div class="driver-avatar">
-                    @if($order->driver->image)
-                        <img src="{{ $order->driver->imageSrc }}" alt="{{ $order->driver->fullname }}">
-                    @else
-                        <i class="las la-user"></i>
-                    @endif
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 p-3" style="background:var(--lz-surface-muted);border-radius:14px;">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="lz-driver-avatar">
+                        @if($order->driver->image)
+                            <img src="{{ $order->driver->imageSrc }}" alt="{{ $order->driver->fullname }}">
+                        @else
+                            <i class="las la-user"></i>
+                        @endif
+                    </div>
+                    <div>
+                        <strong class="d-block text-dark font-weight-bold" style="font-size:15px;">{{ $order->driver->fullname }}</strong>
+                        <span class="text-muted small"><i class="las la-motorcycle"></i> Repartidor Lizto</span>
+                    </div>
                 </div>
-                <div class="driver-info">
-                    <strong>{{ $order->driver->fullname }}</strong>
-                    <small><i class="las la-phone"></i> {{ $order->driver->dial_code }}{{ $order->driver->mobile }}</small>
+                <div class="d-flex gap-2">
+                    <a href="tel:{{ $order->driver->dial_code }}{{ $order->driver->mobile }}" class="btn btn-outline-success btn-sm rounded-pill fw-bold px-3">
+                        <i class="las la-phone"></i> Llamar
+                    </a>
+                    <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', ($order->driver->dial_code . $order->driver->mobile)) }}" target="_blank" class="btn btn-success btn-sm rounded-pill fw-bold px-3">
+                        <i class="lab la-whatsapp"></i> WhatsApp
+                    </a>
                 </div>
             </div>
             @else
-            <div class="no-driver">
-                <i class="las la-motorcycle"></i>
-                <p>Sin repartidor asignado aún</p>
+            <div class="text-center py-4" style="background:var(--lz-surface-muted);border-radius:14px;color:var(--lz-text-muted);">
+                <i class="las la-motorcycle" style="font-size:36px;color:#cbd5e1;"></i>
+                <p class="mb-0 mt-2 font-weight-bold">Asignando al repartidor más cercano...</p>
+                <small>Te notificaremos en cuanto acepte tu pedido.</small>
             </div>
             @endif
         </div>
 
-        <!-- Order Info -->
-        <div class="upanel-card">
-            <h3><i class="las la-info-circle"></i> Detalles del Pedido</h3>
-            <div class="order-info-grid">
-                <div class="order-info-item">
-                    <label>Tienda</label>
-                    <span>{{ $order->store?->name ?? 'N/A' }}</span>
-                </div>
-                <div class="order-info-item">
-                    <label>Método de Pago</label>
-                    <span>{{ $order->payment_method_name ?? 'Efectivo' }}</span>
-                </div>
-                <div class="order-info-item">
-                    <label>Dirección de Entrega</label>
-                    <span>{{ $order->delivery_address }}</span>
-                </div>
-                <div class="order-info-item">
-                    <label>Contacto</label>
-                    <span>{{ $order->contact_name }} — {{ $order->contact_phone }}</span>
-                </div>
-            </div>
-            @if($order->notes)
-            <div style="margin-top:12px;padding:12px;background:#fffbeb;border-radius:10px;font-size:13px;color:#92400e">
-                <strong><i class="las la-sticky-note"></i> Notas:</strong> {{ $order->notes }}
-            </div>
-            @endif
-        </div>
-
-        <!-- Items -->
-        <div class="upanel-card">
-            <h3><i class="las la-shopping-bag"></i> Productos</h3>
-            <ul class="order-items">
+        {{-- Products & Summary --}}
+        <div class="lz-order-card mb-4">
+            <h3 class="lz-card-title mb-3"><i class="las la-shopping-bag text-success"></i> Detalle de Productos</h3>
+            <div class="mb-3">
                 @foreach($order->items as $item)
-                <li>
+                <div class="d-flex justify-content-between py-2 border-bottom" style="font-size:14px;">
                     <div>
-                        <div class="item-name">{{ $item->product_name }}</div>
-                        <div class="item-detail">
-                            Cant: {{ $item->quantity }}
-                            @if($item->variation) &middot; {{ $item->variation->variation_name }} @endif
-                            @foreach($item->addons as $a) &middot; +{{ $a->addon_name }} @endforeach
-                        </div>
+                        <strong class="text-dark">{{ $item->quantity }}x</strong> {{ $item->product_name }}
                     </div>
-                    <div class="item-price">S/ {{ number_format($item->total_price, 2) }}</div>
-                </li>
+                    <span class="fw-bold text-dark">S/ {{ number_format($item->total_price, 2) }}</span>
+                </div>
                 @endforeach
-            </ul>
-            <div class="order-totals">
-                <div><span>Subtotal</span><span>S/ {{ number_format($order->subtotal, 2) }}</span></div>
-                <div><span>Delivery</span><span>S/ {{ number_format($order->delivery_fee, 2) }}</span></div>
+            </div>
+
+            <div class="lz-cart-summary-box pt-2">
+                <div class="lz-summary-line">
+                    <span>Subtotal</span>
+                    <strong>S/ {{ number_format($order->subtotal, 2) }}</strong>
+                </div>
+                <div class="lz-summary-line">
+                    <span>Envío</span>
+                    <strong>S/ {{ number_format($order->delivery_fee, 2) }}</strong>
+                </div>
                 @if($order->tip > 0)
-                <div><span>Propina</span><span>S/ {{ number_format($order->tip, 2) }}</span></div>
+                <div class="lz-summary-line">
+                    <span>Propina</span>
+                    <strong>S/ {{ number_format($order->tip, 2) }}</strong>
+                </div>
                 @endif
                 @if($order->discount > 0)
-                <div><span>Descuento</span><span>-S/ {{ number_format($order->discount, 2) }}</span></div>
+                <div class="lz-summary-line text-success">
+                    <span>Descuento</span>
+                    <strong>-S/ {{ number_format($order->discount, 2) }}</strong>
+                </div>
                 @endif
-                <div class="total-row"><span>Total</span><span>S/ {{ number_format($order->total, 2) }}</span></div>
+                <div class="lz-summary-line lz-summary-total">
+                    <span>Total Pagado</span>
+                    <strong style="color:var(--lz-primary-dark);font-size:22px;">S/ {{ number_format($order->total, 2) }}</strong>
+                </div>
             </div>
         </div>
+
     </div>
-</div>
+</main>
+@endsection
+
+@push('style')
+<style>
+.lz-order-detail-page {
+    padding: 24px 0 60px;
+    background: var(--lz-bg);
+    min-height: 100vh;
+}
+.lz-order-card {
+    background: var(--lz-surface);
+    border: 1.5px solid var(--lz-border);
+    border-radius: var(--lz-r-lg);
+    padding: 24px;
+    box-shadow: var(--lz-shadow-sm);
+}
+.lz-order-status-icon-wrap {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+}
+.lz-order-headline {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--lz-text);
+}
+.lz-eta-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--lz-primary-light);
+    color: var(--lz-primary-dark);
+    padding: 6px 14px;
+    border-radius: var(--lz-r-full);
+    font-size: 13px;
+    font-weight: 600;
+}
+.lz-card-title {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--lz-text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+/* Timeline */
+.lz-timeline-steps {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    padding: 10px 0;
+}
+.lz-t-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+}
+.lz-t-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--lz-surface-muted);
+    color: var(--lz-text-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: var(--lz-transition);
+    border: 2px solid #fff;
+    box-shadow: var(--lz-shadow-xs);
+}
+.lz-t-step.completed .lz-t-icon {
+    background: var(--lz-primary);
+    color: #fff;
+}
+.lz-t-step.current .lz-t-icon {
+    background: var(--lz-primary);
+    color: #fff;
+    box-shadow: 0 0 0 4px var(--lz-primary-glow);
+}
+.lz-t-label {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--lz-text-muted);
+    margin-top: 6px;
+    text-align: center;
+}
+.lz-t-step.completed .lz-t-label, .lz-t-step.current .lz-t-label {
+    color: var(--lz-text);
+}
+.lz-t-line {
+    flex: 1;
+    height: 3px;
+    background: var(--lz-border);
+    margin: 0 8px;
+    transform: translateY(-12px);
+}
+.lz-t-line.completed {
+    background: var(--lz-primary);
+}
+
+.lz-tracking-map {
+    width: 100%;
+    height: 280px;
+    border-radius: var(--lz-r-md);
+    border: 1.5px solid var(--lz-border);
+}
+.lz-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.lz-driver-avatar {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: var(--lz-primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    overflow: hidden;
+}
+.lz-driver-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+</style>
+@endpush
 
 @if($order->delivery_lat && $order->delivery_lng && $order->store?->latitude && $order->store?->longitude)
 @if(gs('google_maps_api'))
+@push('script-lib')
+<script src="https://maps.googleapis.com/maps/api/js?key={{ gs('google_maps_api') }}&callback=initOrderMap" async defer></script>
+@endpush
+@push('script')
 <script>
 function initOrderMap() {
-    var storeLat = {{ $order->store->latitude }};
-    var storeLng = {{ $order->store->longitude }};
-    var userLat  = {{ $order->delivery_lat }};
-    var userLng  = {{ $order->delivery_lng }};
+    var storeLat = {{ (float) $order->store->latitude }};
+    var storeLng = {{ (float) $order->store->longitude }};
+    var userLat  = {{ (float) $order->delivery_lat }};
+    var userLng  = {{ (float) $order->delivery_lng }};
 
-    var map = new google.maps.Map(document.getElementById('order-map'), {
-        zoom: 13,
+    var mapEl = document.getElementById('order-map');
+    if (!mapEl) return;
+
+    var map = new google.maps.Map(mapEl, {
+        zoom: 14,
         center: { lat: (storeLat + userLat) / 2, lng: (storeLng + userLng) / 2 },
-        styles: [
-            { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-            { featureType: 'transit', stylers: [{ visibility: 'off' }] }
-        ]
+        disableDefaultUI: true,
+        zoomControl: true
     });
 
-    // Store marker
     new google.maps.Marker({
         position: { lat: storeLat, lng: storeLng },
         map: map,
@@ -204,15 +349,13 @@ function initOrderMap() {
         icon: { url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png' }
     });
 
-    // User marker
     new google.maps.Marker({
         position: { lat: userLat, lng: userLng },
         map: map,
-        title: 'Tu ubicación',
+        title: 'Tu dirección',
         icon: { url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png' }
     });
 
-    // Driver marker (if assigned)
     @if($order->driver && $order->driver->current_lat && $order->driver->current_lot)
     var driverMarker = new google.maps.Marker({
         position: { lat: {{ $order->driver->current_lat }}, lng: {{ $order->driver->current_lot }} },
@@ -222,35 +365,22 @@ function initOrderMap() {
     });
     @endif
 
-    // Fit bounds
     var bounds = new google.maps.LatLngBounds();
     bounds.extend(new google.maps.LatLng(storeLat, storeLng));
     bounds.extend(new google.maps.LatLng(userLat, userLng));
-    @if($order->driver && $order->driver->current_lat && $order->driver->current_lot)
-    bounds.extend(new google.maps.LatLng({{ $order->driver->current_lat }}, {{ $order->driver->current_lot }}));
-    @endif
     map.fitBounds(bounds);
 
-    // Real-time driver location via polling
     @if($order->driver_id && !in_array($order->status, ['delivered', 'cancelled']))
-    var driverMarkerRef = driverMarker || null;
     setInterval(function() {
         fetch('/user/order/{{ $order->id }}/driver-location', {
-            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.lat && data.lng) {
                 var pos = { lat: parseFloat(data.lat), lng: parseFloat(data.lng) };
-                if (driverMarkerRef) {
-                    driverMarkerRef.setPosition(pos);
-                } else {
-                    driverMarkerRef = new google.maps.Marker({
-                        position: pos,
-                        map: map,
-                        title: '{{ addslashes($order->driver->fullname ?? "Repartidor") }}',
-                        icon: { url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png' }
-                    });
+                if (typeof driverMarker !== 'undefined' && driverMarker) {
+                    driverMarker.setPosition(pos);
                 }
             }
         }).catch(function(){});
@@ -258,12 +388,6 @@ function initOrderMap() {
     @endif
 }
 </script>
-<script src="https://maps.googleapis.com/maps/api/js?key={{ gs('google_maps_api') }}&callback=initOrderMap" async defer></script>
-@else
-<div style="padding:20px;text-align:center;color:#68736c;font-size:13px">
-    <i class="las la-map" style="font-size:32px;color:#d1d5db;display:block;margin-bottom:8px"></i>
-    Google Maps no configurado
-</div>
+@endpush
 @endif
 @endif
-@endsection
