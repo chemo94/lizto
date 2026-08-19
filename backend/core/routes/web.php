@@ -56,8 +56,9 @@ Route::controller('SiteController')->group(function () {
     Route::get('/api/docs', 'apiDocs')->name('api.docs');
     Route::get('/auth/token-login', 'tokenLogin')->name('token.login');
 
-    // Cart (session-based) — /cart-count MUST be before /cart/{storeId}
+    // Cart (session-based) — /cart-count & /cart-summary MUST be before /cart/{storeId}
     Route::get('/cart-count', 'cartCount');
+    Route::get('/cart-summary', 'cartSummary');
     Route::get('/cart/{storeId}', 'cartGet');
     Route::post('/cart/{storeId}/add', 'cartAdd');
     Route::post('/cart/{storeId}/remove', 'cartRemove');

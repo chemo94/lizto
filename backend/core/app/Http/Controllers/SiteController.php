@@ -353,9 +353,32 @@ class SiteController extends Controller
         $seo = \App\Models\Frontend::where('data_keys', 'seo.data')->first();
         $seoContents = $seo ? $seo->seo_content : null;
         $seoImage = $seo ? getImage(getFilePath('seo') . '/' . @$seo->data_values->image) : siteLogo();
+        $selectedCatParam = $request->query('category');
+        $selectedSubCatParam = $request->query('subcategory');
+        $activeCategory = null;
+
         $categories = \App\Models\GeneralCategory::active()->with('subCategories')->orderBy('sort_order')->get();
-        $subCategories = \App\Models\SubCategory::active()->orderBy('sort_order')->get();
-        $query = Store::active()->open()->withActivePackages()->with('subCategories')->withCount('products');
+
+        $subCategoriesQuery = \App\Models\SubCategory::active()->orderBy('sort_order');
+
+        if ($selectedCatParam) {
+            if ($selectedCatParam === 'markets') {
+                $marketCatIds = $categories->whereIn('slug', ['super-mini-markets', 'farmacia'])->pluck('id')->toArray();
+                if (empty($marketCatIds)) $marketCatIds = [2, 6];
+                $subCategoriesQuery->whereIn('general_category_id', $marketCatIds);
+            } elseif (is_numeric($selectedCatParam)) {
+                $subCategoriesQuery->where('general_category_id', $selectedCatParam);
+                $activeCategory = $categories->firstWhere('id', (int)$selectedCatParam);
+            } else {
+                $activeCategory = $categories->firstWhere('slug', $selectedCatParam);
+                if ($activeCategory) {
+                    $subCategoriesQuery->where('general_category_id', $activeCategory->id);
+                }
+            }
+        }
+
+        $subCategories = $subCategoriesQuery->get();
+        $query = Store::active()->open()->withActivePackages()->with(['subCategories', 'generalCategories'])->withCount('products');
 
         if ($request->filled('q')) {
             $search = trim($request->q);
@@ -366,12 +389,22 @@ class SiteController extends Controller
             });
         }
 
-        if ($request->filled('category')) {
-            $query->whereHas('generalCategories', fn ($category) => $category->where('general_categories.id', $request->category));
+        if ($selectedCatParam) {
+            if ($selectedCatParam === 'markets') {
+                $marketCatIds = $categories->whereIn('slug', ['super-mini-markets', 'farmacia'])->pluck('id')->toArray();
+                if (empty($marketCatIds)) $marketCatIds = [2, 6];
+                $query->whereHas('generalCategories', fn ($category) => $category->whereIn('general_categories.id', $marketCatIds));
+            } elseif (is_numeric($selectedCatParam)) {
+                $query->whereHas('generalCategories', fn ($category) => $category->where('general_categories.id', $selectedCatParam));
+            } else {
+                if ($activeCategory) {
+                    $query->whereHas('generalCategories', fn ($category) => $category->where('general_categories.id', $activeCategory->id));
+                }
+            }
         }
 
-        if ($request->filled('subcategory')) {
-            $query->whereHas('subCategories', fn ($subCategory) => $subCategory->where('sub_categories.id', $request->subcategory));
+        if ($selectedSubCatParam) {
+            $query->whereHas('subCategories', fn ($subCategory) => $subCategory->where('sub_categories.id', $selectedSubCatParam));
         }
 
         $stores = $query->orderByFeatured()->get();
@@ -431,7 +464,7 @@ class SiteController extends Controller
         return view('Template::delivery.marketplace', compact(
             'pageTitle', 'seoContents', 'seoImage', 'categories', 'subCategories', 'stores', 'products', 
             'storeCount', 'packages', 'mostOrdered', 'hasFreeDelivery', 'freeRemaining',
-            'banners', 'coupons', 'discountedProducts'
+            'banners', 'coupons', 'discountedProducts', 'activeCategory'
         ));
     }
 
@@ -821,6 +854,16 @@ class SiteController extends Controller
         $store = Store::where('status', 1)->findOrFail($storeId);
         $cart = Session::get("cart_{$storeId}", []);
 
+        // Require user registration / authentication for checkout
+        if (!auth()->check()) {
+            $token = $request->query('token');
+            if ($token) {
+                return redirect('/auth/token-login?token=' . urlencode($token) . '&redirect=' . urlencode($request->fullUrl()));
+            }
+            $notify[] = ['warning', 'Debes registrarte o iniciar sesión para continuar con tu pedido.'];
+            return redirect()->route('delivery.store', ['store' => $store->id, 'require_login' => 1])->withNotify($notify);
+        }
+
         if (empty($cart)) {
             return redirect()->route('delivery.store', $store)->with('error', 'Tu carrito está vacío');
         }
@@ -1129,6 +1172,47 @@ class SiteController extends Controller
         return response()->json(['status' => 'success', 'total_items' => $this->totalCartItems()]);
     }
 
+    public function cartSummary()
+    {
+        $activeCarts = [];
+        foreach (Session::all() as $key => $items) {
+            if (str_starts_with($key, 'cart_') && is_array($items) && !empty($items)) {
+                $storeId = str_replace('cart_', '', $key);
+                $store = Store::find($storeId);
+                if ($store) {
+                    $subtotal = collect($items)->sum(fn($i) => ($i['price'] ?? 0) * ($i['quantity'] ?? 1));
+                    $location = Session::get('delivery_location', []);
+                    $estimate = DeliveryPricing::estimateForStore(
+                        $store,
+                        isset($location['lat']) ? (float) $location['lat'] : null,
+                        isset($location['lng']) ? (float) $location['lng'] : null
+                    );
+                    $deliveryFee = $estimate['delivery_fee'] ?? 0;
+                    $activeCarts[] = [
+                        'store_id'     => $store->id,
+                        'store_name'   => $store->name,
+                        'store_slug'   => $store->slug,
+                        'store_image'  => $store->logo ? getImage(getFilePath('store') . '/' . $store->logo) : null,
+                        'items'        => array_values($items),
+                        'item_count'   => collect($items)->sum('quantity'),
+                        'subtotal'     => round($subtotal, 2),
+                        'delivery_fee' => round($deliveryFee, 2),
+                        'total'        => round($subtotal + $deliveryFee, 2),
+                        'checkout_url' => route('delivery.checkout', ['store' => $store->id]),
+                    ];
+                }
+            }
+        }
+
+        $totalItems = collect($activeCarts)->sum('item_count');
+
+        return response()->json([
+            'status'      => 'success',
+            'total_items' => $totalItems,
+            'carts'       => $activeCarts,
+        ]);
+    }
+
     public function cartCount()
     {
         return response()->json(['status' => 'success', 'total_items' => $this->totalCartItems()]);
@@ -1144,6 +1228,4 @@ class SiteController extends Controller
         }
         return $total;
     }
-
-   
 }
