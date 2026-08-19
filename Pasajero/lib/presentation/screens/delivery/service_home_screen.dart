@@ -602,7 +602,7 @@ class _SubCategoryPills extends StatelessWidget {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(10),
                       child: MyImageWidget(
-                        imageUrl: '${controller.categoryHomeStoreImagePath}/${sub.image}',
+                        imageUrl: '${controller.categoryHomeSubCategoryImagePath}/${sub.image}',
                         boxFit: BoxFit.contain,
                       ),
                     ),

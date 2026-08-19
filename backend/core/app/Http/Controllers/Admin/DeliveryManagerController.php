@@ -846,10 +846,10 @@ class DeliveryManagerController extends Controller
         $stores = Store::where('status', 1)->orderBy('name')->get();
         $activeDrivers = Driver::where('status', Status::ENABLE)
             ->where('online_status', 1)
-            ->whereIn('service_type', ['delivery', 'both'])
+            ->where('service_type', 'delivery')
             ->count();
         $drivers = Driver::where('status', Status::ENABLE)
-            ->whereIn('service_type', ['delivery', 'both'])
+            ->where('service_type', 'delivery')
             ->orderBy('firstname')
             ->get();
         return view('admin.delivery.request', compact('pageTitle', 'stores', 'activeDrivers', 'drivers'));
@@ -959,7 +959,7 @@ class DeliveryManagerController extends Controller
         $assignedDriver = null;
         if ($driverId && $driverId !== 'all') {
             $assignedDriver = Driver::where('status', Status::ENABLE)
-                ->whereIn('service_type', ['delivery', 'both'])
+                ->where('service_type', 'delivery')
                 ->findOrFail($driverId);
         }
 
@@ -990,71 +990,74 @@ class DeliveryManagerController extends Controller
             'payment_method_code' => 0,
         ]);
 
+        // Broadcast real-time event to online couriers
         try {
-
-            // Check push notifications are enabled
-            if (!gs('pn')) {
-                $notify[] = ['warning', 'Solicitud #' . $orderNo . ' creada pero las notificaciones push están desactivadas en configuración general.'];
-                return redirect()->route('admin.delivery.favors')->withNotify($notify);
+            event(new \App\Events\NewJobAvailable($favor, 'Nuevo pedido disponible en ' . $store->name . ' — S/ ' . number_format($deliveryFee, 2)));
+            event(new \App\Events\StoreFavorRequested($favor));
+            if ($assignedDriver) {
+                event(new \App\Events\FavorStatusUpdated($favor, 'waiting_courier_response'));
             }
+        } catch (\Throwable $e) {
+            \Log::error('Real-time broadcast error in admin requestSubmit: ' . $e->getMessage());
+        }
 
-            // Check firebase config
-            $fbConfig = gs('firebase_config');
-            if (!$fbConfig || empty($fbConfig->projectId)) {
-                $notify[] = ['warning', 'Solicitud #' . $orderNo . ' creada pero Firebase no está configurado.'];
-                return redirect()->route('admin.delivery.favors')->withNotify($notify);
-            }
+        $notify = [];
 
-            // Check push_config.json exists
-            $pushConfigPath = getFilePath('pushConfig') . '/push_config.json';
-            if (!file_exists($pushConfigPath)) {
-                $notify[] = ['warning', 'Solicitud #' . $orderNo . ' creada. Falta el archivo push_config.json en ' . $pushConfigPath];
-                return redirect()->route('admin.delivery.favors')->withNotify($notify);
-            }
+        try {
+            $fcmData = [
+                'type'         => 'new_delivery_request',
+                'favor_id'     => (string) $favor->id,
+                'order_id'     => (string) $favor->id,
+                'job_id'       => (string) $favor->id,
+                'order_no'     => (string) $favor->order_no,
+                'for_app'      => 'courier_job_detail-' . $favor->id,
+                'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
+            ];
 
             if ($assignedDriver) {
                 $sent = FcmService::sendToDriver(
                     $assignedDriver,
                     'Nuevo envío asignado',
                     'Se te ha asignado un envío en ' . $store->name . ' — S/ ' . number_format($deliveryFee, 2),
-                    [
-                        'type'    => 'new_delivery_request',
-                        'favor_id' => (string) $favor->id,
-                        'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
-                    ]
+                    $fcmData
                 );
 
                 if ($sent) {
                     $notify[] = ['success', 'Solicitud #' . $orderNo . ' asignada y enviada al repartidor ' . $assignedDriver->fullname];
                 } else {
-                    $notify[] = ['warning', 'Solicitud #' . $orderNo . ' asignada al repartidor ' . $assignedDriver->fullname . ' pero falló el envío de la notificación push.'];
+                    $notify[] = ['warning', 'Solicitud #' . $orderNo . ' asignada al repartidor ' . $assignedDriver->fullname . ' pero no se pudo enviar la notificación push.'];
                 }
             } else {
-                $sent = FcmService::sendToAllCouriers(
-                    'Nuevo envío disponible',
-                    'Recoger en ' . $store->name . ' — S/ ' . number_format($deliveryFee, 2),
-                    [
-                        'type'    => 'new_delivery_request',
-                        'favor_id' => (string) $favor->id,
-                        'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
-                    ]
-                );
+                $deliveryDrivers = Driver::where('status', Status::ENABLE)
+                    ->where('service_type', 'delivery')
+                    ->get();
 
-                $driverCount = Driver::where('status', Status::ENABLE)
-                    ->whereIn('service_type', ['delivery', 'both'])
-                    ->count();
+                $driverCount = $deliveryDrivers->count();
+                $sentCount = 0;
 
-                if ($sent) {
-                    $notify[] = ['success', 'Solicitud #' . $orderNo . ' enviada a ' . $driverCount . ' repartidores'];
+                foreach ($deliveryDrivers as $driver) {
+                    if (FcmService::sendToDriver(
+                        $driver,
+                        'Nuevo envío disponible',
+                        'Recoger en ' . $store->name . ' — S/ ' . number_format($deliveryFee, 2),
+                        $fcmData
+                    )) {
+                        $sentCount++;
+                    }
+                }
+
+                if ($sentCount > 0) {
+                    $notify[] = ['success', 'Solicitud #' . $orderNo . ' enviada por push a ' . $sentCount . ' de ' . $driverCount . ' repartidores (delivery)'];
                 } else {
-                    $notify[] = ['warning', 'Solicitud #' . $orderNo . ' creada pero ningún repartidor tiene tokens de dispositivo registrados.'];
+                    $notify[] = ['warning', 'Solicitud #' . $orderNo . ' creada para ' . $driverCount . ' repartidores (delivery). No se pudieron enviar tokens push.'];
                 }
             }
         } catch (\Throwable $e) {
-            $notify[] = ['warning', 'Solicitud creada pero falló la notificación push: ' . $e->getMessage()];
+            \Log::error('FCM dispatch error in admin requestSubmit: ' . $e->getMessage());
+            $notify[] = ['warning', 'Solicitud creada pero ocurrió un problema al enviar push: ' . $e->getMessage()];
         }
 
-        if (\Request::expectsJson() || \Request::isJson()) {
+        if ($request->expectsJson() || $request->isJson()) {
             return response()->json([
                 'status'    => 'success',
                 'favor_id'  => $favor->id,

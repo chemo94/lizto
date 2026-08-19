@@ -44,26 +44,19 @@ class FcmService
 
     public static function sendToAllCouriers(string $title, string $body, array $data = [])
     {
-        $drivers = \App\Models\Driver::where('service_type', '!=', 'ride')
-            ->where('online_status', 1)->where('status', 1)->get();
+        $drivers = \App\Models\Driver::where('service_type', 'delivery')
+            ->where('status', 1)->get();
 
         $count = 0;
+        $sentCount = 0;
         foreach ($drivers as $driver) {
-            $wallet = $driver->wallet;
-            $hasBalance = $wallet && $wallet->balance > 0;
-
-            if ($hasBalance) {
-                self::sendToDriver($driver, $title, $body, $data);
-            } else {
-                self::sendToDriver($driver, 'Nuevo pedido disponible',
-                    'Recarga tu wallet para ver los detalles y aceptar el pedido. ¡No te quedes sin ganar!',
-                    ['type' => 'low_balance', 'action' => 'recharge']
-                );
+            if (self::sendToDriver($driver, $title, $body, $data)) {
+                $sentCount++;
             }
             $count++;
         }
-        Log::info('FCM sendToAllCouriers', ['drivers_count' => $count, 'title' => $title]);
-        return true;
+        Log::info('FCM sendToAllCouriers', ['drivers_count' => $count, 'sent_count' => $sentCount, 'title' => $title]);
+        return $sentCount > 0;
     }
 
     private static function send(array $tokens, string $title, string $body, array $data = [])
@@ -80,18 +73,34 @@ class FcmService
 
         try {
             $credentialsFilePath = getFilePath('pushConfig') . '/push_config.json';
+            if (!file_exists($credentialsFilePath)) {
+                $altPath = base_path('../' . getFilePath('pushConfig') . '/push_config.json');
+                if (file_exists($altPath)) {
+                    $credentialsFilePath = $altPath;
+                } else {
+                    $altPath2 = public_path(getFilePath('pushConfig') . '/push_config.json');
+                    if (file_exists($altPath2)) {
+                        $credentialsFilePath = $altPath2;
+                    }
+                }
+            }
 
             if (!file_exists($credentialsFilePath)) {
                 Log::error('FCM: push_config.json not found', ['path' => $credentialsFilePath]);
                 return false;
             }
 
+            $guzzleClient = new \GuzzleHttp\Client(['verify' => false]);
             $client = new \Google_Client();
+            $client->setHttpClient($guzzleClient);
             $client->setAuthConfig($credentialsFilePath);
             $client->addScope('https://www.googleapis.com/auth/firebase.messaging');
-            $client->fetchAccessTokenWithAssertion();
-            $token = $client->getAccessToken();
-            $access_token = $token['access_token'];
+            $token = $client->fetchAccessTokenWithAssertion($guzzleClient);
+            $access_token = $token['access_token'] ?? null;
+            if (!$access_token) {
+                Log::error('FCM: Failed to fetch access token', ['token_response' => $token]);
+                return false;
+            }
 
             $projectId = gs('firebase_config')->projectId ?? null;
             if (!$projectId) {
@@ -150,8 +159,8 @@ class FcmService
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                 curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
                 curl_setopt($ch, CURLOPT_TIMEOUT, 20);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
                 curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
                 $response = curl_exec($ch);
                 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

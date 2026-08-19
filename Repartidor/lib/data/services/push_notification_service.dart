@@ -14,6 +14,7 @@ import '../../core/utils/method.dart';
 import '../../core/utils/url_container.dart';
 import '../../data/controller/dashboard/dashboard_controller.dart';
 import '../../data/controller/delivery/courier_controller.dart';
+import '../../data/controller/delivery/courier_notification_service.dart';
 import '../../firebase_options.dart';
 import '../../presentation/screens/delivery/courier_job_detail_screen.dart';
 import 'api_client.dart';
@@ -120,6 +121,18 @@ class PushNotificationService {
       final favorId = data['favor_id']?.toString();
       if ((orderId != null && orderId.isNotEmpty) || (favorId != null && favorId.isNotEmpty)) {
         await AudioUtils.playNotificationSound();
+      }
+
+      _refreshControllers();
+
+      final type = data['type']?.toString() ?? '';
+      if (type == 'new_delivery_request' ||
+          type == 'new_job' ||
+          type == 'targeted_delivery_request' ||
+          type == 'new_favor' ||
+          (favorId != null && favorId.isNotEmpty) ||
+          (orderId != null && orderId.isNotEmpty)) {
+        CourierNotificationService.showIncomingOrderAlertFromData(data);
       }
 
       RemoteNotification? notification = message.notification;

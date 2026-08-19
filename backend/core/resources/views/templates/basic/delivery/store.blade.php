@@ -1,148 +1,254 @@
 @extends($activeTemplate . 'layouts.frontend')
 
 @section('content')
-<main class="store-app">
-    <section class="store-hero">
-        @if($store->cover_image)
-            <img src="{{ getImage(getFilePath('store_cover') . '/' . $store->cover_image) }}" alt="{{ $store->name }}">
-        @endif
+<main class="lz-store-page">
+    {{-- 1. STORE HERO & BRANDING --}}
+    <section class="lz-store-hero">
         <div class="container">
-            <a class="store-back" href="{{ route('delivery.marketplace') }}"><i class="las la-arrow-left"></i> Volver a tiendas</a>
-            <div class="store-hero__card">
-                <div class="store-logo">@if($store->image)<img src="{{ getImage(getFilePath('store') . '/' . $store->image) }}" alt="{{ $store->name }}">@else<i class="las la-store"></i>@endif</div>
-                <div>
-                    <span style="display:inline-flex;align-items:center;gap:6px">
-                        <span style="width:8px;height:8px;border-radius:50%;background:{{ $store->is_open_now ? '#16a34a' : '#dc2626' }};display:inline-block"></span>
-                        {{ $store->is_open_now ? 'Lizto para pedir' : 'Cerrado' }}
-                    </span>
-                    <h1>{{ $store->name }}</h1>
-                    <p>{{ $store->description }}</p>
-                    <div class="store-stats"><b><i class="las la-star"></i> {{ $store->rating > 0 ? number_format($store->rating, 1) : 'Nuevo' }}</b><b><i class="las la-clock"></i> {{ $store->preparation_time ?? 20 }} min</b><b id="store-hero-fee"><i class="las la-motorcycle"></i> S/ {{ number_format($store->display_fee, 2) }}</b></div>
+            <a class="lz-back-btn mb-3" href="{{ route('delivery.marketplace') }}">
+                <i class="las la-arrow-left"></i> Volver a tiendas
+            </a>
+
+            <div class="lz-store-banner">
+                @if($store->cover_image)
+                    <img src="{{ getImage(getFilePath('store_cover') . '/' . $store->cover_image) }}" alt="{{ $store->name }}" class="lz-store-banner-img">
+                @endif
+                <div class="lz-store-banner-overlay"></div>
+
+                <div class="lz-store-header-box">
+                    <div class="lz-store-hero-logo">
+                        @if($store->image)
+                            <img src="{{ getImage(getFilePath('store') . '/' . $store->image) }}" alt="{{ $store->name }}">
+                        @else
+                            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#ecfdf5;color:var(--lz-primary);font-size:32px;">
+                                <i class="las la-store"></i>
+                            </div>
+                        @endif
+                    </div>
+
+                    <div class="lz-store-header-info">
+                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                            <span class="lz-badge-pill {{ $store->is_open_now ? 'lz-badge-open' : 'lz-badge-closed' }}">
+                                <span class="lz-dot-indicator"></span>
+                                {{ $store->is_open_now ? 'Abierto para pedidos' : 'Cerrado por ahora' }}
+                            </span>
+                            @if($store->address)
+                                <span class="lz-store-address-tag"><i class="las la-map-pin"></i> {{ Str::limit($store->address, 30) }}</span>
+                            @endif
+                        </div>
+
+                        <h1 class="lz-store-title">{{ $store->name }}</h1>
+                        <p class="lz-store-desc">{{ $store->description ?? 'Especialidades culinarias y delivery rápido en Tarapoto.' }}</p>
+
+                        <div class="lz-store-stats-row">
+                            <div class="lz-stat-badge">
+                                <i class="las la-star text-warning"></i>
+                                <strong>{{ $store->rating > 0 ? number_format($store->rating, 1) : '4.8' }}</strong>
+                                <span>(50+)</span>
+                            </div>
+                            <div class="lz-stat-badge">
+                                <i class="las la-clock text-primary"></i>
+                                <span>{{ $store->preparation_time ?? 25 }}–{{ ($store->preparation_time ?? 25) + 15 }} min</span>
+                            </div>
+                            <div class="lz-stat-badge" id="store-hero-fee-wrap">
+                                <i class="las la-motorcycle text-success"></i>
+                                <span>Envío: <b id="store-hero-fee">S/ {{ number_format($store->display_fee, 2) }}</b></span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <section class="store-content">
+    {{-- 2. STICKY CATEGORY NAV & IN-STORE SEARCH --}}
+    <nav class="lz-sticky-cats" id="stickyCategoriesNav">
         <div class="container">
-            <div class="store-layout">
-                <div>
-                    <nav class="store-tabs">
-                        @foreach($store->categories as $category)<a href="#category-{{ $category->id }}">{{ $category->name }}</a>@endforeach
-                    </nav>
+            <div class="d-flex align-items-center justify-content-between gap-3">
+                <div class="lz-sticky-cats-scroll" id="categoryTabsList">
+                    @foreach($store->categories as $idx => $category)
+                        <button type="button" class="lz-cat-tab {{ $idx === 0 ? 'active' : '' }}" onclick="scrollToCategory('cat-{{ $category->id }}', this)">
+                            {{ $category->name }}
+                        </button>
+                    @endforeach
+                </div>
+                <div class="lz-store-search-wrap d-none d-md-block">
+                    <div class="lz-search-box" style="max-width:220px;">
+                        <i class="las la-search lz-search-icon" style="font-size:15px;left:10px;"></i>
+                        <input type="text" id="storeInternalSearch" class="lz-search-input" style="padding:6px 12px 6px 32px;font-size:12.5px;" placeholder="Buscar en menú..." oninput="filterStoreProducts(this.value)">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    {{-- 3. STORE MENU & CART LAYOUT --}}
+    <section class="lz-store-content">
+        <div class="container">
+            <div class="row g-4">
+                {{-- Left: Products catalog grouped by categories --}}
+                <div class="col-lg-8">
                     @forelse($store->categories as $category)
-                    <section class="store-category" id="category-{{ $category->id }}">
-                        <div class="store-title"><h2>{{ $category->name }}</h2><small>{{ $category->products->count() }} opciones</small></div>
-                        <div class="store-products">
+                    <div class="lz-category-section mb-5" id="cat-{{ $category->id }}" data-category-name="{{ $category->name }}">
+                        <div class="lz-section-head mb-3">
+                            <h2 class="lz-section-title" style="font-size:20px;">{{ $category->name }}</h2>
+                            <span class="text-muted" style="font-size:13px;font-weight:600;">{{ $category->products->count() }} opciones</span>
+                        </div>
+
+                        <div class="lz-products-grid">
                             @foreach($category->products as $product)
-                            <article class="store-product" style="{{ !$store->is_open_now ? 'opacity:.5;filter:grayscale(60%);pointer-events:none' : '' }}">
-                                <div class="store-product__info">
-                                    <h3>{{ $product->name }}</h3>
-                                    <p>{{ $product->description }}</p>
-                                    <div class="store-product__price">
-                                        <strong>S/ {{ number_format($product->finalPrice(), 2) }}</strong>
-                                        @if($product->discount_price)<del>S/ {{ number_format($product->price, 2) }}</del>@endif
+                            <article class="lz-product-card" onclick="openProductById({{ $product->id }})" style="{{ !$store->is_open_now ? 'opacity:0.7;' : '' }}">
+                                <div class="lz-product-info">
+                                    <div>
+                                        <h3 class="lz-product-name">{{ $product->name }}</h3>
+                                        <p class="lz-product-desc">{{ $product->description }}</p>
+                                    </div>
+                                    <div class="lz-product-price-row">
+                                        <span class="lz-product-price">S/ {{ number_format($product->finalPrice(), 2) }}</span>
+                                        @if($product->discount_price > 0 && $product->price > $product->discount_price)
+                                            <span class="lz-product-old-price">S/ {{ number_format($product->price, 2) }}</span>
+                                        @endif
                                     </div>
                                 </div>
-                                <div class="store-product__thumb">
-                                    @if($product->image)<img src="{{ getImage(getFilePath('product') . '/' . $product->image) }}" alt="{{ $product->name }}">@else<i class="las la-hamburger"></i>@endif
-                                    <button class="add-product" type="button" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-price="{{ $product->finalPrice() }}" {{ !$store->is_open_now ? 'disabled' : '' }}><i class="las la-plus"></i></button>
+                                <div class="lz-product-thumb">
+                                    @if($product->image)
+                                        <img src="{{ getImage(getFilePath('product') . '/' . $product->image) }}" alt="{{ $product->name }}" loading="lazy">
+                                    @else
+                                        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#cbd5e1;font-size:28px">
+                                            <i class="las la-hamburger"></i>
+                                        </div>
+                                    @endif
+                                    <button class="lz-product-add-btn" type="button" aria-label="Agregar">
+                                        <i class="las la-plus"></i>
+                                    </button>
                                 </div>
                             </article>
                             @endforeach
                         </div>
-                    </section>
+                    </div>
                     @empty
-                        <div class="store-empty">Esta tienda todavía no ha publicado productos.</div>
+                    <div class="text-center py-5" style="background:#fff;border-radius:16px;border:1px solid var(--lz-border);padding:40px;">
+                        <i class="las la-utensils" style="font-size:40px;color:#cbd5e1;"></i>
+                        <p class="mt-2 text-muted">Esta tienda aún no tiene productos publicados.</p>
+                    </div>
                     @endforelse
                 </div>
-                <aside class="store-cart">
-                    <div class="store-cart__head"><div><span>Tu pedido</span><h2>Carrito</h2></div><i class="las la-shopping-bag"></i></div>
-                    <div id="cart-empty" class="store-cart__empty">
-                        <i class="las la-shopping-basket"></i>
-                        @if(!$store->is_open_now)
-                        <p style="color:#dc2626;font-weight:700">Tienda cerrada</p>
-                        <p>Vuelve cuando esté abierta para hacer tu pedido.</p>
-                        @else
-                        <p>Agrega productos para comenzar tu pedido.</p>
-                        @endif
-                    </div>
-                    <div id="cart-items"></div>
-                    <div id="cart-summary" class="store-cart__summary d-none">
-                        <div><span>Subtotal</span><b id="cart-subtotal">S/ 0.00</b></div>
-                        <div><span>Envío estimado</span><b id="cart-delivery-fee">S/ {{ number_format($store->display_fee, 2) }}</b></div>
-                        <div class="store-cart__total"><span>Total</span><b id="cart-total">S/ 0.00</b></div>
-                        <button id="open-checkout" type="button" {{ !$store->is_open_now ? 'disabled style="opacity:.4;cursor:not-allowed"' : '' }}>@if(!$store->is_open_now)Tienda cerrada @else Continuar pedido <i class="las la-arrow-right"></i>@endif</button>
-                    </div>
-                </aside>
+
+                {{-- Right: Sticky Desktop Cart Drawer --}}
+                <div class="col-lg-4 d-none d-lg-block">
+                    <aside class="lz-desktop-cart-sidebar" id="desktopCartSidebar">
+                        <div class="lz-cart-card">
+                            <div class="lz-cart-card-header">
+                                <div>
+                                    <span class="lz-cart-tag">Tu Pedido</span>
+                                    <h3 class="lz-cart-title mb-0">{{ $store->name }}</h3>
+                                </div>
+                                <div class="lz-cart-icon-wrap">
+                                    <i class="las la-shopping-bag"></i>
+                                </div>
+                            </div>
+
+                            {{-- Empty Cart State --}}
+                            <div id="cart-empty" class="lz-cart-empty-box">
+                                <i class="las la-shopping-basket"></i>
+                                @if(!$store->is_open_now)
+                                    <strong class="text-danger d-block mt-2">Tienda cerrada</strong>
+                                    <p class="text-muted small">No se pueden agregar productos por ahora.</p>
+                                @else
+                                    <strong class="d-block mt-2">Tu carrito está vacío</strong>
+                                    <p class="text-muted small">Selecciona platos de la carta para empezar.</p>
+                                @endif
+                            </div>
+
+                            {{-- Active Items List --}}
+                            <div id="cart-items" class="lz-cart-items-list"></div>
+
+                            {{-- Summary & Checkout CTA --}}
+                            <div id="cart-summary" class="lz-cart-summary-box d-none">
+                                <div class="lz-summary-line">
+                                    <span>Subtotal</span>
+                                    <strong id="cart-subtotal">S/ 0.00</strong>
+                                </div>
+                                <div class="lz-summary-line">
+                                    <span>Envío estimado</span>
+                                    <strong id="cart-delivery-fee">S/ {{ number_format($store->display_fee, 2) }}</strong>
+                                </div>
+                                <div class="lz-summary-line lz-summary-total">
+                                    <span>Total</span>
+                                    <strong id="cart-total">S/ 0.00</strong>
+                                </div>
+
+                                <button type="button" id="open-checkout" class="lz-btn-cta w-100 mt-3" {{ !$store->is_open_now ? 'disabled' : '' }}>
+                                    @if(!$store->is_open_now)
+                                        <span>Tienda cerrada</span>
+                                    @else
+                                        <span>Continuar pedido</span>
+                                        <i class="las la-arrow-right"></i>
+                                    @endif
+                                </button>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
             </div>
         </div>
     </section>
 
-    <div class="checkout-modal" id="checkout-modal" aria-hidden="true">
-        <div class="checkout-modal__overlay"></div>
-        <div class="checkout-modal__box">
-            <button class="checkout-close" id="close-checkout" type="button"><i class="las la-times"></i></button>
-            <span>Finaliza tu pedido</span>
-            <h2>Datos de entrega</h2>
-            <p>Recibiremos tu orden y te contactaremos por WhatsApp para confirmarla.</p>
-            <form action="{{ route('service.request') }}" method="POST" id="checkout-form">
-                @csrf
-                @if($errors->any())
-                    <div class="checkout-errors">
-                        @foreach($errors->all() as $error)<small>{{ $error }}</small>@endforeach
-                    </div>
-                @endif
-                <input type="hidden" name="service_type" value="delivery">
-                <input type="hidden" name="store_id" value="{{ $store->id }}">
-                <input type="hidden" name="pickup" value="{{ $store->address }}">
-                <input type="hidden" name="cart_payload" id="cart-payload">
-                <input type="hidden" name="delivery_lat" id="delivery-lat">
-                <input type="hidden" name="delivery_lng" id="delivery-lng">
-                <div class="checkout-grid">
-                    <input name="name" placeholder="Tu nombre" required>
-                    <input name="phone" placeholder="Celular / WhatsApp" required>
-                </div>
-                <input name="destination" id="checkout-address" placeholder="Dirección de entrega" required autocomplete="off">
-                <textarea name="notes" rows="3" placeholder="Referencia o indicaciones adicionales"></textarea>
-                <button type="submit">Enviar pedido <i class="las la-check-circle"></i></button>
-            </form>
+    {{-- 4. FLOATING STICKY CART BAR (MOBILE) --}}
+    <div class="lz-floating-cart-bar" id="lz-floating-cart" style="display:none;" onclick="triggerMobileCheckout()">
+        <div class="d-flex align-items-center gap-3">
+            <span class="lz-fc-count" id="lz-fc-qty">0</span>
+            <span class="lz-fc-title">Ver mi pedido</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <strong class="lz-fc-total" id="lz-fc-total-val">S/ 0.00</strong>
+            <i class="las la-arrow-right"></i>
         </div>
     </div>
 
-    <!-- Product Detail Modal -->
-    <div class="product-modal" id="product-modal" aria-hidden="true">
-        <div class="product-modal__overlay" id="product-modal-overlay"></div>
-        <div class="product-modal__box">
-            <button class="product-modal__close" id="product-modal-close" type="button"><i class="las la-times"></i></button>
-            <div class="product-modal__body">
-                <div class="product-modal__image" id="modal-product-image">
-                    <i class="las la-hamburger"></i>
+    {{-- 5. PRODUCT DETAIL BOTTOM SHEET / MODAL (FASE 4) --}}
+    <div class="lz-bottom-sheet-backdrop" id="productSheetBackdrop" onclick="closeProductModal()"></div>
+    <div class="lz-bottom-sheet" id="productModalSheet" role="dialog" aria-modal="true">
+        <div class="lz-sheet-handle"></div>
+        <div class="lz-sheet-body">
+            <button type="button" class="lz-sheet-close-btn" onclick="closeProductModal()" aria-label="Cerrar">
+                <i class="las la-times"></i>
+            </button>
+
+            <div class="lz-modal-prod-img-wrap" id="modal-product-image">
+                <i class="las la-hamburger"></i>
+            </div>
+
+            <div class="lz-modal-prod-details mt-3">
+                <h2 id="modal-product-name" class="lz-modal-prod-title">Nombre del Producto</h2>
+                <p id="modal-product-desc" class="lz-modal-prod-desc">Descripción del producto</p>
+                <div class="lz-modal-prod-base-price" id="modal-product-price">S/ 0.00</div>
+
+                {{-- Variations Section --}}
+                <div id="modal-variations" class="lz-modal-section" style="display:none;">
+                    <label class="lz-modal-section-title">Elige tu variación <span class="badge bg-light text-dark">Obligatorio</span></label>
+                    <div id="modal-variations-list" class="lz-modal-options-list"></div>
                 </div>
-                <div class="product-modal__info">
-                    <h2 id="modal-product-name"></h2>
-                    <p id="modal-product-desc"></p>
-                    <div class="product-modal__price" id="modal-product-price">S/ 0.00</div>
 
-                    <div id="modal-variations" class="product-modal__section" style="display:none">
-                        <label>Variaciones</label>
-                        <div id="modal-variations-list"></div>
-                    </div>
-
-                    <div id="modal-addons" class="product-modal__section" style="display:none">
-                        <label>Extras</label>
-                        <div id="modal-addons-list"></div>
-                    </div>
-
-                    <div class="product-modal__total">
-                        <span>Total</span><strong id="modal-total">S/ 0.00</strong>
-                    </div>
-
-                    <button class="product-modal__add" id="modal-add-btn" type="button">
-                        <i class="las la-plus"></i> Agregar al carrito
-                    </button>
+                {{-- Addons / Extras Section --}}
+                <div id="modal-addons" class="lz-modal-section" style="display:none;">
+                    <label class="lz-modal-section-title">Agrega complementos / extras <span class="badge bg-light text-secondary">Opcional</span></label>
+                    <div id="modal-addons-list" class="lz-modal-options-list"></div>
                 </div>
             </div>
+        </div>
+
+        {{-- Bottom CTA with Reactive Total & Quantity Selector --}}
+        <div class="lz-sheet-footer">
+            <div class="lz-qty-selector">
+                <button type="button" class="lz-qty-btn" onclick="changeModalQty(-1)" aria-label="Disminuir">-</button>
+                <span class="lz-qty-val" id="modal-qty-val">1</span>
+                <button type="button" class="lz-qty-btn" onclick="changeModalQty(1)" aria-label="Aumentar">+</button>
+            </div>
+            <button type="button" class="lz-btn-cta" id="modal-add-btn" onclick="submitModalAddToCart()">
+                <span>Agregar</span>
+                <span id="modal-total">S/ 0.00</span>
+            </button>
         </div>
     </div>
 </main>
@@ -150,45 +256,316 @@
 
 @push('style')
 <style>
-.checkout-errors{display:grid;gap:3px;padding:9px 10px;border-radius:9px;background:#fff1f1;color:#a92525}
-:root{--store:#16a34a;--store-dark:#15803d;--store-soft:#effbef;--store-ink:#17221b;--store-muted:#68736c}.header{background:#fff!important;box-shadow:0 4px 22px rgba(8,63,27,.06)}.header .logo img{filter:brightness(0) saturate(100%) invert(43%) sepia(87%) saturate(1371%) hue-rotate(76deg) brightness(83%) contrast(95%)}.store-app{padding-top:0;background:#fbfdfb;color:var(--store-ink);min-height:100vh}.store-hero{position:relative;padding:30px 0 38px;background:linear-gradient(135deg,#ddf6dc,#f6fff5);overflow:hidden}.store-hero>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.2}.store-hero .container{position:relative}.store-back{display:inline-flex;gap:7px;align-items:center;color:var(--store-dark);font-size:13px;font-weight:800;margin-bottom:27px}.store-hero__card{display:flex;gap:20px;align-items:center}.store-logo{display:grid;place-items:center;width:112px;height:112px;border:5px solid #fff;border-radius:25px;background:#fff;color:var(--store);font-size:52px;box-shadow:0 9px 25px rgba(7,83,33,.11);overflow:hidden}.store-logo img{width:100%;height:100%;object-fit:cover}.store-hero__card span,.store-cart__head span,.checkout-modal__box>span{color:var(--store);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px}.store-hero h1{font-size:42px;font-weight:800;letter-spacing:-1.5px;margin:3px 0}.store-hero p{color:var(--store-muted);margin:0 0 11px}.store-stats{display:flex;gap:9px;flex-wrap:wrap}.store-stats b{padding:6px 9px;border-radius:9px;background:#fff;font-size:11px}.store-stats i{color:var(--store)}.store-content{padding:35px 0 80px}.store-layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:26px;align-items:start}.store-tabs{display:flex;gap:9px;overflow:auto;margin-bottom:25px}.store-tabs a{padding:9px 13px;border:1px solid #dfeae0;border-radius:20px;background:#fff;color:#45534a;font-size:12px;font-weight:800;white-space:nowrap}.store-tabs a:hover{background:var(--store-soft);border-color:var(--store);color:var(--store)}.store-category{scroll-margin-top:105px;margin-bottom:34px}.store-title{display:flex;align-items:end;gap:10px;margin-bottom:15px}.store-title h2{font-size:25px;font-weight:800;margin:0}.store-title small{color:var(--store-muted)}.store-products{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.store-product{display:flex;justify-content:space-between;gap:10px;min-height:146px;padding:15px;border:1px solid #e1eae2;border-radius:17px;background:#fff}.store-product__info{display:flex;flex-direction:column}.store-product h3{font-size:16px;font-weight:800;margin:0}.store-product p{color:var(--store-muted);font-size:12px;line-height:1.45;margin:7px 0}.store-product__price{display:flex;gap:8px;align-items:center;margin-top:auto}.store-product strong{color:var(--store-dark)}.store-product del{color:#9aa59e;font-size:12px}.store-product__thumb{position:relative;display:grid;place-items:center;flex:0 0 94px;height:94px;border-radius:13px;background:#eff9ee;color:var(--store);font-size:35px;overflow:visible}.store-product__thumb img{width:100%;height:100%;object-fit:cover;border-radius:13px}.add-product{position:absolute;right:-6px;bottom:-7px;display:grid;place-items:center;width:31px;height:31px;border:0;border-radius:10px;background:var(--store);color:#fff;box-shadow:0 5px 13px rgba(21,155,18,.28)}.store-cart{position:sticky;top:102px;padding:19px;border:1px solid #dfe9e0;border-radius:20px;background:#fff;box-shadow:0 16px 30px rgba(7,83,33,.06)}.store-cart__head{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #edf2ed;padding-bottom:13px}.store-cart__head h2{font-size:23px;font-weight:800;margin:1px 0}.store-cart__head i{color:var(--store);font-size:28px}.store-cart__empty{text-align:center;padding:31px 5px 17px;color:var(--store-muted);font-size:13px}.store-cart__empty i{color:#a9d9aa;font-size:43px}.cart-item{display:flex;justify-content:space-between;gap:8px;padding:13px 0;border-bottom:1px solid #edf2ed}.cart-item strong{display:block;font-size:13px}.cart-item small{color:var(--store);font-weight:800}.cart-qty{display:flex;align-items:center;gap:8px}.cart-qty button{display:grid;place-items:center;width:22px;height:22px;border:0;border-radius:7px;background:var(--store-soft);color:var(--store);font-weight:800}.store-cart__summary{padding-top:13px}.store-cart__summary>div{display:flex;justify-content:space-between;margin:7px 0;color:var(--store-muted);font-size:12px}.store-cart__total{padding-top:10px;border-top:1px solid #edf2ed;color:var(--store-ink)!important;font-size:16px!important}.store-cart__summary>button,.checkout-modal form button{display:flex;justify-content:center;gap:8px;width:100%;padding:13px;border:0;border-radius:11px;background:var(--store);color:#fff;font-weight:800;margin-top:13px}.checkout-modal{position:fixed;z-index:9999;inset:0;display:none;place-items:center;padding:15px}.checkout-modal.is-open{display:grid}.checkout-modal__overlay{position:absolute;inset:0;background:rgba(4,28,13,.56)}.checkout-modal__box{position:relative;width:min(530px,100%);padding:28px;border-radius:20px;background:#fff}.checkout-close{position:absolute;top:13px;right:13px;border:0;background:#f0f4f0;width:32px;height:32px;border-radius:50%}.checkout-modal h2{font-size:29px;font-weight:800;margin:3px 0}.checkout-modal p{color:var(--store-muted);font-size:13px}.checkout-modal input,.checkout-modal textarea{width:100%;margin-top:10px;padding:12px;border:1px solid #dde7de;border-radius:10px;outline-color:var(--store)}.checkout-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.store-empty{padding:30px;border:1px dashed #c8d9c9;border-radius:15px;color:var(--store-muted)}@media(max-width:991px){.store-layout{display:block}.store-cart{position:relative;top:auto;margin-top:20px}.store-products{grid-template-columns:1fr}}@media(max-width:767px){.store-app{padding-top:0}.store-hero__card{align-items:flex-start}.store-logo{width:82px;height:82px;flex:0 0 82px}.store-hero h1{font-size:31px}.checkout-grid{display:block}}
+.lz-store-page {
+    background: var(--lz-bg);
+    min-height: 100vh;
+    padding-bottom: 90px;
+}
+.lz-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: var(--lz-surface);
+    border: 1px solid var(--lz-border);
+    border-radius: var(--lz-r-full);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--lz-text);
+}
+.lz-back-btn:hover {
+    border-color: var(--lz-primary);
+    color: var(--lz-primary-dark);
+}
+.lz-store-banner {
+    position: relative;
+    border-radius: var(--lz-r-xl);
+    overflow: hidden;
+    background: var(--lz-surface);
+    border: 1px solid var(--lz-border);
+    box-shadow: var(--lz-shadow-sm);
+    min-height: 160px;
+}
+.lz-store-banner-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.25;
+}
+.lz-store-banner-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.95) 80%);
+}
+.lz-store-header-box {
+    position: relative;
+    z-index: 2;
+    padding: 24px;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+@media (max-width: 640px) {
+    .lz-store-header-box {
+        flex-direction: column;
+        padding: 16px;
+        gap: 12px;
+    }
+}
+.lz-store-hero-logo {
+    width: 84px;
+    height: 84px;
+    border-radius: var(--lz-r-lg);
+    border: 2px solid #fff;
+    box-shadow: var(--lz-shadow-md);
+    overflow: hidden;
+    background: #fff;
+    flex-shrink: 0;
+}
+.lz-store-hero-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.lz-store-title {
+    font-size: clamp(22px, 3.2vw, 32px);
+    font-weight: 800;
+    color: var(--lz-text);
+    margin: 0 0 4px;
+}
+.lz-store-desc {
+    font-size: 13.5px;
+    color: var(--lz-text-muted);
+    margin: 0 0 12px;
+    max-width: 600px;
+}
+.lz-badge-pill {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: var(--lz-r-full);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.lz-badge-open {
+    background: #ecfdf5;
+    color: var(--lz-primary-dark);
+}
+.lz-badge-closed {
+    background: #fee2e2;
+    color: var(--lz-danger);
+}
+.lz-dot-indicator {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+.lz-store-address-tag {
+    font-size: 11.5px;
+    color: var(--lz-text-muted);
+    font-weight: 600;
+}
+.lz-store-stats-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.lz-stat-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--lz-surface);
+    border: 1px solid var(--lz-border);
+    border-radius: var(--lz-r-full);
+    padding: 4px 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+}
+
+/* Desktop Cart Box */
+.lz-desktop-cart-sidebar {
+    position: sticky;
+    top: 130px;
+}
+.lz-cart-card {
+    background: var(--lz-surface);
+    border: 1.5px solid var(--lz-border);
+    border-radius: var(--lz-r-lg);
+    padding: 20px;
+    box-shadow: var(--lz-shadow-sm);
+}
+.lz-cart-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--lz-border-subtle);
+}
+.lz-cart-tag {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--lz-primary-dark);
+    letter-spacing: 0.5px;
+}
+.lz-cart-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--lz-text);
+}
+.lz-cart-icon-wrap {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--lz-primary-light);
+    color: var(--lz-primary-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+.lz-cart-empty-box {
+    text-align: center;
+    padding: 30px 10px;
+    color: var(--lz-text-muted);
+}
+.lz-cart-empty-box i {
+    font-size: 40px;
+    color: #cbd5e1;
+}
+.lz-cart-items-list {
+    max-height: 280px;
+    overflow-y: auto;
+    padding: 8px 0;
+}
+.lz-cart-item-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--lz-border-subtle);
+    font-size: 13px;
+}
+.lz-cart-item-name {
+    font-weight: 700;
+    color: var(--lz-text);
+    margin-bottom: 2px;
+}
+.lz-cart-item-price {
+    color: var(--lz-primary-dark);
+    font-weight: 800;
+}
+.lz-cart-summary-box {
+    padding-top: 14px;
+    border-top: 1px solid var(--lz-border);
+}
+.lz-summary-line {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: var(--lz-text-muted);
+}
+.lz-summary-total {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--lz-text);
+    padding-top: 8px;
+    border-top: 1px dashed var(--lz-border);
+}
+
+/* Modal Bottom Sheet specific */
+.lz-sheet-close-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--lz-surface-muted);
+    border: none;
+    color: var(--lz-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.lz-modal-prod-img-wrap {
+    width: 100%;
+    height: 180px;
+    border-radius: var(--lz-r-md);
+    background: var(--lz-surface-muted);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #cbd5e1;
+    font-size: 54px;
+}
+.lz-modal-prod-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.lz-modal-prod-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--lz-text);
+    margin: 0 0 4px;
+}
+.lz-modal-prod-desc {
+    font-size: 13px;
+    color: var(--lz-text-muted);
+    margin: 0 0 10px;
+}
+.lz-modal-prod-base-price {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--lz-primary-dark);
+}
+.lz-modal-section {
+    margin-top: 18px;
+}
+.lz-modal-section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--lz-text);
+    margin-bottom: 8px;
+}
+.lz-option-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border: 1.5px solid var(--lz-border);
+    border-radius: var(--lz-r-sm);
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: var(--lz-transition);
+    font-size: 13.5px;
+}
+.lz-option-card:hover {
+    border-color: var(--lz-primary);
+}
+.lz-option-card.selected {
+    border-color: var(--lz-primary);
+    background: var(--lz-primary-light);
+    color: var(--lz-primary-darker);
+    font-weight: 700;
+}
 </style>
 @endpush
 
-@push('style')
-<style>
-.store-app{background:#fff!important;color:#101828!important}
-.store-hero{padding:42px 0 46px!important;background:linear-gradient(180deg,#f6fbf7 0%,#fff 82%)!important}
-.store-hero:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 84% 12%,rgba(34,197,94,.2),transparent 30%),linear-gradient(90deg,rgba(22,163,74,.1),transparent 42%);pointer-events:none}
-.store-hero>img{opacity:.16!important;filter:saturate(.9)!important}
-.store-back{background:#fff!important;border:1px solid rgba(22,163,74,.22)!important;border-radius:999px!important;padding:8px 12px!important;text-decoration:none!important}
-.store-hero__card{background:#fff!important;border:1px solid #e7eaee!important;border-radius:8px!important;padding:24px!important;box-shadow:0 18px 45px rgba(16,24,40,.08)!important}
-.store-logo{border-radius:8px!important;border-width:0!important;box-shadow:none!important;background:#ecfdf3!important}
-.store-hero h1,.store-title h2,.store-cart__head h2,.product-modal__info h2{font-family:Outfit,Inter,sans-serif!important;color:#101828!important;font-weight:900!important;letter-spacing:0!important}
-.store-hero h1{font-size:clamp(32px,4vw,48px)!important;line-height:1.05!important}
-.store-hero p,.store-product p,.store-empty{color:#667085!important}
-.store-stats b,.store-tabs a,.store-product,.store-cart,.product-modal__box{border-radius:8px!important;border-color:#e7eaee!important}
-.store-content{background:#fff!important}
-.store-tabs a{background:#fff!important;text-decoration:none!important}
-.store-tabs a:hover{background:#f0fdf4!important}
-.store-product{box-shadow:none!important;transition:.2s ease!important}
-.store-product:hover{transform:translateY(-2px);box-shadow:0 18px 36px rgba(16,24,40,.08)!important}
-.store-product__thumb,.store-product__thumb img,.add-product,.store-cart__summary>button,.checkout-modal form button,.product-modal__add{border-radius:8px!important}
-.store-cart{box-shadow:0 18px 45px rgba(16,24,40,.08)!important}
-.store-cart__summary>button,.checkout-modal form button,.product-modal__add{background:#16a34a!important;font-weight:900!important}
-@media(max-width:767px){.store-hero__card{padding:18px!important}.store-logo{width:76px!important;height:76px!important;flex-basis:76px!important}.store-hero h1{font-size:30px!important}}
-</style>
-@endpush
-
-@push('style')
-<style>.product-modal{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;visibility:hidden;opacity:0;transition:.25s}.product-modal.open{visibility:visible;opacity:1}.product-modal__overlay{position:absolute;inset:0;background:rgba(0,0,0,.5)}.product-modal__box{position:relative;background:#fff;border-radius:18px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;margin:16px;z-index:1}.product-modal__close{position:absolute;top:12px;right:12px;width:32px;height:32px;border:none;background:#f3f4f6;border-radius:50%;font-size:16px;cursor:pointer;display:grid;place-items:center;z-index:2}.product-modal__image{width:100%;height:200px;background:#f8fdf8;display:grid;place-items:center;font-size:64px;color:#16a34a;overflow:hidden;border-radius:18px 18px 0 0}.product-modal__image img{width:100%;height:100%;object-fit:cover}.product-modal__info{padding:20px}.product-modal__info h2{font-size:20px;font-weight:800;color:#1a2e1a;margin:0 0 4px}.product-modal__info>p{font-size:13px;color:#68736c;margin:0 0 12px}.product-modal__price{font-size:18px;font-weight:800;color:#16a34a}.product-modal__section{margin-top:16px}.product-modal__section>label{display:block;font-size:12px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}.var-option{display:flex;align-items:center;gap:10px;padding:10px 12px;border:2px solid #e0eee2;border-radius:10px;cursor:pointer;margin-bottom:6px;transition:.2s;font-size:13px}.var-option.selected{border-color:#16a34a;background:#f0fdf4}.var-option input{display:none}.var-option__price{color:#16a34a;font-weight:700;margin-left:auto}.addon-option{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid #e0eee2;border-radius:10px;cursor:pointer;margin-bottom:6px;transition:.2s;font-size:13px}.addon-option.selected{border-color:#16a34a;background:#f0fdf4}.addon-option input{display:none}.addon-option__price{color:#16a34a;font-weight:700;margin-left:auto}.product-modal__total{display:flex;justify-content:space-between;align-items:center;padding:14px 0;margin-top:16px;border-top:2px solid #e0eee2}.product-modal__total span{font-size:14px;font-weight:600;color:#374151}.product-modal__total strong{font-size:22px;font-weight:800;color:#16a34a}.product-modal__add{width:100%;padding:14px;border:none;border-radius:14px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;transition:.2s}.product-modal__add:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(22,163,74,.3)}.product-modal__add:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}</style>
-@endpush
-
-@if(gs('google_maps_api'))
-@push('script-lib')
-<script src="https://maps.googleapis.com/maps/api/js?key={{ gs('google_maps_api') }}&libraries=places" defer></script>
-@endpush
-@endif
 @push('script')
 <script>
 (function () {
@@ -196,291 +573,275 @@
     var STORE_IS_OPEN = {{ $store->is_open_now ? 'true' : 'false' }};
     var PRODUCTS = {!! $productsJson !!};
     var deliveryFee = {{ (float) $store->display_fee }};
-    var cartItems = document.getElementById('cart-items');
-    var cartEmpty = document.getElementById('cart-empty');
-    var cartSummary = document.getElementById('cart-summary');
-    var modal = document.getElementById('checkout-modal');
-    var payload = document.getElementById('cart-payload');
-    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
-    var csrfToken = csrfMeta ? csrfMeta.content : '';
+    var csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
     var cartData = [];
 
-    @if($errors->any())
-    modal.classList.add('is-open');
-    modal.setAttribute('aria-hidden','false');
-    @endif
+    var currentProduct = null;
+    var modalQty = 1;
+    var selectedVariation = null;
+    var selectedAddons = [];
 
-    function money(value){ return 'S/ ' + Number(value).toFixed(2); }
+    function money(v) { return 'S/ ' + Number(v).toFixed(2); }
 
     function api(method, url, body) {
-        var opts = { method: method, credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' } };
+        var opts = {
+            method: method,
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }
+        };
         if (body) opts.body = JSON.stringify(body);
-        return fetch(url, opts).then(function(r){ return r.json(); }).catch(function(e){ console.error('Cart API error:', e); return {status:'error'}; });
+        return fetch(url, opts).then(function(r){ return r.json(); }).catch(function(){ return {status:'error'}; });
     }
 
-    function updateBadge(count) {
-        var badge = document.getElementById('hdr-cart-badge');
-        var icon = document.getElementById('header-cart-icon');
-        if (badge) badge.textContent = count || 0;
-        if (icon) icon.style.display = (count > 0) ? 'inline-block' : 'none';
-    }
+    function renderCart() {
+        var itemsContainer = document.getElementById('cart-items');
+        var emptyBox = document.getElementById('cart-empty');
+        var summaryBox = document.getElementById('cart-summary');
+        var floatingCart = document.getElementById('lz-floating-cart');
+        var floatingQty = document.getElementById('lz-fc-qty');
+        var floatingTotal = document.getElementById('lz-fc-total-val');
 
-    function updateFeeDisplay(fee) {
-        var heroFee = document.getElementById('store-hero-fee');
-        var cartFee = document.getElementById('cart-delivery-fee');
-        if (heroFee) heroFee.textContent = 'S/ ' + fee.toFixed(2);
-        if (cartFee) cartFee.textContent = 'S/ ' + fee.toFixed(2);
-        deliveryFee = fee;
-        var totalEl = document.getElementById('cart-total');
-        if (totalEl) {
-            var subtotal = parseFloat((document.getElementById('cart-subtotal')?.textContent || 'S/ 0.00').replace('S/ ', '')) || 0;
-            totalEl.textContent = money(subtotal + deliveryFee);
+        if (!itemsContainer) return;
+        itemsContainer.innerHTML = '';
+
+        var subtotal = 0;
+        var totalQty = 0;
+
+        cartData.forEach(function (item) {
+            var itemTotal = item.price * item.quantity;
+            subtotal += itemTotal;
+            totalQty += item.quantity;
+
+            var row = document.createElement('div');
+            row.className = 'lz-cart-item-row';
+            row.innerHTML = `
+                <div style="flex:1;overflow:hidden;padding-right:8px;">
+                    <div class="lz-cart-item-name">${item.name}</div>
+                    <div class="lz-cart-item-price">${money(itemTotal)}</div>
+                </div>
+                <div class="lz-qty-selector" style="transform:scale(0.85);margin-right:-6px;">
+                    <button type="button" class="lz-qty-btn" data-action="minus" data-id="${item.product_id}">-</button>
+                    <span class="lz-qty-val">${item.quantity}</span>
+                    <button type="button" class="lz-qty-btn" data-action="plus" data-id="${item.product_id}">+</button>
+                </div>
+            `;
+            itemsContainer.appendChild(row);
+        });
+
+        if (cartData.length > 0) {
+            emptyBox.classList.add('d-none');
+            summaryBox.classList.remove('d-none');
+            document.getElementById('cart-subtotal').textContent = money(subtotal);
+            document.getElementById('cart-total').textContent = money(subtotal + deliveryFee);
+
+            if (floatingCart) {
+                floatingCart.style.display = 'flex';
+                floatingQty.textContent = totalQty;
+                floatingTotal.textContent = money(subtotal + deliveryFee);
+            }
+        } else {
+            emptyBox.classList.remove('d-none');
+            summaryBox.classList.add('d-none');
+            if (floatingCart) {
+                floatingCart.style.display = 'none';
+            }
+        }
+
+        if (typeof window.updateHeaderCartBadge === 'function') {
+            window.updateHeaderCartBadge();
         }
     }
 
-    function estimateFee() {
-        fetch('/location/get', { headers: { 'Accept': 'application/json' } })
-            .then(function(r) { return r.json(); })
-            .then(function(loc) {
-                if (!loc.lat || !loc.lng) return;
-                var url = '/delivery/store-fee-estimate?store_id=' + STORE_ID + '&delivery_lat=' + loc.lat + '&delivery_lng=' + loc.lng;
-                return fetch(url, { headers: { 'Accept': 'application/json' } }).then(function(r) { return r.json(); });
-            })
-            .then(function(data) {
-                if (data && data.delivery_fee != null) {
-                    updateFeeDisplay(data.delivery_fee);
-                }
-            })
-            .catch(function(){});
-    }
-
-    function render() {
-        cartItems.innerHTML = '';
-        cartEmpty.classList.toggle('d-none', cartData.length > 0);
-        cartSummary.classList.toggle('d-none', cartData.length === 0);
-        var subtotal = 0;
-        var totalQty = 0;
-        cartData.forEach(function(item){
-            subtotal += item.price * item.quantity;
-            totalQty += item.quantity;
-            var row = document.createElement('div');
-            row.className = 'cart-item';
-            row.innerHTML = '<div><strong>'+item.name+'</strong><small>'+money(item.price * item.quantity)+'</small></div><div class="cart-qty"><button type="button" data-cart-action="minus" data-id="'+item.product_id+'">-</button><b>'+item.quantity+'</b><button type="button" data-cart-action="plus" data-id="'+item.product_id+'">+</button></div>';
-            cartItems.appendChild(row);
-        });
-        document.getElementById('cart-subtotal').textContent = money(subtotal);
-        document.getElementById('cart-total').textContent = money(subtotal + deliveryFee);
-        payload.value = JSON.stringify(cartData.map(function(item){ return {product_id:item.product_id, name:item.name, quantity:item.quantity, unit_price:item.price}; }));
-        updateBadge(totalQty);
-    }
-
     function loadCart() {
-        api('GET', '/cart/' + STORE_ID).then(function(data) {
+        api('GET', '/cart/' + STORE_ID).then(function (data) {
             if (data.status === 'success') {
                 cartData = data.cart || [];
-                render();
+                renderCart();
             }
         });
     }
 
-    document.querySelectorAll('.add-product').forEach(function(button){
-        button.addEventListener('click',function(){
-            @if(!$store->is_open_now)
-            alert('La tienda está cerrada en este momento. No se pueden agregar productos.');
+    // Modal / Bottom Sheet Functions
+    window.openProductById = function (pid) {
+        if (!STORE_IS_OPEN) {
+            alert('La tienda está cerrada en este momento.');
             return;
-            @endif
-            var pid = Number(button.dataset.id);
-            var product = PRODUCTS[pid];
-            if (!product) return;
-            openProductModal(product);
-        });
-    });
+        }
+        var product = PRODUCTS[pid];
+        if (!product) return;
 
-    // ── Product Modal ──
-    var prodModal = document.getElementById('product-modal');
-    var selectedVariation = null;
-    var selectedAddons = [];
-    var currentProduct = null;
-
-    function openProductModal(product) {
         currentProduct = product;
+        modalQty = 1;
         selectedVariation = null;
         selectedAddons = [];
 
         document.getElementById('modal-product-name').textContent = product.name;
         document.getElementById('modal-product-desc').textContent = product.description || '';
-        document.getElementById('modal-product-price').textContent = 'S/ ' + product.price.toFixed(2);
-        document.getElementById('modal-total').textContent = 'S/ ' + product.price.toFixed(2);
+        document.getElementById('modal-product-price').textContent = money(product.price);
+        document.getElementById('modal-qty-val').textContent = '1';
 
-        var imgContainer = document.getElementById('modal-product-image');
+        var imgWrap = document.getElementById('modal-product-image');
         if (product.image) {
-            imgContainer.innerHTML = '<img src="' + product.image + '" alt="' + product.name + '">';
+            imgWrap.innerHTML = '<img src="' + product.image + '" alt="' + product.name + '">';
         } else {
-            imgContainer.innerHTML = '<i class="las la-hamburger"></i>';
+            imgWrap.innerHTML = '<i class="las la-hamburger"></i>';
         }
 
         // Variations
-        var varContainer = document.getElementById('modal-variations');
+        var varSection = document.getElementById('modal-variations');
         var varList = document.getElementById('modal-variations-list');
         if (product.variations && product.variations.length > 0) {
-            varContainer.style.display = 'block';
-            varList.innerHTML = product.variations.map(function(v) {
-                return '<label class="var-option" data-var-id="' + v.id + '" data-var-price="' + v.price + '"><input type="radio" name="variation"><span>' + v.name + '</span><span class="var-option__price">+S/ ' + v.price.toFixed(2) + '</span></label>';
+            varSection.style.display = 'block';
+            varList.innerHTML = product.variations.map(function (v, i) {
+                return `
+                    <div class="lz-option-card ${i === 0 ? 'selected' : ''}" data-var-id="${v.id}" data-var-price="${v.price}" onclick="selectVariation(this, ${v.id}, '${v.name}', ${v.price})">
+                        <span>${v.name}</span>
+                        <strong class="text-success">+${money(v.price)}</strong>
+                    </div>
+                `;
             }).join('');
-            varList.querySelectorAll('.var-option').forEach(function(opt) {
-                opt.addEventListener('click', function() {
-                    varList.querySelectorAll('.var-option').forEach(function(o) { o.classList.remove('selected'); });
-                    opt.classList.add('selected');
-                    selectedVariation = { id: Number(opt.dataset.varId), name: opt.querySelector('span').textContent, price: Number(opt.dataset.varPrice) };
-                    updateModalTotal();
-                });
-            });
+            selectedVariation = { id: product.variations[0].id, name: product.variations[0].name, price: product.variations[0].price };
         } else {
-            varContainer.style.display = 'none';
+            varSection.style.display = 'none';
             selectedVariation = null;
         }
 
         // Addons
-        var addonContainer = document.getElementById('modal-addons');
+        var addonSection = document.getElementById('modal-addons');
         var addonList = document.getElementById('modal-addons-list');
         if (product.addons && product.addons.length > 0) {
-            addonContainer.style.display = 'block';
-            addonList.innerHTML = product.addons.map(function(a) {
-                return '<label class="addon-option" data-addon-id="' + a.id + '" data-addon-price="' + a.price + '"><input type="checkbox"><span>' + a.name + '</span><span class="addon-option__price">+S/ ' + a.price.toFixed(2) + '</span></label>';
+            addonSection.style.display = 'block';
+            addonList.innerHTML = product.addons.map(function (a) {
+                return `
+                    <div class="lz-option-card" data-addon-id="${a.id}" data-addon-price="${a.price}" onclick="toggleAddon(this, ${a.id}, '${a.name}', ${a.price})">
+                        <span>${a.name}</span>
+                        <strong class="text-success">+${money(a.price)}</strong>
+                    </div>
+                `;
             }).join('');
-            addonList.querySelectorAll('.addon-option').forEach(function(opt) {
-                opt.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    opt.classList.toggle('selected');
-                    opt.querySelector('input').checked = opt.classList.contains('selected');
-                    var aid = Number(opt.dataset.addonId);
-                    if (opt.classList.contains('selected')) {
-                        selectedAddons.push({ id: aid, name: opt.querySelector('span').textContent, price: Number(opt.dataset.addonPrice) });
-                    } else {
-                        selectedAddons = selectedAddons.filter(function(a) { return a.id !== aid; });
-                    }
-                    updateModalTotal();
-                });
-            });
         } else {
-            addonContainer.style.display = 'none';
-            selectedAddons = [];
+            addonSection.style.display = 'none';
         }
 
-        prodModal.classList.add('open');
-        prodModal.setAttribute('aria-hidden', 'false');
+        updateModalPrice();
+
+        document.getElementById('productSheetBackdrop').classList.add('active');
+        document.getElementById('productModalSheet').classList.add('active');
+    };
+
+    window.selectVariation = function (el, vid, name, price) {
+        document.querySelectorAll('#modal-variations-list .lz-option-card').forEach(function (c) { c.classList.remove('selected'); });
+        el.classList.add('selected');
+        selectedVariation = { id: vid, name: name, price: price };
+        updateModalPrice();
+    };
+
+    window.toggleAddon = function (el, aid, name, price) {
+        el.classList.toggle('selected');
+        if (el.classList.contains('selected')) {
+            selectedAddons.push({ id: aid, name: name, price: price });
+        } else {
+            selectedAddons = selectedAddons.filter(function (a) { return a.id !== aid; });
+        }
+        updateModalPrice();
+    };
+
+    window.changeModalQty = function (delta) {
+        modalQty = Math.max(1, modalQty + delta);
+        document.getElementById('modal-qty-val').textContent = modalQty;
+        updateModalPrice();
+    };
+
+    function updateModalPrice() {
+        if (!currentProduct) return;
+        var unitPrice = currentProduct.price;
+        if (selectedVariation) unitPrice += selectedVariation.price;
+        selectedAddons.forEach(function (a) { unitPrice += a.price; });
+        var total = unitPrice * modalQty;
+        document.getElementById('modal-total').textContent = money(total);
     }
 
-    function updateModalTotal() {
-        var total = currentProduct.price;
-        if (selectedVariation) total += selectedVariation.price;
-        selectedAddons.forEach(function(a) { total += a.price; });
-        document.getElementById('modal-total').textContent = 'S/ ' + total.toFixed(2);
-    }
-
-    document.getElementById('modal-add-btn').addEventListener('click', function() {
+    window.submitModalAddToCart = function () {
         if (!currentProduct || !STORE_IS_OPEN) return;
-        var total = currentProduct.price;
-        if (selectedVariation) total += selectedVariation.price;
-        selectedAddons.forEach(function(a) { total += a.price; });
+        var unitPrice = currentProduct.price;
+        var suffix = [];
+        if (selectedVariation) {
+            unitPrice += selectedVariation.price;
+            suffix.push(selectedVariation.name);
+        }
+        selectedAddons.forEach(function (a) {
+            unitPrice += a.price;
+            suffix.push(a.name);
+        });
 
-        var body = {
+        var fullName = currentProduct.name;
+        if (suffix.length > 0) {
+            fullName += ' (' + suffix.join(', ') + ')';
+        }
+
+        api('POST', '/cart/' + STORE_ID + '/add', {
             product_id: currentProduct.id,
-            name: currentProduct.name,
-            price: total,
-            quantity: 1
-        };
-        api('POST', '/cart/' + STORE_ID + '/add', body).then(function(data) {
+            name: fullName,
+            price: unitPrice,
+            quantity: modalQty
+        }).then(function () {
             closeProductModal();
             loadCart();
         });
+    };
+
+    window.closeProductModal = function () {
+        document.getElementById('productSheetBackdrop').classList.remove('active');
+        document.getElementById('productModalSheet').classList.remove('active');
+    };
+
+    // Cart Events
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        var pid = Number(btn.dataset.id);
+        var action = btn.dataset.action;
+        api('POST', '/cart/' + STORE_ID + (action === 'plus' ? '/add' : '/remove'), { product_id: pid, quantity: 1 })
+            .then(function () { loadCart(); });
     });
 
-    function closeProductModal() {
-        prodModal.classList.remove('open');
-        prodModal.setAttribute('aria-hidden', 'true');
-    }
-    document.getElementById('product-modal-close').addEventListener('click', closeProductModal);
-    document.getElementById('product-modal-overlay').addEventListener('click', closeProductModal);
+    window.triggerMobileCheckout = function () {
+        document.getElementById('open-checkout')?.click();
+    };
 
-    cartItems.addEventListener('click',function(event){
-        var button = event.target.closest('button[data-cart-action]'); if(!button) return;
-        var pid = Number(button.dataset.id);
-        var isPlus = button.dataset.cartAction === 'plus';
-        api('POST', '/cart/' + STORE_ID + (isPlus ? '/add' : '/remove'), { product_id: pid, quantity: 1 }).then(function(data) {
-            loadCart();
-        });
-    });
-
-    document.getElementById('open-checkout').addEventListener('click',function(){
+    document.getElementById('open-checkout')?.addEventListener('click', function () {
         if (cartData.length === 0) return;
-
         var token = localStorage.getItem('auth_token');
+        var checkoutUrl = '/delivery/checkout?store=' + STORE_ID;
         if (token) {
-            var redirect = '/delivery/checkout?store=' + STORE_ID;
-            window.location.href = '/auth/token-login?token=' + encodeURIComponent(token) + '&redirect=' + encodeURIComponent(redirect);
+            window.location.href = '/auth/token-login?token=' + encodeURIComponent(token) + '&redirect=' + encodeURIComponent(checkoutUrl);
         } else {
-            if (typeof showLoginModal === 'function') showLoginModal();
+            window.location.href = checkoutUrl;
         }
     });
 
-    document.getElementById('close-checkout').addEventListener('click',function(){ modal.classList.remove('is-open'); modal.setAttribute('aria-hidden','true'); });
-    modal.querySelector('.checkout-modal__overlay').addEventListener('click',function(){ modal.classList.remove('is-open'); modal.setAttribute('aria-hidden','true'); });
-
-    window.addEventListener('load',function(){
-        var address = document.getElementById('checkout-address');
-        if(window.google && google.maps && google.maps.places){
-            var autocomplete = new google.maps.places.Autocomplete(address,{componentRestrictions:{country:'pe'}});
-            autocomplete.addListener('place_changed',function(){
-                var place = autocomplete.getPlace();
-                if(place.geometry){
-                    document.getElementById('delivery-lat').value = place.geometry.location.lat();
-                    document.getElementById('delivery-lng').value = place.geometry.location.lng();
-                }
-            });
+    // Category Tabs Smooth Scroll
+    window.scrollToCategory = function (catId, tabEl) {
+        document.querySelectorAll('#categoryTabsList .lz-cat-tab').forEach(function (t) { t.classList.remove('active'); });
+        if (tabEl) tabEl.classList.add('active');
+        var target = document.getElementById(catId);
+        if (target) {
+            var offset = 120;
+            var top = target.getBoundingClientRect().top + window.pageYOffset - offset;
+            window.scrollTo({ top: top, behavior: 'smooth' });
         }
-        estimateFee();
-        loadCart();
-    });
+    };
+
+    window.filterStoreProducts = function (query) {
+        query = query.toLowerCase().trim();
+        document.querySelectorAll('.lz-product-card').forEach(function (card) {
+            var title = card.querySelector('.lz-product-name')?.textContent.toLowerCase() || '';
+            var desc = card.querySelector('.lz-product-desc')?.textContent.toLowerCase() || '';
+            card.style.display = (title.includes(query) || desc.includes(query)) ? 'flex' : 'none';
+        });
+    };
+
+    loadCart();
 })();
-</script>
-@endpush
-
-@push('json-ld')
-<script type="application/ld+json">
-{
-    "@context": "https://schema.org",
-    "@type": "LocalBusiness",
-    "name": "{{ $store->name }}",
-    "image": "{{ $store->image ? getImage(getFilePath('store') . '/' . $store->image) : siteLogo() }}",
-    "url": "{{ route('delivery.store', $store->slug ?? $store->id) }}",
-    "telephone": "{{ $store->phone ?? '+51997428341' }}",
-    "description": "{{ Str::limit(strip_tags($store->description ?? ''), 200) }}",
-    "@id": "{{ route('delivery.store', $store->slug ?? $store->id) }}",
-    "address": {
-        "@type": "PostalAddress",
-        "streetAddress": "{{ $store->address ?? '' }}",
-        "addressLocality": "Tarapoto",
-        "addressRegion": "San Martin",
-        "addressCountry": "PE"
-    },
-    "geo": {
-        "@type": "GeoCoordinates",
-        "latitude": {{ $store->latitude ?? -6.4833 }},
-        "longitude": {{ $store->longitude ?? -76.3667 }}
-    },
-    "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "{{ $store->rating ?? 0 }}",
-        "reviewCount": "{{ $store->total_orders ?? 0 }}"
-    },
-    "priceRange": "$$",
-    "openingHoursSpecification": {
-        "@type": "OpeningHoursSpecification",
-        "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
-        "opens": "00:00",
-        "closes": "23:59"
-    }
-}
 </script>
 @endpush

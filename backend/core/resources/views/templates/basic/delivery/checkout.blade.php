@@ -4,167 +4,379 @@
 @php
     $cartItems = array_values($cart);
     $subtotal = collect($cartItems)->sum(fn($i) => ($i['price'] ?? 0) * ($i['quantity'] ?? 0));
-    $tipAmount = old('tip', 0);
+    $tipAmount = old('tip_amount', 0);
     $total = $subtotal + $deliveryFee + (float) $tipAmount;
 @endphp
 
-<main class="checkout-page">
+<main class="lz-checkout-page">
     <div class="container">
-        <a class="checkout-back" href="{{ route('delivery.store', $store) }}"><i class="las la-arrow-left"></i> Volver a la tienda</a>
+        {{-- Back Navigation --}}
+        <a class="lz-back-btn mb-3" href="{{ route('delivery.store', $store) }}">
+            <i class="las la-arrow-left"></i> Volver al menú de {{ $store->name }}
+        </a>
 
         @if($errors->any())
-        <div class="checkout-errors">
-            @foreach($errors->all() as $error)<small>{{ $error }}</small>@endforeach
+        <div class="alert alert-danger mb-4" style="border-radius:14px;">
+            <ul class="mb-0">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
         </div>
         @endif
 
-        <h1 class="checkout-title">Finaliza tu pedido</h1>
+        <h1 class="lz-checkout-title mb-4">Finaliza tu pedido</h1>
 
-        <div class="checkout-layout">
-            <div class="checkout-main">
-                <section class="checkout-card">
-                    <h2><i class="las la-map-marker-alt"></i> Datos de entrega</h2>
-                    <form action="{{ route('delivery.checkout.submit') }}" method="POST" id="checkout-form" novalidate>
-                        @csrf
-                        <input type="hidden" name="store_id" value="{{ $store->id }}">
-                        <input type="hidden" name="delivery_lat" id="delivery-lat" value="{{ old('delivery_lat', $location['lat'] ?? '') }}">
-                        <input type="hidden" name="delivery_lng" id="delivery-lng" value="{{ old('delivery_lng', $location['lng'] ?? '') }}">
-                        <input type="hidden" name="payment_method_code" id="payment-method-code" value="{{ old('payment_method_code', '0') }}">
-                        <input type="hidden" name="tip_amount" id="tip-amount" value="{{ old('tip', 0) }}">
+        <div class="row g-4">
+            {{-- Left column: 3 clear step cards --}}
+            <div class="col-lg-7">
+                <form action="{{ route('delivery.checkout.submit') }}" method="POST" id="checkout-form" novalidate>
+                    @csrf
+                    <input type="hidden" name="store_id" value="{{ $store->id }}">
+                    <input type="hidden" name="delivery_lat" id="delivery-lat" value="{{ old('delivery_lat', $location['lat'] ?? '') }}">
+                    <input type="hidden" name="delivery_lng" id="delivery-lng" value="{{ old('delivery_lng', $location['lng'] ?? '') }}">
+                    <input type="hidden" name="payment_method_code" id="payment-method-code" value="{{ old('payment_method_code', '0') }}">
+                    <input type="hidden" name="tip_amount" id="tip-amount" value="{{ old('tip_amount', 0) }}">
+                    <input type="hidden" name="coupon_code" id="hidden_coupon_code" value="{{ old('coupon_code') }}">
 
-                        <div class="checkout-grid">
-                            <div class="checkout-field">
-                                <label>Nombre</label>
-                                <input name="contact_name" value="{{ old('contact_name', auth()->user()->firstname ?? $userInfo['firstname'] ?? '') }}" placeholder="Tu nombre completo" required>
+                    {{-- PASO 1: ENTREGA --}}
+                    <div class="lz-checkout-card mb-4">
+                        <div class="lz-checkout-step-header">
+                            <span class="lz-step-number">1</span>
+                            <div>
+                                <h2 class="lz-step-title">Dirección de Entrega</h2>
+                                <p class="lz-step-desc">¿Dónde te llevamos tu pedido en Tarapoto?</p>
                             </div>
-                            <div class="checkout-field">
-                                <label>Teléfono</label>
-                                <input name="contact_phone" value="{{ old('contact_phone', auth()->user()->mobile ?? $userInfo['mobile'] ?? '') }}" placeholder="Celular / WhatsApp" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="lz-form-label">Dirección exacta</label>
+                            <div class="lz-input-with-icon">
+                                <i class="las la-map-marker-alt lz-field-icon"></i>
+                                <input type="text" name="delivery_address" id="checkout-address" class="lz-form-control" value="{{ old('delivery_address', $location['label'] ?? '') }}" placeholder="Calle, jirón, número o referencia..." required autocomplete="off">
                             </div>
                         </div>
 
-                        <div class="checkout-field">
-                            <label>Dirección de entrega</label>
-                            <input name="delivery_address" id="checkout-address" value="{{ old('delivery_address', $location['label'] ?? '') }}" placeholder="Calle, número, referencia" required autocomplete="off">
+                        <div class="mb-0">
+                            <label class="lz-form-label">Referencia o indicaciones (opcional)</label>
+                            <textarea name="notes" class="lz-form-control" rows="2" placeholder="Ej: Portón negro, segundo piso, tocar el timbre blanco...">{{ old('notes') }}</textarea>
+                        </div>
+                    </div>
+
+                    {{-- PASO 2: DATOS DE CONTACTO --}}
+                    <div class="lz-checkout-card mb-4">
+                        <div class="lz-checkout-step-header">
+                            <span class="lz-step-number">2</span>
+                            <div>
+                                <h2 class="lz-step-title">Datos de Contacto</h2>
+                                <p class="lz-step-desc">Para coordinar la entrega y avisarte cuando esté en camino</p>
+                            </div>
                         </div>
 
-                        <div class="checkout-field">
-                            <label>Notas (opcional)</label>
-                            <textarea name="notes" rows="2" placeholder="Timbre no funciona, dejar con el portero...">{{ old('notes') }}</textarea>
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <label class="lz-form-label">Tu nombre</label>
+                                <input type="text" name="contact_name" class="lz-form-control" value="{{ old('contact_name', auth()->user()->firstname ?? $userInfo['firstname'] ?? '') }}" placeholder="Nombre y apellido" required>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="lz-form-label">Celular / WhatsApp</label>
+                                <input type="tel" name="contact_phone" class="lz-form-control" value="{{ old('contact_phone', auth()->user()->mobile ?? $userInfo['mobile'] ?? '') }}" placeholder="Ej: 997428341" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- PASO 3: MÉTODO DE PAGO --}}
+                    <div class="lz-checkout-card mb-4">
+                        <div class="lz-checkout-step-header">
+                            <span class="lz-step-number">3</span>
+                            <div>
+                                <h2 class="lz-step-title">Método de Pago</h2>
+                                <p class="lz-step-desc">Selecciona cómo deseas pagar tu orden</p>
+                            </div>
                         </div>
 
-                        <h2 style="margin-top:32px;"><i class="las la-credit-card"></i> Método de pago</h2>
-                        <div class="payment-methods" id="payment-methods">
-                            <label class="payment-option {{ old('payment_method_code', '0') == '0' ? 'selected' : '' }}" data-code="0">
-                                <input type="radio" name="pm_code" value="0" {{ old('payment_method_code', '0') == '0' ? 'checked' : '' }}>
-                                <span class="pm-icon"><i class="las la-money-bill-wave"></i></span>
-                                <span class="pm-info">
-                                    <strong>Efectivo</strong>
-                                    <small>Paga al recibir tu pedido</small>
-                                </span>
+                        <div class="lz-payment-grid">
+                            {{-- Efectivo --}}
+                            <label class="lz-payment-card {{ old('payment_method_code', '0') == '0' ? 'selected' : '' }}" data-code="0">
+                                <input type="radio" name="pm_code" value="0" {{ old('payment_method_code', '0') == '0' ? 'checked' : '' }} hidden>
+                                <div class="lz-pm-icon"><i class="las la-money-bill-wave"></i></div>
+                                <div class="lz-pm-info">
+                                    <strong>Efectivo al recibir</strong>
+                                    <small>Pagas directamente al repartidor</small>
+                                </div>
+                                <i class="las la-check-circle lz-pm-check"></i>
                             </label>
+
+                            {{-- Pasarelas activas (MercadoPago, Yape, Plin, Tarjeta) --}}
                             @foreach($gateways as $gw)
-                            <label class="payment-option {{ old('payment_method_code') == $gw['code'] ? 'selected' : '' }}" data-code="{{ $gw['code'] }}">
-                                <input type="radio" name="pm_code" value="{{ $gw['code'] }}" {{ old('payment_method_code') == $gw['code'] ? 'checked' : '' }}>
-                                <span class="pm-icon">
+                            <label class="lz-payment-card {{ old('payment_method_code') == $gw['code'] ? 'selected' : '' }}" data-code="{{ $gw['code'] }}">
+                                <input type="radio" name="pm_code" value="{{ $gw['code'] }}" {{ old('payment_method_code') == $gw['code'] ? 'checked' : '' }} hidden>
+                                <div class="lz-pm-icon">
                                     @if($gw['image'])
                                         <img src="{{ getImage(getFilePath('gateway') . '/' . $gw['image']) }}" alt="{{ $gw['name'] }}" style="width:28px;height:28px;object-fit:contain;">
                                     @else
                                         <i class="las la-credit-card"></i>
                                     @endif
-                                </span>
-                                <span class="pm-info">
+                                </div>
+                                <div class="lz-pm-info">
                                     <strong>{{ $gw['name'] }}</strong>
-                                </span>
+                                    <small>{{ $gw['description'] ?? 'Pago digital seguro' }}</small>
+                                </div>
+                                <i class="las la-check-circle lz-pm-check"></i>
                             </label>
                             @endforeach
                         </div>
-                    </form>
-                </section>
+                    </div>
+                </form>
             </div>
 
-            <aside class="checkout-sidebar">
-                <div class="checkout-card checkout-summary">
-                    <h2><i class="las la-shopping-bag"></i> Tu pedido</h2>
-                    <div class="summary-store">{{ $store->name }}</div>
+            {{-- Right column: Order Summary & Confirmation CTA --}}
+            <div class="col-lg-5">
+                <aside class="lz-checkout-sidebar">
+                    <div class="lz-checkout-card">
+                        <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                            <div>
+                                <span class="lz-cart-tag">Resumen</span>
+                                <h3 class="lz-cart-title mb-0">{{ $store->name }}</h3>
+                            </div>
+                            <span class="badge bg-light text-dark font-monospace">{{ count($cartItems) }} items</span>
+                        </div>
 
-                    <div class="summary-items">
-                        @foreach($cartItems as $item)
-                        <div class="summary-row">
-                            <span>{{ $item['quantity'] }}x {{ $item['name'] }}</span>
-                            <span>S/ {{ number_format(($item['price'] ?? 0) * ($item['quantity'] ?? 0), 2) }}</span>
-                        </div>
-                        @endforeach
-                    </div>
-
-                    <div class="summary-divider"></div>
-
-                    <div class="summary-row">
-                        <span>Subtotal</span>
-                        <span>S/ {{ number_format($subtotal, 2) }}</span>
-                    </div>
-                    <div class="summary-row">
-                        <span>Envío</span>
-                        <span id="summary-delivery-fee">S/ {{ number_format($deliveryFee, 2) }}</span>
-                    </div>
-                    <div id="distance-details" style="{{ isset($estimate['distance_km']) ? '' : 'display:none' }}">
-                        <div class="summary-row summary-detail">
-                            <span>Distancia</span>
-                            <span id="summary-distance">{{ isset($estimate['distance_km']) ? number_format($estimate['distance_km'], 2) . ' km' : '0.00 km' }}</span>
-                        </div>
-                        <div class="summary-row summary-detail">
-                            <span>Tarifa base</span>
-                            <span id="summary-base-fare">S/ {{ number_format($estimate['base_fare'] ?? 4, 2) }}</span>
-                        </div>
-                        <div class="summary-row summary-detail">
-                            <span>Distancia extra</span>
-                            <span id="summary-distance-fee">S/ {{ number_format($estimate['distance_fee'] ?? 0, 2) }}</span>
-                        </div>
-                        <div class="summary-row summary-detail">
-                            <span>Tiempo est. (<span id="summary-time-label">~{{ round($estimate['time_min'] ?? 0) }} min</span>)</span>
-                            <span id="summary-time-fee">S/ {{ number_format($estimate['time_fee'] ?? 0, 2) }}</span>
-                        </div>
-                        <div class="summary-row surge-row" id="summary-surge-row" style="{{ (($estimate['surge'] ?? 1) > 1) ? '' : 'display:none' }}">
-                            <span>Demanda alta (×<span id="summary-surge-mult">{{ number_format($estimate['surge'] ?? 1, 2) }}</span>)</span>
-                            <span id="summary-surge-fee">+{{ round((($estimate['base_fare'] ?? 0) + ($estimate['distance_fee'] ?? 0) + ($estimate['time_fee'] ?? 0)) * (($estimate['surge'] ?? 1) - 1), 2) }}</span>
-                        </div>
-                    </div>
-
-                    <div style="margin-bottom:12px">
-                        <label style="font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:4px">¿Tienes un cupón?</label>
-                        <div style="display:flex;gap:6px">
-                            <input type="text" name="coupon_code" class="coupon-input" placeholder="Código de cupón" style="flex:1" value="{{ old('coupon_code') }}">
-                            <button type="button" onclick="applyCoupon()" class="tip-btn" style="white-space:nowrap">Aplicar</button>
-                        </div>
-                        <div id="coupon-msg" style="font-size:11px;margin-top:4px"></div>
-                    </div>
-
-                    <div class="tip-section">
-                        <span>Propina para el repartidor</span>
-                        <div class="tip-options">
-                            @foreach([0, 1, 2, 5] as $t)
-                            <button type="button" class="tip-btn {{ old('tip', 0) == $t ? 'active' : '' }}" data-amount="{{ $t }}" onclick="setTip({{ $t }})">S/ {{ $t }}</button>
+                        {{-- Item list --}}
+                        <div class="lz-summary-items-list mb-3">
+                            @foreach($cartItems as $item)
+                            <div class="d-flex justify-content-between py-2 border-bottom" style="font-size:13.5px;">
+                                <div>
+                                    <strong class="text-dark">{{ $item['quantity'] }}x</strong> {{ $item['name'] }}
+                                </div>
+                                <span class="fw-bold text-dark">S/ {{ number_format(($item['price'] ?? 0) * ($item['quantity'] ?? 0), 2) }}</span>
+                            </div>
                             @endforeach
-                            <button type="button" class="tip-btn tip-custom {{ !in_array(old('tip', 0), [0,1,2,5]) && old('tip', 0) > 0 ? 'active' : '' }}" data-amount="custom" onclick="setCustomTip()">Otro</button>
+                        </div>
+
+                        {{-- Coupon Input --}}
+                        <div class="mb-3">
+                            <label class="lz-form-label">Cupón de descuento</label>
+                            <div class="d-flex gap-2">
+                                <input type="text" id="coupon_input" class="lz-form-control" placeholder="Ingresa código..." value="{{ old('coupon_code') }}">
+                                <button type="button" class="btn btn-outline-success px-3 fw-bold" onclick="applyCouponCode()">Aplicar</button>
+                            </div>
+                            <div id="coupon-msg" class="small mt-1"></div>
+                        </div>
+
+                        {{-- Tip selector --}}
+                        <div class="mb-3">
+                            <label class="lz-form-label d-flex justify-content-between">
+                                <span>Propina voluntaria al repartidor</span>
+                                <strong id="tip-display" class="text-success">+S/ 0.00</strong>
+                            </label>
+                            <div class="d-flex gap-2">
+                                @foreach([0, 1, 2, 5] as $t)
+                                <button type="button" class="lz-tip-btn {{ old('tip_amount', 0) == $t ? 'active' : '' }}" onclick="selectTip({{ $t }}, this)">
+                                    {{ $t == 0 ? 'Sin propina' : 'S/ ' . $t }}
+                                </button>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        {{-- Financial Breakdown --}}
+                        <div class="lz-cart-summary-box">
+                            <div class="lz-summary-line">
+                                <span>Subtotal</span>
+                                <strong>S/ {{ number_format($subtotal, 2) }}</strong>
+                            </div>
+                            <div class="lz-summary-line">
+                                <span>Costo de envío</span>
+                                <strong id="delivery-fee-val">S/ {{ number_format($deliveryFee, 2) }}</strong>
+                            </div>
+                            <div class="lz-summary-line text-success" id="discount-row" style="display:none;">
+                                <span>Descuento aplicado</span>
+                                <strong id="discount-val">-S/ 0.00</strong>
+                            </div>
+                            <div class="lz-summary-line lz-summary-total">
+                                <span>Total a pagar</span>
+                                <strong id="total-val" style="color:var(--lz-primary-dark);font-size:22px;">S/ {{ number_format($total, 2) }}</strong>
+                            </div>
+
+                            <button type="button" class="lz-btn-cta w-100 mt-4" id="submitOrderBtn" onclick="triggerCheckoutSubmit()">
+                                <span>Confirmar pedido</span>
+                                <span id="btn-total-display">S/ {{ number_format($total, 2) }}</span>
+                            </button>
                         </div>
                     </div>
-
-                    <div class="summary-divider"></div>
-
-                    <div class="summary-total">
-                        <span>Total</span>
-                        <span id="summary-total">S/ {{ number_format($total, 2) }}</span>
-                    </div>
-
-                    <button type="button" class="checkout-submit" id="submit-order" onclick="submitOrder()">
-                        Confirmar pedido <i class="las la-arrow-right"></i>
-                    </button>
-                </div>
-            </aside>
+                </aside>
+            </div>
         </div>
     </div>
 </main>
 @endsection
+
+@push('style')
+<style>
+.lz-checkout-page {
+    padding: 20px 0 60px;
+    background: var(--lz-bg);
+}
+.lz-checkout-title {
+    font-size: clamp(24px, 3.5vw, 32px);
+    font-weight: 800;
+    color: var(--lz-text);
+}
+.lz-checkout-card {
+    background: var(--lz-surface);
+    border: 1.5px solid var(--lz-border);
+    border-radius: var(--lz-r-lg);
+    padding: 24px;
+    box-shadow: var(--lz-shadow-sm);
+}
+.lz-checkout-step-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+}
+.lz-step-number {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--lz-primary);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.lz-step-title {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--lz-text);
+    margin: 0;
+}
+.lz-step-desc {
+    font-size: 12.5px;
+    color: var(--lz-text-muted);
+    margin: 2px 0 0;
+}
+.lz-form-label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--lz-text);
+    margin-bottom: 6px;
+}
+.lz-form-control {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid var(--lz-border);
+    border-radius: var(--lz-r-sm);
+    font-size: 14px;
+    color: var(--lz-text);
+    outline: none;
+    transition: var(--lz-transition);
+}
+.lz-form-control:focus {
+    border-color: var(--lz-primary);
+    box-shadow: 0 0 0 3px var(--lz-primary-glow);
+}
+.lz-input-with-icon {
+    position: relative;
+}
+.lz-input-with-icon .lz-field-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--lz-primary);
+    font-size: 18px;
+    pointer-events: none;
+}
+.lz-input-with-icon .lz-form-control {
+    padding-left: 42px;
+}
+.lz-payment-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+.lz-payment-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 1.5px solid var(--lz-border);
+    border-radius: var(--lz-r-md);
+    cursor: pointer;
+    transition: var(--lz-transition);
+    background: var(--lz-surface);
+}
+.lz-payment-card:hover {
+    border-color: var(--lz-primary);
+}
+.lz-payment-card.selected {
+    border-color: var(--lz-primary);
+    background: var(--lz-primary-light);
+}
+.lz-pm-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--lz-r-sm);
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: var(--lz-primary-dark);
+    flex-shrink: 0;
+    box-shadow: var(--lz-shadow-xs);
+}
+.lz-pm-info {
+    flex: 1;
+}
+.lz-pm-info strong {
+    display: block;
+    font-size: 14px;
+    color: var(--lz-text);
+}
+.lz-pm-info small {
+    font-size: 11.5px;
+    color: var(--lz-text-muted);
+}
+.lz-pm-check {
+    font-size: 20px;
+    color: var(--lz-border);
+    transition: var(--lz-transition);
+}
+.lz-payment-card.selected .lz-pm-check {
+    color: var(--lz-primary-dark);
+}
+.lz-tip-btn {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid var(--lz-border);
+    border-radius: var(--lz-r-sm);
+    background: var(--lz-surface);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--lz-text);
+    cursor: pointer;
+    transition: var(--lz-transition);
+}
+.lz-tip-btn:hover {
+    border-color: var(--lz-primary);
+}
+.lz-tip-btn.active {
+    background: var(--lz-primary);
+    border-color: var(--lz-primary);
+    color: #fff;
+}
+.lz-checkout-sidebar {
+    position: sticky;
+    top: 100px;
+}
+</style>
+@endpush
 
 @if(gs('google_maps_api'))
 @push('script-lib')
@@ -175,248 +387,110 @@
 @push('script')
 <script>
 (function() {
-    var tip = {{ old('tip', 0) }};
-    var subtotal = {{ $subtotal }};
-    var deliveryFee = {{ $deliveryFee }};
+    var subtotal = {{ (float) $subtotal }};
+    var deliveryFee = {{ (float) $deliveryFee }};
+    var currentTip = {{ (float) $tipAmount }};
+    var currentDiscount = 0;
 
     function money(v) { return 'S/ ' + Number(v).toFixed(2); }
 
-    window.setTip = function(amount) {
-        tip = amount;
-        document.querySelectorAll('.tip-btn').forEach(function(b){ b.classList.remove('active'); });
-        document.querySelector('[data-amount="' + amount + '"]')?.classList.add('active');
-        updateTotal();
+    function recalculateTotal() {
+        var total = Math.max(0, subtotal + deliveryFee + currentTip - currentDiscount);
+        document.getElementById('total-val').textContent = money(total);
+        document.getElementById('btn-total-display').textContent = money(total);
+        document.getElementById('tip-amount').value = currentTip;
+    }
+
+    window.selectTip = function(amount, el) {
+        currentTip = amount;
+        document.querySelectorAll('.lz-tip-btn').forEach(function(b){ b.classList.remove('active'); });
+        el.classList.add('active');
+        document.getElementById('tip-display').textContent = '+S/ ' + amount.toFixed(2);
+        recalculateTotal();
     };
 
-    window.setCustomTip = function() {
-        var val = parseFloat(prompt('Monto de propina (S/):', '0'));
-        if (!isNaN(val) && val >= 0) {
-            tip = val;
-            document.querySelectorAll('.tip-btn').forEach(function(b){ b.classList.remove('active'); });
-            document.querySelector('.tip-btn.tip-custom')?.classList.add('active');
-            updateTotal();
-        }
-    };
+    window.applyCouponCode = function() {
+        var code = document.getElementById('coupon_input').value.trim();
+        var msgEl = document.getElementById('coupon-msg');
+        if (!code) { msgEl.innerHTML = ''; return; }
 
-    window.applyCoupon = function() {
-        var code = document.querySelector('[name="coupon_code"]').value.trim();
-        var msg = document.getElementById('coupon-msg');
-        if (!code) { msg.innerHTML = ''; return; }
-        msg.innerHTML = '<span style="color:#3b82f6">Validando...</span>';
+        msgEl.innerHTML = '<span class="text-primary">Validando cupón...</span>';
         fetch('/api/validate-coupon', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'dev-token': '{{ developerToken() }}', 'Accept': 'application/json' },
             body: JSON.stringify({ code: code, subtotal: subtotal })
         })
         .then(function(r) { return r.json(); })
-        .then(function(d) {
-            if (d.status === 'success') {
-                discount = d.data.discount;
-                msg.innerHTML = '<span style="color:#16a34a">✓ ' + d.data.description + ' — Descuento: S/ ' + discount.toFixed(2) + '</span>';
-                updateTotal();
+        .then(function(res) {
+            if (res.status === 'success') {
+                currentDiscount = res.data.discount || 0;
+                document.getElementById('hidden_coupon_code').value = code;
+                document.getElementById('discount-row').style.display = 'flex';
+                document.getElementById('discount-val').textContent = '-' + money(currentDiscount);
+                msgEl.innerHTML = '<span class="text-success fw-bold">✓ Cupón aplicado: ' + res.data.description + '</span>';
+                recalculateTotal();
             } else {
-                msg.innerHTML = '<span style="color:#dc2626">' + (d.message || 'Cupón inválido') + '</span>';
+                currentDiscount = 0;
+                document.getElementById('hidden_coupon_code').value = '';
+                document.getElementById('discount-row').style.display = 'none';
+                msgEl.innerHTML = '<span class="text-danger">' + (res.message || 'Cupón no válido') + '</span>';
+                recalculateTotal();
             }
         });
     };
 
-    function updateTotal() {
-        document.getElementById('summary-total').textContent = money(subtotal + deliveryFee + tip);
-        document.getElementById('tip-amount').value = tip;
-    }
+    // Payment Selection
+    document.querySelectorAll('.lz-payment-card').forEach(function(card) {
+        card.addEventListener('click', function() {
+            document.querySelectorAll('.lz-payment-card').forEach(function(c){ c.classList.remove('selected'); });
+            card.classList.add('selected');
+            card.querySelector('input[type="radio"]').checked = true;
+            document.getElementById('payment-method-code').value = card.dataset.code;
+        });
+    });
 
-    window.submitOrder = function() {
+    window.triggerCheckoutSubmit = function() {
         var form = document.getElementById('checkout-form');
-        var addr = document.getElementById('checkout-address');
-        if (!addr.value.trim()) { alert('Ingresa tu dirección de entrega'); addr.focus(); return; }
-        var btn = document.getElementById('submit-order');
+        var addressInput = document.getElementById('checkout-address');
+        var nameInput = document.querySelector('[name="contact_name"]');
+        var phoneInput = document.querySelector('[name="contact_phone"]');
+
+        if (!addressInput.value.trim()) {
+            alert('Por favor ingresa la dirección de entrega.');
+            addressInput.focus();
+            return;
+        }
+        if (!nameInput.value.trim()) {
+            alert('Por favor ingresa tu nombre de contacto.');
+            nameInput.focus();
+            return;
+        }
+        if (!phoneInput.value.trim()) {
+            alert('Por favor ingresa tu número de celular / WhatsApp.');
+            phoneInput.focus();
+            return;
+        }
+
+        var btn = document.getElementById('submitOrderBtn');
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Procesando...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Enviando pedido...';
         form.submit();
     };
 
-    document.querySelectorAll('.payment-option').forEach(function(opt) {
-        opt.addEventListener('click', function() {
-            document.querySelectorAll('.payment-option').forEach(function(o){ o.classList.remove('selected'); });
-            opt.classList.add('selected');
-            opt.querySelector('input').checked = true;
-            document.getElementById('payment-method-code').value = opt.dataset.code;
-        });
-    });
-
+    // Geocomplete if google places loaded
     window.addEventListener('load', function() {
         var address = document.getElementById('checkout-address');
-        if (window.google && google.maps && google.maps.places) {
+        if (window.google && google.maps && google.maps.places && address) {
             var autocomplete = new google.maps.places.Autocomplete(address, { componentRestrictions: { country: 'pe' } });
             autocomplete.addListener('place_changed', function() {
                 var place = autocomplete.getPlace();
-                if (place && place.geometry) {
-                    var lat = place.geometry.location.lat();
-                    var lng = place.geometry.location.lng();
-                    document.getElementById('delivery-lat').value = lat;
-                    document.getElementById('delivery-lng').value = lng;
-
-                    // Save to session
-                    var label = place.formatted_address || (lat.toFixed(6) + ', ' + lng.toFixed(6));
-                    fetch('/location/save', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
-                        body: JSON.stringify({ lat: lat, lng: lng, label: label })
-                    }).then(function() {
-                        if (typeof window.updateHeaderLocation === 'function') window.updateHeaderLocation();
-                    }).catch(function(){});
-
-                    // Update UI delivery fee and total
-                    fetch('/delivery/store-fee-estimate?store_id={{ $store->id }}&delivery_lat=' + lat + '&delivery_lng=' + lng)
-                        .then(function(r) { return r.json(); })
-                        .then(function(d) {
-                            if (d && d.delivery_fee != null) {
-                                deliveryFee = d.delivery_fee;
-                                document.getElementById('summary-delivery-fee').textContent = money(deliveryFee);
-                                
-                                var details = document.getElementById('distance-details');
-                                if (details) details.style.display = 'block';
-
-                                var summaryDist = document.getElementById('summary-distance');
-                                if (summaryDist && d.distance_km != null) {
-                                    summaryDist.textContent = d.distance_km.toFixed(2) + ' km';
-                                }
-                                var summaryDistFee = document.getElementById('summary-distance-fee');
-                                if (summaryDistFee && d.distance_fee != null) {
-                                    summaryDistFee.textContent = money(d.distance_fee);
-                                }
-                                var summaryTimeFee = document.getElementById('summary-time-fee');
-                                if (summaryTimeFee && d.time_fee != null) {
-                                    var timeMin = d.time_min != null ? Math.round(d.time_min) : 0;
-                                    var labelEl = document.getElementById('summary-time-label');
-                                    if (labelEl) labelEl.textContent = '~' + timeMin + ' min';
-                                    summaryTimeFee.textContent = money(d.time_fee);
-                                }
-                                var summaryBaseFee = document.getElementById('summary-base-fare');
-                                if (summaryBaseFee && d.base_fare != null) {
-                                    summaryBaseFee.textContent = money(d.base_fare);
-                                }
-
-                                var surgeRow = document.getElementById('summary-surge-row');
-                                if (surgeRow) {
-                                    if (d.surge > 1) {
-                                        surgeRow.style.display = '';
-                                        var multEl = document.getElementById('summary-surge-mult');
-                                        if (multEl) multEl.textContent = d.surge.toFixed(2);
-                                        var feeEl = document.getElementById('summary-surge-fee');
-                                        if (feeEl) {
-                                            var surgeFeeVal = (d.base_fare + d.distance_fee + d.time_fee) * (d.surge - 1);
-                                            feeEl.textContent = '+' + surgeFeeVal.toFixed(2);
-                                        }
-                                    } else {
-                                        surgeRow.style.display = 'none';
-                                    }
-                                }
-                                
-                                updateTotal();
-                            }
-                        }).catch(function(){});
+                if (place.geometry) {
+                    document.getElementById('delivery-lat').value = place.geometry.location.lat();
+                    document.getElementById('delivery-lng').value = place.geometry.location.lng();
                 }
             });
         }
-
-        address.addEventListener('input', function() {
-            document.getElementById('delivery-lat').value = '';
-            document.getElementById('delivery-lng').value = '';
-            deliveryFee = 0;
-            document.getElementById('summary-delivery-fee').textContent = money(0);
-            var details = document.getElementById('distance-details');
-            if (details) details.style.display = 'none';
-            updateTotal();
-        });
     });
-
-    updateTotal();
 })();
 </script>
-@endpush
-
-@push('style')
-<style>
-.checkout-errors { padding: 12px 16px; border-radius: 12px; background: #fff1f1; color: #a92525; margin-bottom: 20px; display: grid; gap: 4px; }
-.checkout-page { padding-top: 110px; padding-bottom: 80px; min-height: 100vh; background: #f8faf8; }
-.checkout-back { display: inline-flex; align-items: center; gap: 6px; color: #16a34a; font-weight: 700; font-size: 14px; text-decoration: none; margin-bottom: 20px; }
-.checkout-back:hover { color: #15803d; }
-.checkout-title { font-size: 32px; font-weight: 800; letter-spacing: -1px; margin-bottom: 32px; }
-.checkout-layout { display: grid; grid-template-columns: 1fr 380px; gap: 28px; align-items: start; }
-.checkout-main { min-width: 0; }
-.checkout-card { background: #fff; border-radius: 20px; padding: 28px; box-shadow: 0 2px 16px rgba(0,0,0,.04); margin-bottom: 24px; }
-.checkout-card h2 { font-size: 18px; font-weight: 700; margin: 0 0 20px; display: flex; align-items: center; gap: 8px; }
-.checkout-card h2 i { color: #16a34a; }
-.checkout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.checkout-field { margin-bottom: 16px; }
-.checkout-field label { display: block; font-size: 13px; font-weight: 700; color: #555; margin-bottom: 6px; }
-.checkout-field input, .checkout-field textarea { width: 100%; padding: 12px 16px; border: 2px solid #e8e8f0; border-radius: 12px; font-size: 15px; outline: none; transition: border .2s; box-sizing: border-box; }
-.checkout-field input:focus, .checkout-field textarea:focus { border-color: #16a34a; }
-.checkout-field textarea { resize: vertical; }
-
-.payment-methods { display: grid; gap: 10px; }
-.payment-option { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border: 2px solid #e8e8f0; border-radius: 14px; cursor: pointer; transition: all .2s; }
-.payment-option:hover { border-color: #c8e6c9; background: #f9fff9; }
-.payment-option.selected { border-color: #16a34a; background: #f0fdf0; }
-.payment-option input { display: none; }
-.pm-icon { width: 44px; height: 44px; border-radius: 12px; background: #f3f4f6; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #666; flex-shrink: 0; overflow: hidden; }
-.payment-option.selected .pm-icon { background: #e8f5e9; color: #16a34a; }
-.pm-info strong { display: block; font-size: 14px; color: #333; }
-.pm-info small { font-size: 12px; color: #999; }
-
-.checkout-sidebar { position: sticky; top: 110px; }
-.summary-store { font-size: 13px; color: #999; margin-bottom: 16px; padding: 8px 12px; background: #f3f4f6; border-radius: 8px; }
-.summary-items { margin-bottom: 4px; }
-.summary-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; color: #555; }
-.summary-divider { height: 1px; background: #f0f0f0; margin: 12px 0; }
-.summary-total { display: flex; justify-content: space-between; padding: 8px 0; font-size: 20px; font-weight: 800; color: #1a1a2e; }
-.summary-detail { font-size: 12px; color: #999; padding: 3px 0 3px 12px; }
-.summary-detail span:first-child::before { content: '• '; }
-.surge-row { color: #e67e22 !important; font-weight: 600 !important; }
-
-.tip-section { margin-top: 12px; }
-.tip-section > span { font-size: 13px; font-weight: 600; color: #555; display: block; margin-bottom: 8px; }
-.tip-options { display: flex; gap: 6px; flex-wrap: wrap; }
-.tip-btn { padding: 8px 16px; border: 2px solid #e8e8f0; border-radius: 10px; background: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s; }
-.tip-btn:hover { border-color: #16a34a; }
-.tip-btn.active { background: #16a34a; color: #fff; border-color: #16a34a; }
-
-.checkout-submit { width: 100%; margin-top: 20px; padding: 16px; border: none; border-radius: 14px; background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all .25s; }
-.checkout-submit:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(22,163,74,.35); }
-.checkout-submit:disabled { opacity: .7; pointer-events: none; }
-
-.coupon-input {
-    padding: 10px 14px !important;
-    border: 2px solid #e8e8f0 !important;
-    border-radius: 10px !important;
-    font-size: 14px !important;
-    outline: none !important;
-    transition: border-color 0.2s !important;
-    background: #fff !important;
-    box-sizing: border-box;
-}
-.coupon-input:focus {
-    border-color: #16a34a !important;
-}
-
-@media (max-width: 768px) {
-    .checkout-layout { grid-template-columns: 1fr; }
-    .checkout-sidebar { position: static; }
-    .checkout-grid { grid-template-columns: 1fr; }
-}
-.checkout-page{background:linear-gradient(180deg,#f6fbf7 0%,#fff 360px)!important;color:#101828!important}
-.checkout-title{font-family:Outfit,Inter,sans-serif!important;font-size:clamp(32px,4vw,48px)!important;line-height:1.08!important;font-weight:900!important;color:#101828!important;letter-spacing:0!important}
-.checkout-back{background:#fff!important;border:1px solid rgba(22,163,74,.22)!important;border-radius:999px!important;padding:8px 12px!important}
-.checkout-card{border:1px solid #e7eaee!important;border-radius:8px!important;box-shadow:0 18px 45px rgba(16,24,40,.08)!important}
-.checkout-card h2{font-family:Outfit,Inter,sans-serif!important;color:#101828!important;font-weight:900!important}
-.checkout-field label{color:#344054!important;font-weight:900!important}
-.checkout-field input,.checkout-field textarea,.coupon-input,.payment-option,.tip-btn,.summary-store{border-radius:8px!important}
-.checkout-field input,.checkout-field textarea,.coupon-input{border-color:#d8dee6!important;color:#101828!important}
-.checkout-field input:focus,.checkout-field textarea:focus,.coupon-input:focus{border-color:#16a34a!important;box-shadow:0 0 0 4px rgba(22,163,74,.1)!important}
-.payment-option{border-color:#e7eaee!important}
-.payment-option.selected{border-color:#16a34a!important;background:#f0fdf4!important}
-.checkout-submit{border-radius:8px!important;background:#16a34a!important;font-weight:900!important;box-shadow:0 14px 30px rgba(22,163,74,.2)!important}
-.summary-total{color:#101828!important}
-</style>
 @endpush

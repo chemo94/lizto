@@ -73,10 +73,11 @@ Route::controller('SiteController')->group(function () {
 
     Route::post('/solicitar-servicio', 'serviceRequestSubmit')->name('service.request');
     Route::get('/inicio', function () { return redirect()->route('home', [], 301); }); // Legacy redirect
-    Route::get('/', 'index')->name('home'); // Landing principal del ecosistema
+    Route::get('/', 'deliveryMarketplace')->name('home'); // Superapp Marketplace B2C en la raíz
     Route::get('/delivery', 'deliveryMarketplace')->name('delivery.marketplace');
     Route::get('/delivery/tienda/{store}', 'deliveryStore')->name('delivery.store');
     Route::get('/taxi', 'taxiPage')->name('taxi');
+    Route::get('/software', 'index')->name('software');
     Route::get('/negocios', 'businessLanding')->name('negocios');
     Route::get('/contact', 'contact')->name('contact');
     Route::post('/contact', 'contactSubmit');

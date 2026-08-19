@@ -353,7 +353,8 @@ class SiteController extends Controller
         $seo = \App\Models\Frontend::where('data_keys', 'seo.data')->first();
         $seoContents = $seo ? $seo->seo_content : null;
         $seoImage = $seo ? getImage(getFilePath('seo') . '/' . @$seo->data_values->image) : siteLogo();
-        $categories = \App\Models\GeneralCategory::active()->orderBy('sort_order')->get();
+        $categories = \App\Models\GeneralCategory::active()->with('subCategories')->orderBy('sort_order')->get();
+        $subCategories = \App\Models\SubCategory::active()->orderBy('sort_order')->get();
         $query = Store::active()->open()->withActivePackages()->with('subCategories')->withCount('products');
 
         if ($request->filled('q')) {
@@ -367,6 +368,10 @@ class SiteController extends Controller
 
         if ($request->filled('category')) {
             $query->whereHas('generalCategories', fn ($category) => $category->where('general_categories.id', $request->category));
+        }
+
+        if ($request->filled('subcategory')) {
+            $query->whereHas('subCategories', fn ($subCategory) => $subCategory->where('sub_categories.id', $request->subcategory));
         }
 
         $stores = $query->orderByFeatured()->get();
@@ -424,7 +429,7 @@ class SiteController extends Controller
             ->get();
 
         return view('Template::delivery.marketplace', compact(
-            'pageTitle', 'seoContents', 'seoImage', 'categories', 'stores', 'products', 
+            'pageTitle', 'seoContents', 'seoImage', 'categories', 'subCategories', 'stores', 'products', 
             'storeCount', 'packages', 'mostOrdered', 'hasFreeDelivery', 'freeRemaining',
             'banners', 'coupons', 'discountedProducts'
         ));

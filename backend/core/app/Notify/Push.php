@@ -73,16 +73,34 @@ class Push extends NotifyProcess implements Notifiable
             try {
                 $credentialsFilePath = getFilePath('pushConfig') . '/push_config.json';
                 if (!file_exists($credentialsFilePath)) {
+                    $altPath = base_path('../' . getFilePath('pushConfig') . '/push_config.json');
+                    if (file_exists($altPath)) {
+                        $credentialsFilePath = $altPath;
+                    } else {
+                        $altPath2 = public_path(getFilePath('pushConfig') . '/push_config.json');
+                        if (file_exists($altPath2)) {
+                            $credentialsFilePath = $altPath2;
+                        }
+                    }
+                }
+
+                if (!file_exists($credentialsFilePath)) {
                     Log::channel('driver_otp')->error('[Push] push_config.json NOT FOUND', ['path' => $credentialsFilePath]);
                     $this->createErrorLog('push_config.json not found: ' . $credentialsFilePath);
                     return false;
                 }
+
+                $guzzleClient = new \GuzzleHttp\Client(['verify' => false]);
                 $client = new \Google_Client();
+                $client->setHttpClient($guzzleClient);
                 $client->setAuthConfig($credentialsFilePath);
                 $client->addScope('https://www.googleapis.com/auth/firebase.messaging');
-                $client->fetchAccessTokenWithAssertion();
-                $token = $client->getAccessToken();
-                $access_token = $token['access_token'];
+                $token = $client->fetchAccessTokenWithAssertion($guzzleClient);
+                $access_token = $token['access_token'] ?? null;
+                if (!$access_token) {
+                    Log::channel('driver_otp')->error('[Push] Failed to fetch access token', ['token_response' => $token]);
+                    return false;
+                }
                 $headers = [
                     "Authorization: Bearer $access_token",
                     'Content-Type: application/json'

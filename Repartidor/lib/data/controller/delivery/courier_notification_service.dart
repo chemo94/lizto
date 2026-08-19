@@ -83,13 +83,7 @@ class CourierNotificationService extends GetxController {
             iconColor: MyColor.primaryColor,
             type: 'new_job',
           );
-          Get.snackbar(
-            'Nuevo reparto',
-            message ?? 'Hay un pedido disponible para tomar',
-            backgroundColor: MyColor.primaryColor,
-            colorText: MyColor.colorWhite,
-            duration: const Duration(seconds: 4),
-          );
+          showIncomingOrderAlertFromData(data);
           break;
 
         case 'delivery_order_status_updated':
@@ -126,6 +120,318 @@ class CourierNotificationService extends GetxController {
       }
     } catch (e) {
       printX('Courier notification event error: $e');
+    }
+  }
+
+  static int? _activeAlertJobId;
+
+  static void showIncomingOrderAlertFromData(Map<dynamic, dynamic> data) {
+    try {
+      final rawJobId = data['job_id'] ?? data['favor_id'] ?? data['order_id'];
+      final jobId = rawJobId is int ? rawJobId : int.tryParse(rawJobId?.toString() ?? '');
+      if (jobId == null || jobId == 0) return;
+
+      if (_activeAlertJobId == jobId && Get.isDialogOpen == true) {
+        return; // already open
+      }
+      _activeAlertJobId = jobId;
+
+      final type = data['job_type']?.toString() ?? data['type']?.toString() ?? 'favor';
+      final orderNo = data['order_no']?.toString() ?? '#$jobId';
+      final storeName = data['store_name']?.toString() ?? data['seller_name']?.toString() ?? 'Lizto';
+      final pickupAddress = data['pickup_address']?.toString() ?? 'Punto de recogida';
+      final deliveryAddress = data['delivery_address']?.toString() ?? 'Punto de entrega';
+      final rawFee = data['delivery_fee'] ?? data['total_earning'] ?? data['total'];
+      final fee = rawFee is num ? rawFee.toDouble() : (double.tryParse(rawFee?.toString() ?? '0.0') ?? 0.0);
+      final description = data['description']?.toString() ?? '';
+
+      AudioUtils.playNotificationSound();
+
+      Get.dialog(
+        Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          elevation: 16,
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          child: Builder(
+            builder: (context) {
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              return Container(
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: MyColor.primaryColor.withValues(alpha: 0.25),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Glowing Top Banner
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [MyColor.primaryColor, Color(0xFF059669)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.bolt_rounded, color: Colors.white, size: 24),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  '¡NUEVO PEDIDO ENTRANTE!',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                Text(
+                                  'Solicitud $orderNo',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.85),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'S/ ${fee.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                color: MyColor.primaryColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Body details
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          // Store / Description
+                          if (storeName.isNotEmpty)
+                            Row(
+                              children: [
+                                const Icon(Icons.storefront_rounded, color: MyColor.primaryColor, size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    storeName,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          const SizedBox(height: 12),
+
+                          // Route Box (Pickup -> Delivery)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.circle, color: Color(0xFF10B981), size: 10),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        pickupAddress,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: isDark ? Colors.grey[300] : const Color(0xFF475569),
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const Padding(
+                                  padding: EdgeInsets.only(left: 4, top: 4, bottom: 4),
+                                  child: Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: SizedBox(
+                                      height: 12,
+                                      child: VerticalDivider(color: Colors.grey, width: 1, thickness: 1),
+                                    ),
+                                  ),
+                                ),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.location_on_rounded, color: Colors.redAccent, size: 14),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        deliveryAddress,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          if (description.isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Nota: $description',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontStyle: FontStyle.italic,
+                                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+
+                          const SizedBox(height: 20),
+
+                          // Action Buttons: Aceptar & Rechazar
+                          Row(
+                            children: [
+                              Expanded(
+                                flex: 1,
+                                child: OutlinedButton(
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    side: BorderSide(
+                                      color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    AudioUtils.stop();
+                                    Get.back();
+                                  },
+                                  child: Text(
+                                    'Rechazar',
+                                    style: TextStyle(
+                                      color: isDark ? Colors.grey[400] : Colors.grey[700],
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 2,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: MyColor.primaryColor,
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 4,
+                                  ),
+                                  onPressed: () async {
+                                    AudioUtils.stop();
+                                    Get.back();
+                                    if (Get.isRegistered<CourierController>()) {
+                                      final courierController = Get.find<CourierController>();
+                                      bool ok = await courierController.acceptJob(jobId, type);
+                                      if (ok) {
+                                        Get.snackbar(
+                                          '¡Pedido Aceptado!',
+                                          'El pedido $orderNo ya está en tus pedidos activos.',
+                                          backgroundColor: const Color(0xFF10B981),
+                                          colorText: MyColor.colorWhite,
+                                          icon: const Icon(Icons.check_circle_rounded, color: Colors.white),
+                                          duration: const Duration(seconds: 4),
+                                        );
+                                      }
+                                    }
+                                  },
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        'Aceptar Pedido',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        barrierDismissible: true,
+      );
+    } catch (e) {
+      printX('showIncomingOrderAlertFromData error: $e');
     }
   }
 

@@ -159,11 +159,12 @@ class DeliveryController extends Controller
         }
 
         return apiResponse('general_categories', 'success', $notify, [
-            'general_categories'        => $categories,
+            'general_categories'          => $categories,
             'general_category_image_path' => getFilePath('general_category'),
-            'sections'                  => $formattedSections,
-            'store_image_path'          => getFilePath('store'),
-            'product_image_path'        => 'storage',
+            'sub_category_image_path'     => getFilePath('sub_category'),
+            'sections'                    => $formattedSections,
+            'store_image_path'            => getFilePath('store'),
+            'product_image_path'          => 'storage',
         ]);
     }
 
@@ -244,6 +245,7 @@ class DeliveryController extends Controller
             'sub_categories' => $subCategories,
             'stores' => $stores,
             'sections' => $sections,
+            'sub_category_image_path' => getFilePath('sub_category'),
             'store_image_path' => getFilePath('store'),
             'store_cover_path' => getFilePath('store_cover'),
             'product_image_path' => 'storage',

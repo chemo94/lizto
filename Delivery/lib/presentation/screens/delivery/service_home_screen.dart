@@ -792,7 +792,7 @@ class _SubCategoryPills extends StatelessWidget {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(10),
                       child: MyImageWidget(
-                        imageUrl: '${controller.categoryHomeStoreImagePath}/${sub.image}',
+                        imageUrl: '${controller.categoryHomeSubCategoryImagePath}/${sub.image}',
                         boxFit: BoxFit.contain,
                       ),
                     ),
@@ -853,7 +853,7 @@ class _PharmacyQuickSections extends StatelessWidget {
                 child: SizedBox(
                   width: 92,
                   child: Column(children: [
-                    ClipOval(child: MyImageWidget(imageUrl: '${controller.categoryHomeStoreImagePath}/${section.image}', width: 66, height: 66, boxFit: BoxFit.contain)),
+                    ClipOval(child: MyImageWidget(imageUrl: '${controller.categoryHomeSubCategoryImagePath}/${section.image}', width: 66, height: 66, boxFit: BoxFit.contain)),
                     const SizedBox(height: 7),
                     Text(section.name ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: boldDefault.copyWith(fontSize: 12)),
                   ]),
