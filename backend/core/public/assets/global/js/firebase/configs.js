@@ -1,0 +1,1 @@
+var firebaseConfig = {"apiKey":"AIzaSyDOipHPuaDCXlZ_fUJlXENEpzacFPS9n5g","authDomain":"services-c8c8d.firebaseapp.com","projectId":"services-c8c8d","storageBucket":"services-c8c8d.firebasestorage.app","messagingSenderId":"714316853778","appId":"1:714316853778:web:fd2a5d4d59870e0f885ecb","measurementId":"G-CNG1LJZ46T"}
