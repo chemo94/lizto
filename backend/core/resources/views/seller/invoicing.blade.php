@@ -386,13 +386,13 @@
                                 <a href="{{ route('seller.invoice.detail', $inv->id) }}" class="s-btn s-btn-ghost s-btn-xs" title="Ver detalle" style="padding:4px 8px;">
                                     <i class="las la-eye" style="font-size:16px;color:var(--s-primary);"></i>
                                 </a>
-                                <a href="{{ route('seller.invoice.pdf', [$inv->id, 'a4']) }}" class="s-btn s-btn-ghost s-btn-xs" title="Descargar PDF" style="padding:4px 8px;">
+                                <a href="{{ route('seller.invoice.pdf', [$inv->id, 'a4']) }}" class="s-btn s-btn-ghost s-btn-xs" title="Previsualizar PDF" style="padding:4px 8px;">
                                     <i class="las la-file-pdf" style="font-size:16px;color:#dc2626;"></i>
                                 </a>
                                 <a href="{{ route('seller.invoice.xml', $inv->id) }}" class="s-btn s-btn-ghost s-btn-xs" title="Descargar XML" style="padding:4px 8px;">
                                     <i class="las la-file-code" style="font-size:16px;color:#8b5cf6;"></i>
                                 </a>
-                                <a href="{{ route('seller.invoice.pdf', [$inv->id, 'ticket']) }}" class="s-btn s-btn-ghost s-btn-xs" title="Descargar Ticket" style="padding:4px 8px;">
+                                <a href="{{ route('seller.invoice.pdf', [$inv->id, 'ticket']) }}" class="s-btn s-btn-ghost s-btn-xs" title="Previsualizar Ticket" style="padding:4px 8px;">
                                     <i class="las la-receipt" style="font-size:16px;color:var(--s-info);"></i>
                                 </a>
                                 @if(in_array($inv->cdr_status, ['pending', 'error', 'rejected']))

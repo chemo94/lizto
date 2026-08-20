@@ -220,13 +220,13 @@
                 @if($invoiceTypes->count())
                 <div>
                     <label class="s-label" style="font-weight:700;">Comprobante a emitir</label>
-                    <select class="s-input" name="series_id" id="pay-series" style="height:44px; border-radius:10px;">
-                        <option value="">Nota de Venta (Clientes Varios - Por defecto)</option>
+                    <select class="s-input" name="series_id" id="pay-series" style="height:44px; border-radius:10px;" onchange="onBillingSeriesChange()">
+                        <option value="" data-code="NV">Nota de Venta (Clientes Varios - Por defecto)</option>
                         @foreach($invoiceTypes as $type)
                         @if(in_array($type->code, ['01', '03', 'NV']))
                         <optgroup label="{{ $type->code }} - {{ $type->name }}">
                             @foreach($type->series as $s)
-                            <option value="{{ $s->id }}">{{ $s->series }} (Siguiente: {{ $s->nextNumber() }})</option>
+                            <option value="{{ $s->id }}" data-code="{{ $type->code }}">{{ $s->series }} (Siguiente: {{ $s->nextNumber() }})</option>
                             @endforeach
                         </optgroup>
                         @endif
@@ -656,7 +656,33 @@ function openPayModal(orderId, total, orderNo){
     renderProductSplit('pay');
     clearDocResult();
     document.getElementById('pay-num-doc').value = '';
+    onBillingSeriesChange();
     document.getElementById('pay-modal').style.display = 'flex';
+}
+
+function onBillingSeriesChange() {
+    const seriesSelect = document.getElementById('pay-series');
+    if (!seriesSelect) return;
+    const selectedOption = seriesSelect.options[seriesSelect.selectedIndex];
+    const docCode = selectedOption ? (selectedOption.getAttribute('data-code') || '') : '';
+    const tipoDocSelect = document.getElementById('pay-tipo-doc');
+    const numDocInput = document.getElementById('pay-num-doc');
+    if (!tipoDocSelect || !numDocInput) return;
+
+    if (docCode === '01') {
+        tipoDocSelect.value = '6';
+        numDocInput.placeholder = 'N° RUC cliente (11 dígitos - obligatorio)';
+        numDocInput.required = true;
+    } else if (docCode === '03') {
+        tipoDocSelect.value = '1';
+        numDocInput.placeholder = 'N° DNI cliente (8 dígitos - opcional)';
+        numDocInput.required = false;
+    } else {
+        tipoDocSelect.value = '1';
+        numDocInput.placeholder = 'N° Documento cliente (opcional)';
+        numDocInput.required = false;
+    }
+    clearDocResult();
 }
 
 function updateTupperFee() {
@@ -782,6 +808,20 @@ document.addEventListener('DOMContentLoaded', function() {
         payForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
+            var seriesSelect = document.getElementById('pay-series');
+            var selectedOpt = seriesSelect ? seriesSelect.options[seriesSelect.selectedIndex] : null;
+            var docCode = selectedOpt ? (selectedOpt.getAttribute('data-code') || '') : '';
+            var numDocInput = document.getElementById('pay-num-doc');
+
+            if (docCode === '01') {
+                var rucVal = numDocInput ? numDocInput.value.trim() : '';
+                if (rucVal.length !== 11 || !/^\d{11}$/.test(rucVal)) {
+                    alert('Para emitir una Factura Electrónica debes ingresar un número de RUC válido de 11 dígitos.');
+                    if (numDocInput) numDocInput.focus();
+                    return;
+                }
+            }
+
             var submitBtn = document.getElementById('pay-submit-btn');
             submitBtn.disabled = true;
             submitBtn.style.opacity = '0.5';

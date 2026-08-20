@@ -83,17 +83,17 @@
             <div style="display:flex; flex-direction:column; gap:12px;">
                 <a href="{{ route('seller.invoice.pdf', [$invoice->id, 'a4']) }}" class="s-btn s-btn-outline" style="justify-content:flex-start; gap:10px; border-radius:10px; padding:12px 16px;">
                     <i class="las la-file-pdf" style="color:#dc2626; font-size:20px;"></i>
-                    <div style="text-align:left;"><b style="font-size:14px;">Descargar PDF A4</b><br><small style="color:var(--s-text-3); font-size:11px;">Formato carta para impresión</small></div>
+                    <div style="text-align:left;"><b style="font-size:14px;">Previsualizar PDF A4</b><br><small style="color:var(--s-text-3); font-size:11px;">Vista previa e impresión formato carta</small></div>
                 </a>
 
                 <a href="{{ route('seller.invoice.pdf', [$invoice->id, 'a5']) }}" class="s-btn s-btn-outline" style="justify-content:flex-start; gap:10px; border-radius:10px; padding:12px 16px;">
                     <i class="las la-file-pdf" style="color:#f59e0b; font-size:20px;"></i>
-                    <div style="text-align:left;"><b style="font-size:14px;">Descargar PDF A5</b><br><small style="color:var(--s-text-3); font-size:11px;">Media carta</small></div>
+                    <div style="text-align:left;"><b style="font-size:14px;">Previsualizar PDF A5</b><br><small style="color:var(--s-text-3); font-size:11px;">Vista previa e impresión media carta</small></div>
                 </a>
 
                 <a href="{{ route('seller.invoice.pdf', [$invoice->id, 'ticket']) }}" class="s-btn s-btn-outline" style="justify-content:flex-start; gap:10px; border-radius:10px; padding:12px 16px;">
                     <i class="las la-receipt" style="color:var(--s-info); font-size:20px;"></i>
-                    <div style="text-align:left;"><b style="font-size:14px;">Descargar Ticket</b><br><small style="color:var(--s-text-3); font-size:11px;">Formato ticket 80mm térmica</small></div>
+                    <div style="text-align:left;"><b style="font-size:14px;">Previsualizar Ticket</b><br><small style="color:var(--s-text-3); font-size:11px;">Vista previa formato ticket 80mm térmica</small></div>
                 </a>
 
                 <a href="{{ route('seller.invoice.xml', $invoice->id) }}" class="s-btn s-btn-outline" style="justify-content:flex-start; gap:10px; border-radius:10px; padding:12px 16px;">

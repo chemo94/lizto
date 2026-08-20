@@ -751,7 +751,16 @@ class PanelController extends Controller
         $montoLetras = $this->numeroALetrasPdf($invoice->total);
 
         $itemDetails = [];
-        if ($invoice->order && $invoice->order->items->count()) {
+        if ($invoice->isConsumptionSummary()) {
+            $itemDetails[] = [
+                'quantity' => 1,
+                'unit_code' => 'NIU',
+                'sunat_code' => null,
+                'name' => $invoice->consumption_description ?: 'Consumo',
+                'tax_type' => $invoice->total_exonerada > 0 ? 'exonerado' : ($invoice->total_inafecta > 0 ? 'inafecto' : 'gravado'),
+                'unit_price' => $invoice->total,
+            ];
+        } elseif ($invoice->order && $invoice->order->items->count()) {
             foreach ($invoice->order->items as $item) {
                 $product = $item->product;
                 $unitCode = 'NIU';
@@ -801,7 +810,7 @@ class PanelController extends Controller
         $ruc = $docNumber ?: '00000000000';
         $tipoDoc = $invoice->tipo_doc ?: '03';
         $filename = $ruc . '-' . $tipoDoc . '-' . $invoice->serie . '-' . str_pad($invoice->correlativo, 8, '0', STR_PAD_LEFT) . '.pdf';
-        return $pdf->download($filename);
+        return $pdf->stream($filename);
     }
 
     public function invoiceXml($id)

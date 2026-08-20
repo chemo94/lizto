@@ -174,11 +174,24 @@
         </thead>
         <tbody>
             @if($invoice->isConsumptionSummary())
+                @php
+                    $isExonerado = ($invoice->total_exonerada > 0) || (($invoice->total_gravada ?? 0) == 0 && ($invoice->total_inafecta ?? 0) == 0 && ($invoice->total_igv ?? 0) == 0);
+                    $isInafecto  = ($invoice->total_inafecta > 0);
+                    $isGravado   = !$isExonerado && !$isInafecto;
+                    
+                    $afectLabel = $isExonerado ? 'Exonerado' : ($isInafecto ? 'Inafecto' : 'Gravado');
+                    $vUnit  = $isGravado ? round($invoice->total / 1.18, 2) : $invoice->total;
+                    $vVenta = $vUnit;
+                @endphp
                 <tr>
-                    <td class="align-center">1.00</td><td class="align-center">NIU</td><td class="align-center">—</td>
+                    <td class="align-center">1.00</td>
+                    <td class="align-center">NIU</td>
+                    <td class="align-center">—</td>
                     <td class="align-left">{{ $invoice->consumption_description ?: 'Consumo' }}</td>
-                    <td class="align-center">{{ $invoice->total_exonerada > 0 ? 'Exonerado' : ($invoice->total_inafecta > 0 ? 'Inafecto' : 'Gravado') }}</td>
-                    <td class="align-right">{{ number_format($invoice->total, 2) }}</td><td class="align-center">—</td><td class="align-right">{{ number_format($invoice->total, 2) }}</td>
+                    <td class="align-center">{{ $afectLabel }}</td>
+                    <td class="align-right">{{ number_format($vUnit, 2) }}</td>
+                    <td class="align-center">—</td>
+                    <td class="align-right">{{ number_format($vVenta, 2) }}</td>
                 </tr>
             @elseif(!empty($itemDetails) && count($itemDetails))
                 @foreach($itemDetails as $detail)
@@ -249,41 +262,20 @@
             </td>
             <td style="width: 40%; vertical-align: top;">
                 @php
-                    $totGravada = 0;
-                    $totExonerada = 0;
-                    $totInafecta = 0;
-                    $totIgv = 0;
+                    $totGravada = (double)($invoice->total_gravada ?? 0);
+                    $totExonerada = (double)($invoice->total_exonerada ?? 0);
+                    $totInafecta = (double)($invoice->total_inafecta ?? 0);
+                    $totIgv = (double)($invoice->total_igv ?? 0);
+                    $totTotal = (double)($invoice->total ?? 0);
                     
-                    if ($invoice->order && $invoice->order->items->count()) {
-                        foreach ($invoice->order->items as $item) {
-                            $product = $item->product;
-                            $taxType = $product ? $product->tax_type : 'gravado';
-                            $lineTotal = round($item->unit_price * $item->quantity, 2);
-                            
-                            if ($taxType === 'exonerado') {
-                                $totExonerada += $lineTotal;
-                            } elseif ($taxType === 'inafecto') {
-                                $totInafecta += $lineTotal;
-                            } else {
-                                $lineVal = round($lineTotal / 1.18, 2);
-                                $lineIgv = round($lineVal * 0.18, 2);
-                                $lineSum = round($lineVal + $lineIgv, 2);
-                                if ($lineSum !== $lineTotal) {
-                                    $diff = round($lineTotal - $lineSum, 2);
-                                    $lineIgv = round($lineIgv + $diff, 2);
-                                }
-                                $totGravada += $lineVal;
-                                $totIgv += $lineIgv;
-                            }
-                        }
-                    } else {
-                        $totGravada = (double)($invoice->total_gravada ?? 0);
-                        $totIgv = (double)($invoice->total_igv ?? 0);
-                        if ($totGravada == 0) {
-                            $totExonerada = (double)($invoice->total ?? 0);
+                    // Fallback para comprobantes antiguos sin columnas de desglose
+                    if ($totGravada == 0 && $totExonerada == 0 && $totInafecta == 0 && $totTotal > 0) {
+                        if ($totIgv > 0) {
+                            $totGravada = round($totTotal - $totIgv, 2);
+                        } else {
+                            $totExonerada = $totTotal;
                         }
                     }
-                    $totTotal = (double)($invoice->total ?? 0);
                 @endphp
                 <table class="totals-table">
                     @if($totGravada > 0)

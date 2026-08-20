@@ -387,13 +387,13 @@
             @csrf
             <div style="display: flex; flex-direction: column; gap: 12px;">
                 @if($invoiceTypes->count())
-                <select class="s-input" name="series_id" id="charge-series" style="padding: 8px 12px; font-size: 12px; background: var(--s-surface-2);">
-                    <option value="">Nota de Venta (Clientes Varios - Por defecto)</option>
+                <select class="s-input" name="series_id" id="charge-series" style="padding: 8px 12px; font-size: 12px; background: var(--s-surface-2);" onchange="onChargeSeriesChange()">
+                    <option value="" data-code="NV">Nota de Venta (Clientes Varios - Por defecto)</option>
                     @foreach($invoiceTypes as $type)
                     @if(in_array($type->code, ['01', '03', 'NV']))
                     <optgroup label="{{ $type->code }} - {{ $type->name }}">
                         @foreach($type->series as $s)
-                        <option value="{{ $s->id }}">{{ $s->series }} (Siguiente: {{ $s->nextNumber() }})</option>
+                        <option value="{{ $s->id }}" data-code="{{ $type->code }}">{{ $s->series }} (Siguiente: {{ $s->nextNumber() }})</option>
                         @endforeach
                     </optgroup>
                     @endif
@@ -1959,7 +1959,33 @@ function openChargeModal(id, orderNo, total, customer, table){
     const detailedOption = document.querySelector('input[name="detail_mode"][value="detailed"]');
     if (detailedOption) detailedOption.checked = true;
     toggleChargeConsumptionDescription();
+    onChargeSeriesChange();
     document.getElementById('charge-modal').style.display = 'flex';
+}
+
+function onChargeSeriesChange() {
+    const seriesSelect = document.getElementById('charge-series');
+    if (!seriesSelect) return;
+    const selectedOption = seriesSelect.options[seriesSelect.selectedIndex];
+    const docCode = selectedOption ? (selectedOption.getAttribute('data-code') || '') : '';
+    const tipoDocSelect = document.getElementById('charge-tipo-doc');
+    const numDocInput = document.getElementById('charge-num-doc');
+    if (!tipoDocSelect || !numDocInput) return;
+
+    if (docCode === '01') {
+        tipoDocSelect.value = '6';
+        numDocInput.placeholder = 'N° RUC cliente (11 dígitos - obligatorio)';
+        numDocInput.required = true;
+    } else if (docCode === '03') {
+        tipoDocSelect.value = '1';
+        numDocInput.placeholder = 'N° DNI cliente (8 dígitos - opcional)';
+        numDocInput.required = false;
+    } else {
+        tipoDocSelect.value = '1';
+        numDocInput.placeholder = 'N° Documento cliente (opcional)';
+        numDocInput.required = false;
+    }
+    clearChargeDocResult();
 }
 
 function closeChargeModal(){

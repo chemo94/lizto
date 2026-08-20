@@ -3,7 +3,7 @@ description: Lizto Conductor is a complete ride-sharing solution.
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 1.0.4+5
+version: 4.0.8+26
 
 environment:
   sdk: '>=3.5.0 <4.0.0'

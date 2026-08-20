@@ -997,7 +997,10 @@ class SellerPosController extends Controller
             }
 
             $series = PosInvoiceSeries::where('id', $seriesId)
-                ->where('seller_company_id', $activeCompany->id)
+                ->where(function($q) use ($activeCompany, $seller) {
+                    $q->where('seller_company_id', $activeCompany->id)
+                      ->orWhere('seller_id', $seller->id);
+                })
                 ->with('invoiceType')
                 ->first();
 
@@ -1029,8 +1032,15 @@ class SellerPosController extends Controller
             });
             $tipoDoc = $series->invoiceType->sunat_code ?? $series->invoiceType->code;
 
+            $docType = $request->tipo_doc;
+            if ($tipoDoc === '01') {
+                $docType = '6'; // Factura requiere obligatoriamente tipo RUC (6)
+            } elseif ($tipoDoc === '03' && empty($docType)) {
+                $docType = '1'; // Boleta por defecto DNI (1)
+            }
+
             $clientData = [
-                'tipo_doc' => $request->tipo_doc ?? ($tipoDoc === '01' ? '6' : '1'),
+                'tipo_doc' => $docType ?? ($tipoDoc === '01' ? '6' : '1'),
                 'num_doc'  => $request->num_doc ?? ($order->customer_doc ?? '0'),
                 'nombre'   => $request->customer_name ?? $order->customer_name ?? 'CLIENTE VARIOS',
             ];
@@ -1044,22 +1054,32 @@ class SellerPosController extends Controller
             $totalInafecta  = 0;
             $totalIgv       = 0;
 
-            foreach ($order->items as $item) {
-                if ($detailMode === 'consumption') {
-                    $itemTaxType = $activeCompany->default_tax_type ?? 'gravado';
-                } else {
-                    $itemTaxType = $item->tax_type ?? ($item->product?->tax_type ?? 'gravado');
-                }
-                $lineTotal   = (float) $item->total_price;
-
-                if ($itemTaxType === 'exonerado') {
-                    $totalExonerada += $lineTotal;
-                } elseif ($itemTaxType === 'inafecto') {
-                    $totalInafecta += $lineTotal;
+            if ($detailMode === 'consumption') {
+                $consumptionTaxType = $activeCompany->default_tax_type ?? 'gravado';
+                $orderTotal = (float) $order->total;
+                if ($consumptionTaxType === 'exonerado') {
+                    $totalExonerada = $orderTotal;
+                } elseif ($consumptionTaxType === 'inafecto') {
+                    $totalInafecta = $orderTotal;
                 } else { // gravado
-                    $base = round($lineTotal / 1.18, 2);
-                    $totalGravada += $base;
-                    $totalIgv += round($lineTotal - $base, 2);
+                    $base = round($orderTotal / 1.18, 2);
+                    $totalGravada = $base;
+                    $totalIgv = round($orderTotal - $base, 2);
+                }
+            } else {
+                foreach ($order->items as $item) {
+                    $itemTaxType = $item->tax_type ?? ($item->product?->tax_type ?? 'gravado');
+                    $lineTotal   = (float) $item->total_price;
+
+                    if ($itemTaxType === 'exonerado') {
+                        $totalExonerada += $lineTotal;
+                    } elseif ($itemTaxType === 'inafecto') {
+                        $totalInafecta += $lineTotal;
+                    } else { // gravado
+                        $base = round($lineTotal / 1.18, 2);
+                        $totalGravada += $base;
+                        $totalIgv += round($lineTotal - $base, 2);
+                    }
                 }
             }
 
@@ -5093,7 +5113,7 @@ class SellerPosController extends Controller
         $ruc = $docNumber ?: '00000000000';
         $tipoDoc = $invoice->tipo_doc ?: '03'; // Default to boleta '03'
         $filename = $ruc . '-' . $tipoDoc . '-' . $invoice->serie . '-' . str_pad($invoice->correlativo, 8, '0', STR_PAD_LEFT) . '.pdf';
-        return $pdf->download($filename);
+        return $pdf->stream($filename);
     }
 
     public function invoiceCdr($id)

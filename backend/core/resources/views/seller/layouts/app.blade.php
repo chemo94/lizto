@@ -2081,6 +2081,7 @@ document.addEventListener('keydown', function(e) {
 @stack('script')
 @include('seller.partials.realtime_notifications')
 @include('seller.partials.firebase_notifications')
+@include('seller.partials.invoice_preview_sheet')
 @include('partials.jsoft_ai')
 </body>
 </html>

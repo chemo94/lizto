@@ -204,8 +204,8 @@ class SunatService
     {
         $correlativo = $correlativo ?? (int) $series->current_number;
         $isElectronic = $series->invoiceType->is_electronic ?? false;
-        $detailMode = $existingInvoice?->detail_mode ?? 'detailed';
-        $consumptionDescription = $existingInvoice?->consumption_description ?: 'Consumo';
+        $detailMode = $existingInvoice?->detail_mode ?? request('detail_mode') ?? 'detailed';
+        $consumptionDescription = $existingInvoice?->consumption_description ?: (request('consumption_description') ?: 'Consumo');
         
         if (!$isElectronic || $this->getTipoDoc($series) === 'NV') {
             // Nota de Venta / Comprobante Interno: emitir localmente sin enviar a SUNAT
@@ -308,11 +308,12 @@ class SunatService
         $sourceItems = $order->items;
         if ($detailMode === 'consumption') {
             $consumptionTaxType = $this->companyModel?->default_tax_type ?: 'gravado';
+            $orderTotal = (float) ($order->total > 0 ? $order->total : $order->items->sum('total_price'));
             $sourceItems = collect([
                 (object) [
                     'product' => null,
                     'tax_type' => $consumptionTaxType,
-                    'unit_price' => (float) $order->items->sum('total_price'),
+                    'unit_price' => $orderTotal,
                     'quantity' => 1,
                     'product_name' => $consumptionDescription,
                 ],
@@ -454,6 +455,8 @@ class SunatService
             'cliente_tipo_doc'=> $clientData['tipo_doc'] ?? '6',
             'cliente_num_doc' => $clientData['num_doc'] ?? '-',
             'cliente_nombre'  => $clientData['nombre'] ?? 'CLIENTE VARIOS',
+            'detail_mode'     => $detailMode,
+            'consumption_description' => $detailMode === 'consumption' ? $consumptionDescription : null,
             'total_gravada'   => round($totalGravada, 2),
             'total_exonerada' => round($totalExonerada, 2),
             'total_inafecta'  => round($totalInafecta, 2),
