@@ -2380,29 +2380,59 @@ class SellerPosController extends Controller
         $store = $this->store();
         $dateFrom = request('from', now()->startOfMonth()->format('Y-m-d'));
         $dateTo = request('to', now()->format('Y-m-d'));
+        $sellerFilter = request('seller_filter');
 
-        $orders = PosOrder::where('seller_id', $seller->id)
-            ->whereBetween('created_at', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59'])
-            ->with('table')->latest()->get();
+        $sales = $this->generalSalesRows($seller, $store, $dateFrom, $dateTo, $sellerFilter);
 
-        $csv = "Pedido,Cliente,Tipo,Mesa,Items,Total,Estado,Fecha\n";
-        foreach ($orders as $o) {
-            $csv .= implode(',', [
-                $o->order_no,
-                '"' . ($o->customer_name ?? '') . '"',
-                $o->order_type,
-                $o->table?->name ?? '',
-                $o->items->count(),
-                number_format($o->total, 2),
-                $o->status,
-                $o->created_at->format('d/m/Y H:i'),
-            ]) . "\n";
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Ventas generales');
+        $sheet->mergeCells('A1:I1')->setCellValue('A1', 'REPORTE DE VENTAS GENERALES');
+        $sheet->mergeCells('A2:I2')->setCellValue('A2', "Período: {$dateFrom} al {$dateTo}");
+        $sheet->setCellValue('A4', 'Origen');
+        $sheet->setCellValue('B4', 'Pedido');
+        $sheet->setCellValue('C4', 'Cliente');
+        $sheet->setCellValue('D4', 'Tipo');
+        $sheet->setCellValue('E4', 'Artículos');
+        $sheet->setCellValue('F4', 'Método de pago');
+        $sheet->setCellValue('G4', 'Total');
+        $sheet->setCellValue('H4', 'Estado');
+        $sheet->setCellValue('I4', 'Fecha');
+
+        $row = 5;
+        foreach ($sales as $sale) {
+            $sheet->setCellValue('A' . $row, $sale->source);
+            $sheet->setCellValueExplicit('B' . $row, $sale->orderNo, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue('C' . $row, $sale->customer);
+            $sheet->setCellValue('D' . $row, $sale->type);
+            $sheet->setCellValue('E' . $row, $sale->items);
+            $sheet->setCellValue('F' . $row, $sale->paymentMethod);
+            $sheet->setCellValue('G' . $row, $sale->total);
+            $sheet->setCellValue('H' . $row, $sale->status);
+            $sheet->setCellValue('I' . $row, \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel($sale->date));
+            $row++;
         }
 
-        return response($csv, 200, [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="reporte_ventas_' . $dateFrom . '_' . $dateTo . '.csv"',
+        $sheet->setCellValue('F' . ($row + 1), 'Total ventas');
+        $sheet->setCellValue('G' . ($row + 1), $sales->sum('total'));
+        $sheet->getStyle('A1:I1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A4:I4')->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => '16A34A']],
+            'alignment' => ['horizontal' => 'center'],
         ]);
+        $sheet->getStyle('G5:G' . ($row + 1))->getNumberFormat()->setFormatCode('#,##0.00');
+        $sheet->getStyle('I5:I' . max(5, $row - 1))->getNumberFormat()->setFormatCode('dd/mm/yyyy hh:mm');
+        $sheet->getStyle('F' . ($row + 1) . ':G' . ($row + 1))->getFont()->setBold(true);
+        foreach (['A' => 13, 'B' => 18, 'C' => 30, 'D' => 16, 'E' => 10, 'F' => 20, 'G' => 14, 'H' => 16, 'I' => 19] as $column => $width) {
+            $sheet->getColumnDimension($column)->setWidth($width);
+        }
+        $sheet->freezePane('A5');
+
+        $filename = "reporte_ventas_generales_{$dateFrom}_{$dateTo}.xlsx";
+        return response()->streamDownload(function () use ($spreadsheet) {
+            (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save('php://output');
+        }, $filename, ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
     }
 
     public function reportsExportPdf()
@@ -2411,51 +2441,80 @@ class SellerPosController extends Controller
         $store = $this->store();
         $dateFrom = request('from', now()->startOfMonth()->format('Y-m-d'));
         $dateTo = request('to', now()->format('Y-m-d'));
+        $sellerFilter = request('seller_filter');
 
-        $orders = PosOrder::where('seller_id', $seller->id)
+        $sales = $this->generalSalesRows($seller, $store, $dateFrom, $dateTo, $sellerFilter);
+        $totalSales = $sales->sum('total');
+        $totalOrders = $sales->count();
+        $filename = "reporte_ventas_generales_{$dateFrom}_{$dateTo}.pdf";
+
+        return \Barryvdh\DomPDF\Facade\Pdf::loadView('seller.reports_sales_pdf', compact(
+            'seller', 'store', 'sales', 'dateFrom', 'dateTo', 'totalSales', 'totalOrders'
+        ))->setPaper('a4', 'landscape')->download($filename);
+    }
+
+    /** Ventas POS y delivery consolidadas para los exportables del módulo. */
+    private function generalSalesRows(Seller $seller, ?Store $store, string $dateFrom, string $dateTo, $sellerFilter)
+    {
+        $posOrders = PosOrder::where('seller_id', $seller->id)
             ->whereBetween('created_at', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59'])
-            ->with('table')->latest()->get();
+            ->withCount('items');
 
-        $totalSales = $orders->sum('total');
-        $totalOrders = $orders->count();
-
-        $html = "<html><head><style>
-            body{font-family:Arial;font-size:12px;color:#333}
-            h1{font-size:18px;color:#22c55e}h2{font-size:14px;color:#555}
-            table{width:100%;border-collapse:collapse;margin:16px 0}
-            th{background:#22c55e;color:#fff;padding:8px;text-align:left;font-size:11px}
-            td{padding:6px 8px;border-bottom:1px solid #eee;font-size:11px}
-            .summary{display:flex;gap:24px;margin:12px 0}.summary div{background:#f8f9fa;padding:12px;border-radius:8px;flex:1;text-align:center}
-            .summary b{font-size:16px;color:#22c55e;display:block}
-        </style></head><body>
-        <h1>Reporte de Ventas</h1>
-        <h2>{$store?->name} — {$dateFrom} al {$dateTo}</h2>
-        <div class='summary'>
-            <div><b>S/ " . number_format($totalSales, 2) . "</b>Total Ventas</div>
-            <div><b>{$totalOrders}</b>Total Pedidos</div>
-            <div><b>S/ " . ($totalOrders > 0 ? number_format($totalSales / $totalOrders, 2) : '0.00') . "</b>Ticket Promedio</div>
-        </div>
-        <table>
-            <tr><th>#</th><th>Cliente</th><th>Tipo</th><th>Mesa</th><th>Total</th><th>Estado</th><th>Fecha</th></tr>";
-
-        foreach ($orders as $o) {
-            $html .= "<tr>
-                <td>{$o->order_no}</td>
-                <td>" . ($o->customer_name ?: '—') . "</td>
-                <td>{$o->order_type}</td>
-                <td>" . ($o->table?->name ?? '—') . "</td>
-                <td><b>S/ " . number_format($o->total, 2) . "</b></td>
-                <td>{$o->status}</td>
-                <td>{$o->created_at->format('d/m H:i')}</td>
-            </tr>";
+        if ($sellerFilter) {
+            $posOrders->where('seller_id', $sellerFilter);
         }
 
-        $html .= "</table></body></html>";
-
-        return response($html, 200, [
-            'Content-Type' => 'text/html',
-            'Content-Disposition' => 'inline; filename="reporte_ventas_' . $dateFrom . '_' . $dateTo . '.html"',
+        $posSales = $posOrders->get()->map(fn (PosOrder $order) => (object) [
+            'source' => 'Punto de venta', 'orderNo' => $order->order_no, 'customer' => $order->customer_name ?: 'CLIENTE VARIOS',
+            'type' => $this->reportOrderTypeLabel($order->order_type), 'items' => $order->items_count,
+            'paymentMethod' => $this->reportPaymentMethodLabel($order->payment_method),
+            'total' => (float) $order->total, 'status' => $this->reportStatusLabel($order->status), 'date' => $order->created_at,
         ]);
+
+        $deliverySales = collect();
+        if ($store) {
+            $deliverySales = DeliveryOrder::where('store_id', $store->id)
+                ->whereBetween('created_at', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59'])
+                ->withCount('items')->get()
+                ->map(fn (DeliveryOrder $order) => (object) [
+                    'source' => 'Entrega a domicilio', 'orderNo' => $order->order_no, 'customer' => $order->contact_name ?: 'CLIENTE VARIOS',
+                    'type' => 'A domicilio', 'items' => $order->items_count,
+                    'paymentMethod' => $this->reportPaymentMethodLabel($order->payment_method_name),
+                    'total' => (float) $order->total, 'status' => $this->reportStatusLabel($order->status), 'date' => $order->created_at,
+                ]);
+        }
+
+        return $posSales->concat($deliverySales)->sortBy('date')->values();
+    }
+
+    private function reportOrderTypeLabel(?string $type): string
+    {
+        return [
+            'dine_in' => 'En mesa', 'takeaway' => 'Para llevar', 'pickup' => 'Recojo en tienda',
+            'delivery' => 'A domicilio', 'external' => 'Pedido externo', 'online' => 'Pedido en línea',
+        ][$type] ?? ($type ? ucfirst(str_replace('_', ' ', $type)) : 'Punto de venta');
+    }
+
+    private function reportPaymentMethodLabel(?string $method): string
+    {
+        return [
+            'cash' => 'Efectivo', 'card' => 'Tarjeta', 'credit_card' => 'Tarjeta de crédito',
+            'debit_card' => 'Tarjeta de débito', 'transfer' => 'Transferencia',
+            'bank_transfer' => 'Transferencia bancaria', 'bank_deposit' => 'Depósito bancario',
+            'yape' => 'Yape', 'plin' => 'Plin', 'wallet' => 'Billetera digital',
+            'mercadopago' => 'Mercado Pago', 'credit' => 'Crédito',
+        ][strtolower((string) $method)] ?? ($method ?: 'Sin especificar');
+    }
+
+    private function reportStatusLabel(?string $status): string
+    {
+        return [
+            'pending' => 'Pendiente', 'confirmed' => 'Confirmado', 'accepted' => 'Aceptado',
+            'processing' => 'En proceso', 'preparing' => 'En preparación', 'ready' => 'Listo',
+            'assigned' => 'Asignado', 'on_the_way' => 'En camino', 'delivered' => 'Entregado',
+            'completed' => 'Completado', 'paid' => 'Pagado', 'cancelled' => 'Cancelado',
+            'rejected' => 'Rechazado', 'failed' => 'Fallido',
+        ][strtolower((string) $status)] ?? ($status ? ucfirst(str_replace('_', ' ', $status)) : 'Sin estado');
     }
 
     public function reportsAdvanced()
@@ -2542,12 +2601,14 @@ class SellerPosController extends Controller
         $seller = $this->seller();
         $store = $this->store();
         $pageTitle = 'Declaraciones SUNAT / SIRE';
-        $dateFrom = request('from', now()->startOfMonth()->format('Y-m-d'));
-        $dateTo = request('to', now()->format('Y-m-d'));
+        [$selectedMonth, $dateFrom, $dateTo] = $this->declarationPeriod();
         $activeCompany = $this->activeCompany();
 
         $sales = SunatInvoice::where('seller_id', $seller->id)
-            ->where('cdr_status', SunatInvoice::STATUS_ACCEPTED)
+            // El registro debe mostrar emitidos, pendientes, rechazados, etc.
+            // NV es interno y RA es una comunicación de baja, no un comprobante
+            // que deba figurar en el RVIE.
+            ->whereNotIn('tipo_doc', ['NV', 'RA'])
             ->whereBetween('fecha_emision', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59']);
         if ($activeCompany) {
             $sales->where(function ($query) use ($activeCompany) {
@@ -2559,24 +2620,49 @@ class SellerPosController extends Controller
         $purchases = InvPurchase::where('seller_id', $seller->id)
             ->whereBetween('document_date', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59']);
 
-        return view('seller.declarations', compact('pageTitle', 'seller', 'store', 'dateFrom', 'dateTo', 'activeCompany') + [
+        return view('seller.declarations', compact('pageTitle', 'seller', 'store', 'selectedMonth', 'dateFrom', 'dateTo', 'activeCompany') + [
             'salesCount' => $sales->count(), 'salesTotal' => (float) $sales->sum('total'),
             'purchasesCount' => $purchases->count(), 'purchasesTotal' => (float) $purchases->sum('total'),
         ]);
+    }
+
+    /**
+     * Obtiene un período mensual para las declaraciones. Se conservan from/to
+     * para que los enlaces antiguos sigan funcionando, pero el módulo usa mes.
+     */
+    private function declarationPeriod(): array
+    {
+        $selectedMonth = request('month');
+
+        if (is_string($selectedMonth) && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $selectedMonth)) {
+            $period = \Carbon\Carbon::createFromFormat('!Y-m', $selectedMonth);
+
+            return [
+                $selectedMonth,
+                $period->copy()->startOfMonth()->format('Y-m-d'),
+                $period->copy()->endOfMonth()->format('Y-m-d'),
+            ];
+        }
+
+        $dateFrom = request('from', now()->startOfMonth()->format('Y-m-d'));
+        $dateTo = request('to', now()->format('Y-m-d'));
+
+        return [\Carbon\Carbon::parse($dateFrom)->format('Y-m'), $dateFrom, $dateTo];
     }
 
     public function exportRVIE()
     {
         $seller = $this->seller();
         $activeCompany = $this->activeCompany();
-        $dateFrom = request('from', now()->startOfMonth()->format('Y-m-d'));
-        $dateTo = request('to', now()->format('Y-m-d'));
+        [, $dateFrom, $dateTo] = $this->declarationPeriod();
         $format = request('format', 'excel');
 
         $invoicesQuery = SunatInvoice::with('company')
             ->whereBetween('fecha_emision', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59'])
-            ->where('cdr_status', SunatInvoice::STATUS_ACCEPTED)
-            ->whereIn('tipo_doc', ['01', '03', '07', '08']);
+            // No se limita a Aceptado: el Excel debe permitir conciliar todos
+            // los comprobantes electrónicos emitidos. Se excluyen las notas
+            // de venta y las comunicaciones de baja (RA).
+            ->whereNotIn('tipo_doc', ['NV', 'RA']);
 
         if ($activeCompany) {
             $invoicesQuery->where(function($q) use ($activeCompany, $seller) {
@@ -2589,7 +2675,15 @@ class SellerPosController extends Controller
             $invoicesQuery->where('seller_id', $seller->id);
         }
 
-        $invoices = $invoicesQuery->orderBy('fecha_emision')->get();
+        // La fecha puede coincidir entre varios comprobantes. Completar el
+        // orden con serie, correlativo e id evita que el XLSX cambie de orden
+        // y asegura que su correlativo de registro se genere sin saltos.
+        $invoices = $invoicesQuery
+            ->orderBy('fecha_emision')
+            ->orderBy('serie')
+            ->orderBy('correlativo')
+            ->orderBy('id')
+            ->get();
 
         // Las notas comparten pedido con el comprobante afectado. Se arma un
         // índice sin depender de que el comprobante original esté en el período.
@@ -2742,8 +2836,7 @@ class SellerPosController extends Controller
     public function exportRCE()
     {
         $seller = $this->seller();
-        $dateFrom = request('from', now()->startOfMonth()->format('Y-m-d'));
-        $dateTo = request('to', now()->format('Y-m-d'));
+        [, $dateFrom, $dateTo] = $this->declarationPeriod();
         $format = request('format', 'excel');
 
         $purchases = InvPurchase::where('seller_id', $seller->id)

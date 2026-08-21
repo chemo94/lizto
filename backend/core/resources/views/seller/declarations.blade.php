@@ -8,9 +8,11 @@
 <div class="s-content" style="max-width:1100px;margin:0 auto;">
     <div class="s-card" style="margin-bottom:24px;">
         <form method="GET" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-            <div><label class="s-label">Desde</label><input type="date" name="from" value="{{ $dateFrom }}" class="s-input"></div>
-            <div><label class="s-label">Hasta</label><input type="date" name="to" value="{{ $dateTo }}" class="s-input"></div>
-            <button class="s-btn s-btn-primary"><i class="las la-filter"></i> Actualizar período</button>
+            <div>
+                <label class="s-label">Mes de declaración</label>
+                <input type="month" name="month" value="{{ $selectedMonth }}" class="s-input" required>
+            </div>
+            <button class="s-btn s-btn-primary"><i class="las la-filter"></i> Consultar mes</button>
         </form>
     </div>
 
@@ -29,8 +31,8 @@
             </div>
             <div style="font-size:24px;font-weight:800;color:var(--s-accent-dark);margin-bottom:18px;">S/ {{ number_format($salesTotal, 2) }}</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                <a class="s-btn s-btn-outline" href="{{ route('seller.reports.export.rvie', ['from'=>$dateFrom,'to'=>$dateTo,'format'=>'excel']) }}"><i class="las la-file-excel" style="color:#16a34a;"></i> XLSX</a>
-                <a class="s-btn s-btn-primary" href="{{ route('seller.reports.export.rvie', ['from'=>$dateFrom,'to'=>$dateTo,'format'=>'txt']) }}"><i class="las la-file-alt"></i> TXT SIRE</a>
+                <a class="s-btn s-btn-outline" href="{{ route('seller.reports.export.rvie', ['month'=>$selectedMonth,'format'=>'excel']) }}"><i class="las la-file-excel" style="color:#16a34a;"></i> XLSX</a>
+                <a class="s-btn s-btn-primary" href="{{ route('seller.reports.export.rvie', ['month'=>$selectedMonth,'format'=>'txt']) }}"><i class="las la-file-alt"></i> TXT SIRE</a>
             </div>
         </div>
         <div class="s-card">
@@ -40,8 +42,8 @@
             </div>
             <div style="font-size:24px;font-weight:800;color:var(--s-accent-dark);margin-bottom:18px;">S/ {{ number_format($purchasesTotal, 2) }}</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                <a class="s-btn s-btn-outline" href="{{ route('seller.reports.export.rce', ['from'=>$dateFrom,'to'=>$dateTo,'format'=>'excel']) }}"><i class="las la-file-excel" style="color:#16a34a;"></i> XLSX</a>
-                <a class="s-btn s-btn-primary" href="{{ route('seller.reports.export.rce', ['from'=>$dateFrom,'to'=>$dateTo,'format'=>'txt']) }}"><i class="las la-file-alt"></i> TXT SIRE</a>
+                <a class="s-btn s-btn-outline" href="{{ route('seller.reports.export.rce', ['month'=>$selectedMonth,'format'=>'excel']) }}"><i class="las la-file-excel" style="color:#16a34a;"></i> XLSX</a>
+                <a class="s-btn s-btn-primary" href="{{ route('seller.reports.export.rce', ['month'=>$selectedMonth,'format'=>'txt']) }}"><i class="las la-file-alt"></i> TXT SIRE</a>
             </div>
         </div>
     </div>

@@ -41,10 +41,10 @@
             </a>
             <div style="margin-left:auto;display:flex;gap:8px;margin-bottom:1px">
                 <a href="{{ route('seller.reports.export.excel', request()->query()) }}" class="s-btn s-btn-outline" style="font-size:11px;padding:6px 12px">
-                    <i class="las la-file-excel"></i> Excel
+                    <i class="las la-file-excel"></i> Ventas generales Excel
                 </a>
                 <a href="{{ route('seller.reports.export.pdf', request()->query()) }}" class="s-btn s-btn-outline" style="font-size:11px;padding:6px 12px">
-                    <i class="las la-file-pdf"></i> PDF
+                    <i class="las la-file-pdf"></i> Ventas generales PDF
                 </a>
             </div>
         </form>
