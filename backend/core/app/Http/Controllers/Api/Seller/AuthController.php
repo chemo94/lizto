@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Seller;
 
 use App\Http\Controllers\Controller;
+use App\Lib\SocialLogin;
 use App\Models\DeviceToken;
 use App\Models\PosStaff;
 use App\Models\Seller;
@@ -13,6 +14,20 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
+    public function socialLogin(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'token'    => 'required',
+            'provider' => 'required|in:google,apple,facebook,linkedin',
+        ]);
+
+        if ($validator->fails()) {
+            return apiResponse('validation_error', 'error', $validator->errors()->all());
+        }
+
+        $socialLogin = new SocialLogin('seller', $request->provider);
+        return $socialLogin->login();
+    }
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [

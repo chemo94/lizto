@@ -390,7 +390,8 @@ Route::namespace('Api\Driver')->prefix('driver')->group(function () {
 
 Route::namespace('Api\Seller')->prefix('seller')->name('seller.')->group(function () {
     Route::post('login', 'AuthController@login');
-        Route::middleware('auth:sanctum')->group(function () {
+    Route::post('social-login', 'AuthController@socialLogin');
+    Route::middleware('auth:sanctum')->group(function () {
             Route::post('sunat-lookup', [\App\Http\Controllers\SellerPosController::class, 'sunatLookup']);
             Route::post('save-device-token', 'AuthController@registerDeviceToken');
             Route::get('dashboard', 'AuthController@dashboard');
