@@ -7,6 +7,7 @@ use App\Events\FavorStatusUpdated;
 use App\Models\Driver;
 use App\Models\Favor;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class SellerFavorDispatchService
 {
@@ -27,12 +28,15 @@ class SellerFavorDispatchService
 
     public static function start(Favor $favor): ?Driver
     {
-        $favor->update([
+        $dispatchState = [
             'courier_id' => null,
             'dispatch_mode' => 'seller_nearby',
-            'dispatch_attempted_driver_ids' => [],
             'dispatch_timeout_at' => now(),
-        ]);
+        ];
+        if (self::tracksAttemptedDrivers()) {
+            $dispatchState['dispatch_attempted_driver_ids'] = [];
+        }
+        $favor->update($dispatchState);
         return self::dispatchNext($favor->fresh());
     }
 
@@ -40,7 +44,9 @@ class SellerFavorDispatchService
     {
         if ($favor->status !== 'searching_courier') return null;
 
-        $attempted = collect($favor->dispatch_attempted_driver_ids ?? [])->map(fn ($id) => (int) $id)->filter()->values()->all();
+        $attempted = self::tracksAttemptedDrivers()
+            ? collect($favor->dispatch_attempted_driver_ids ?? [])->map(fn ($id) => (int) $id)->filter()->values()->all()
+            : [];
         $nearbyRadius = min(5, (float) (gs('delivery_coverage_radius') ?? 10));
         $courier = self::availableCouriers($favor, $attempted, $nearbyRadius)->first();
         $mode = 'seller_nearby';
@@ -57,12 +63,15 @@ class SellerFavorDispatchService
         }
 
         $attempted[] = $courier->id;
-        $favor->update([
+        $dispatchState = [
             'courier_id' => $courier->id,
             'dispatch_mode' => $mode,
-            'dispatch_attempted_driver_ids' => array_values(array_unique($attempted)),
             'dispatch_timeout_at' => now()->addSeconds(self::RESPONSE_WINDOW_SECONDS),
-        ]);
+        ];
+        if (self::tracksAttemptedDrivers()) {
+            $dispatchState['dispatch_attempted_driver_ids'] = array_values(array_unique($attempted));
+        }
+        $favor->update($dispatchState);
 
         FcmService::sendToDriver($courier, '¿Puedes realizar este envío?',
             'Tienes 15 segundos para responder al envío #' . $favor->order_no . '.', [
@@ -77,24 +86,25 @@ class SellerFavorDispatchService
     {
         $lat = (float) $favor->pickup_lat;
         $lng = (float) $favor->pickup_lng;
-        $latColumn = 'COALESCE(NULLIF(current_lat, 0), latitude)';
-        $lngColumn = 'COALESCE(NULLIF(current_lot, 0), longitude)';
+        // Driver live coordinates are stored in current_lat/current_lot.
+        // The drivers table has no latitude/longitude fallback columns.
+        $latColumn = 'current_lat';
+        $lngColumn = 'current_lot';
         $distanceSql = "(6371 * acos(cos(radians(?)) * cos(radians($latColumn)) * cos(radians($lngColumn) - radians(?)) + sin(radians(?)) * sin(radians($latColumn))))";
 
         return Driver::query()->where('status', Status::ENABLE)->where('online_status', 1)
             ->whereIn('service_type', ['delivery', 'both'])->whereHas('wallet', fn ($q) => $q->where('balance', '>', 0))
-            // Use the live GPS position when available; otherwise use the
-            // courier's registered position so eligible couriers are not skipped.
-            ->where(function ($query) {
-                $query->where(function ($location) {
-                    $location->whereNotNull('current_lat')->whereNotNull('current_lot');
-                })->orWhere(function ($location) {
-                    $location->whereNotNull('latitude')->whereNotNull('longitude');
-                });
-            })
+            ->whereNotNull('current_lat')->whereNotNull('current_lot')
+            ->where('current_lat', '!=', 0)->where('current_lot', '!=', 0)
             ->when($attempted, fn ($q) => $q->whereNotIn('id', $attempted))
             ->select('drivers.*')->selectRaw("$distanceSql as dispatch_distance", [$lat, $lng, $lat])
             ->when($radius !== null, fn ($q) => $q->whereRaw("$distanceSql <= ?", [$lat, $lng, $lat, $radius]))
             ->orderBy('dispatch_distance');
+    }
+
+    private static function tracksAttemptedDrivers(): bool
+    {
+        static $available;
+        return $available ??= Schema::hasColumn('favors', 'dispatch_attempted_driver_ids');
     }
 }

@@ -84,10 +84,13 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> with Widg
       _c.loadWalletBalance(),
     ]);
     if (!_c.isStaff && _c.stores.isNotEmpty) {
-      final storeIds = _c.stores.map((s) {
-        final raw = s['id'];
-        return raw is int ? raw : int.tryParse(raw?.toString() ?? '') ?? 0;
-      }).where((id) => id > 0).toList();
+      final storeIds = _c.stores
+          .map((s) {
+            final raw = s['id'];
+            return raw is int ? raw : int.tryParse(raw?.toString() ?? '') ?? 0;
+          })
+          .where((id) => id > 0)
+          .toList();
       if (storeIds.isNotEmpty) {
         Get.find<SellerPackageController>().loadAllStoresSubscriptions(storeIds);
       }
@@ -189,9 +192,7 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> with Widg
   }
 
   Widget _buildHeader(SellerController c) {
-    final name = c.isStaff
-        ? (c.staffName ?? 'Personal')
-        : (c.sellerData?['seller']?['name']?.toString() ?? 'Vendedor');
+    final name = c.isStaff ? (c.staffName ?? 'Personal') : (c.sellerData?['seller']?['name']?.toString() ?? 'Vendedor');
     final storesCount = c.sellerData?['total_stores'] ?? 0;
     final productsCount = c.sellerData?['total_products'] ?? 0;
     final store = c.stores.isNotEmpty ? c.stores.first : null;
@@ -425,7 +426,7 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> with Widg
         'icon': Icons.motorcycle_rounded,
         'label': 'Repartidor',
         'color': const Color(0xFFF59E0B),
-        'onTap': () => Get.to(() => SellerFavorCreateScreen(sellerToken: '')),
+        'onTap': () => Get.to(() => const SellerFavorCreateScreen()),
         'permissions': ['pos_orders'],
       },
       {

@@ -522,7 +522,7 @@ class SellerController extends GetxController {
     try {
       final response = await sellerRepo.estimateStoreFavorFee(data);
       final body = response.responseJson;
-      if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300 && body is Map && body['status'] == 'success') {
+      if (response.statusCode >= 200 && response.statusCode < 300 && body is Map && body['status'] == 'success') {
         final payload = body['data'];
         if (payload is Map && payload['estimate'] is Map) {
           return Map<String, dynamic>.from(payload['estimate']);
@@ -538,12 +538,33 @@ class SellerController extends GetxController {
   }
 
   Future<Map<String, dynamic>?> createStoreFavorAndStartSearch(Map<String, dynamic> data) async {
-    final response = await sellerRepo.createStoreFavor(data);
-    if (response.statusCode == 200 && response.responseJson['status'] == 'success') {
-      return Map<String, dynamic>.from(response.responseJson['data'] ?? {});
+    errorMessage = null;
+    try {
+      final response = await sellerRepo.createStoreFavor(data);
+      final body = response.responseJson;
+      if (response.isSuccess && body is Map && body['status'] == 'success') {
+        final payload = body['data'];
+        if (payload is Map) return Map<String, dynamic>.from(payload);
+        errorMessage = 'El servidor no devolvió los datos de la solicitud';
+        return null;
+      }
+      errorMessage = _apiErrorMessage(body, response.message, 'No se pudo iniciar la búsqueda');
+    } catch (e) {
+      printX(e);
+      errorMessage = 'Error de conexión. Inténtalo nuevamente';
     }
-    errorMessage = response.responseJson?['message']?.toString() ?? 'No se pudo iniciar la búsqueda';
     return null;
+  }
+
+  String _apiErrorMessage(dynamic body, String responseMessage, String fallback) {
+    final message = body is Map ? body['message'] : null;
+    if (message is List && message.isNotEmpty) {
+      return message.map((item) => item.toString()).join('\n');
+    }
+    if (message != null && message.toString().trim().isNotEmpty) {
+      return message.toString();
+    }
+    return responseMessage.trim().isNotEmpty ? responseMessage : fallback;
   }
 
   Future<Map<String, dynamic>?> getStoreFavorSearchStatus(int favorId) async {
