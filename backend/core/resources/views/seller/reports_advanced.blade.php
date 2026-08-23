@@ -12,9 +12,11 @@
 
 @section('seller-content')
 <div class="s-content" style="max-width:1400px;margin:0 auto;">
+    @php $advancedProductSales = $byProduct->sum('total'); $advancedExpenses = $expenses->sum('total'); @endphp
+    <section class="module-hero analytics"><div><div class="module-crumb"><i class="las la-home"></i> Inicio &nbsp;/&nbsp; Analítica &nbsp;/&nbsp; Avanzado</div><h2><i class="las la-chart-bar"></i> Analítica Avanzada</h2><p>Descubre productos líderes, horas pico, plataformas, gastos y rentabilidad.</p></div><div class="module-hero-stats"><div><b>{{ $byProduct->count() }}</b><small>Productos analizados</small></div><div><b>S/ {{ number_format($advancedProductSales,0) }}</b><small>Venta productos</small></div><div><b>S/ {{ number_format($advancedExpenses,0) }}</b><small>Gastos</small></div></div></section>
 
     <!-- Filtro de fechas -->
-    <div class="s-card" style="margin-bottom:24px;">
+    <div class="s-card seller-work-card" style="margin-bottom:14px;">
         <form method="GET" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
             <div style="display:flex;align-items:center;gap:8px;">
                 <label style="font-weight:700;font-size:12px;">Desde</label>
@@ -29,7 +31,7 @@
     </div>
 
     <!-- Top Products -->
-    <div class="s-card" style="margin-bottom:24px;">
+    <div class="s-card seller-work-card" style="margin-bottom:14px;">
         <h3 style="margin-bottom:16px;font-weight:800;font-size:16px;display:flex;align-items:center;gap:8px;">
             <i class="las la-star" style="color:var(--s-warning);"></i> Top 20 Productos Más Vendidos
         </h3>

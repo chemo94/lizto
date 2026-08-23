@@ -6,8 +6,10 @@
 
 @section('seller-content')
 <div class="s-content">
+    @php $bankingBalance = $accounts->sum('balance'); @endphp
+    <section class="module-hero banking"><div><div class="module-crumb"><i class="las la-home"></i> Inicio &nbsp;/&nbsp; Finanzas &nbsp;/&nbsp; Bancos</div><h2><i class="las la-university"></i> Cuentas y Monederos</h2><p>Administra bancos, billeteras digitales, terminales POS y movimientos.</p></div><div class="module-hero-stats"><div><b>{{ $accounts->count() }}</b><small>Cuentas</small></div><div><b>{{ $accounts->where('status','active')->count() }}</b><small>Activas</small></div><div><b>S/ {{ number_format($bankingBalance,0) }}</b><small>Saldo total</small></div></div></section>
 
-    <div style="display:flex;gap:12px;margin-bottom:24px;border-bottom:1px solid var(--s-border);padding-bottom:12px">
+    <div style="display:flex;gap:8px;margin-bottom:14px;border-bottom:1px solid var(--s-border);padding-bottom:10px;overflow-x:auto">
         <a href="{{ route('seller.cash') }}" style="text-decoration:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;color:{{ request()->routeIs('seller.cash') ? '#fff' : 'var(--s-text-2)' }};background:{{ request()->routeIs('seller.cash') ? 'var(--s-primary)' : 'transparent' }};border:{{ request()->routeIs('seller.cash') ? 'none' : '1px solid var(--s-border)' }}">
             <i class="las la-cash-register" style="font-size:16px"></i> Caja Chica / POS
         </a>
@@ -16,7 +18,7 @@
         </a>
     </div>
 
-    <div style="display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start;">
+    <div class="banking-workspace" style="display: grid; grid-template-columns: 360px 1fr; gap: 14px; align-items: start;">
         
         <!-- REGISTRO Y TRANSACCIONES MANUALES -->
         <div style="display: flex; flex-direction: column; gap: 24px;">

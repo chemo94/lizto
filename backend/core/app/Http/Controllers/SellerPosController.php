@@ -424,6 +424,65 @@ class SellerPosController extends Controller
 
     // ── Dashboard ──
 
+    public function profile()
+    {
+        $seller = $this->seller();
+        $store = $this->store();
+        $pageTitle = 'Mi Perfil';
+        $profileStats = [
+            'orders' => PosOrder::where('seller_id', $seller->id)->count(),
+            'customers' => PosOrder::where('seller_id', $seller->id)->whereNotNull('customer_phone')->distinct('customer_phone')->count('customer_phone'),
+            'products' => Product::where('store_id', $store?->id)->count(),
+            'revenue' => PosOrder::where('seller_id', $seller->id)->sum('total'),
+        ];
+        $recentActivity = PosOrder::where('seller_id', $seller->id)->latest()->limit(6)->get();
+
+        return view('seller.profile', compact('pageTitle', 'seller', 'store', 'profileStats', 'recentActivity'));
+    }
+
+    public function profileUpdate(Request $request)
+    {
+        $seller = $this->seller();
+        $store = $this->store();
+        $request->validate([
+            'name' => 'required|string|max:120',
+            'email' => 'required|email|max:190|unique:sellers,email,' . $seller->id,
+            'phone' => 'nullable|string|max:30',
+            'document_type' => 'nullable|string|max:20',
+            'document_number' => 'nullable|string|max:30',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'store_description' => 'nullable|string|max:1000',
+            'store_address' => 'nullable|string|max:255',
+        ]);
+        $seller->fill($request->only('name', 'email', 'phone', 'document_type', 'document_number'));
+        if ($request->hasFile('avatar')) {
+            $seller->avatar = fileUploader($request->file('avatar'), 'assets/images/seller', null, $seller->avatar);
+        }
+        $seller->save();
+        if ($store) {
+            $store->description = $request->store_description;
+            $store->address = $request->store_address;
+            if ($request->hasFile('cover_image')) {
+                $store->cover_image = fileUploader($request->file('cover_image'), 'assets/images/store_cover', null, $store->cover_image);
+            }
+            $store->save();
+        }
+        return back()->with('success', 'Perfil actualizado correctamente.');
+    }
+
+    public function profilePassword(Request $request)
+    {
+        $seller = $this->seller();
+        $request->validate(['current_password' => 'required', 'password' => 'required|min:6|confirmed']);
+        if (!Hash::check($request->current_password, $seller->password)) {
+            return back()->with('error', 'La contraseña actual no es correcta.');
+        }
+        $seller->password = Hash::make($request->password);
+        $seller->save();
+        return back()->with('success', 'Contraseña actualizada correctamente.');
+    }
+
     public function dashboard(Request $request)
     {
         $seller = $this->seller();
@@ -1895,7 +1954,34 @@ class SellerPosController extends Controller
             ->orderByDesc('total_orders')
             ->get();
 
-        return view('seller.customers', compact('pageTitle', 'seller', 'store', 'customers'));
+        $customerGrowth = collect(range(11, 0))->map(function ($monthsAgo) use ($seller) {
+            $month = now()->subMonths($monthsAgo);
+            $start = $month->copy()->startOfMonth();
+            $end = $month->copy()->endOfMonth();
+            $phonesInMonth = PosOrder::where('seller_id', $seller->id)
+                ->whereNotNull('customer_phone')->whereBetween('created_at', [$start, $end])
+                ->distinct()->pluck('customer_phone');
+            $new = $phonesInMonth->filter(function ($phone) use ($seller, $start) {
+                return !PosOrder::where('seller_id', $seller->id)->where('customer_phone', $phone)
+                    ->where('created_at', '<', $start)->exists();
+            })->count();
+
+            return [
+                'label' => ucfirst($month->locale('es')->translatedFormat('M')),
+                'new' => $new,
+                'returning' => max(0, $phonesInMonth->count() - $new),
+            ];
+        });
+
+        $customerStats = [
+            'active' => $customers->filter(fn($customer) => \Carbon\Carbon::parse($customer->last_order)->gte(now()->subDays(90)))->count(),
+            'new_today' => PosOrder::where('seller_id', $seller->id)->whereNotNull('customer_phone')
+                ->whereDate('created_at', today())->distinct('customer_phone')->count('customer_phone'),
+            'vip' => $customers->where('total_orders', '>=', 5)->count(),
+            'churned' => $customers->filter(fn($customer) => \Carbon\Carbon::parse($customer->last_order)->lt(now()->subDays(90)))->count(),
+        ];
+
+        return view('seller.customers', compact('pageTitle', 'seller', 'store', 'customers', 'customerGrowth', 'customerStats'));
     }
 
     // ── Orders ──
@@ -1976,7 +2062,32 @@ class SellerPosController extends Controller
         return view('seller.orders', compact('pageTitle', 'seller', 'store', 'orders', 'pusherConfig'));
     }
 
-    public function products()
+    public function orderDetail(string $source, int $id)
+    {
+        $seller = $this->seller();
+        $store = $this->store();
+        if ($source === 'delivery') {
+            $order = DeliveryOrder::where('store_id', $store?->id)
+                ->with(['items.product', 'user', 'driver', 'store'])->findOrFail($id);
+            $customerName = $order->contact_name ?: $order->user?->fullname;
+            $customerPhone = $order->contact_phone ?: $order->user?->mobile;
+        } else {
+            $order = PosOrder::where('seller_id', $seller->id)
+                ->with(['items.product', 'table', 'staff', 'sunatInvoice', 'store'])->findOrFail($id);
+            $customerName = $order->customer_name;
+            $customerPhone = $order->customer_phone;
+        }
+        $customerOrders = $customerPhone
+            ? PosOrder::where('seller_id', $seller->id)->where('customer_phone', $customerPhone)->count()
+            : 0;
+        $pageTitle = 'Pedido #' . $order->order_no;
+
+        return view('seller.order_detail', compact(
+            'pageTitle', 'seller', 'store', 'order', 'source', 'customerName', 'customerPhone', 'customerOrders'
+        ));
+    }
+
+    public function products(Request $request)
     {
         $seller = $this->seller();
         $store = $this->store();
@@ -1989,7 +2100,28 @@ class SellerPosController extends Controller
         // Get warehouses for stock adjustments
         $warehouses = \App\Models\InvWarehouse::where('seller_id', $seller->id)->get();
 
-        return view('seller.products', compact('pageTitle', 'seller', 'store', 'storeCategories', 'storeType', 'warehouses'));
+        $cats = StoreCategory::where('store_id', $store->id)->orderBy('sort_order')->get();
+        $productBase = Product::where('store_id', $store->id);
+        $totalProducts = (clone $productBase)->count();
+        $activeProducts = (clone $productBase)->where('status', 1)->count();
+        $inactiveProducts = $totalProducts - $activeProducts;
+        $categoryCounts = Product::where('store_id', $store->id)
+            ->selectRaw('store_category_id, COUNT(*) as total')
+            ->groupBy('store_category_id')->pluck('total', 'store_category_id');
+
+        $productsQuery = Product::where('store_id', $store->id)
+            ->with('category', 'variations', 'addons', 'invProductItems.item')
+            ->when($request->filled('search'), fn($query) => $query->where('name', 'like', '%' . $request->search . '%'))
+            ->when($request->status === 'active', fn($query) => $query->where('status', 1))
+            ->when($request->status === 'inactive', fn($query) => $query->where('status', 0))
+            ->when($request->filled('category'), fn($query) => $query->where('store_category_id', $request->category))
+            ->orderBy('store_category_id')->orderBy('sort_order')->orderBy('name');
+        $allProducts = $productsQuery->paginate(12)->withQueryString();
+
+        return view('seller.products', compact(
+            'pageTitle', 'seller', 'store', 'storeCategories', 'storeType', 'warehouses',
+            'allProducts', 'cats', 'totalProducts', 'activeProducts', 'inactiveProducts', 'categoryCounts'
+        ));
     }
 
     // ── Kitchen Display ──
@@ -6441,34 +6573,15 @@ class SellerPosController extends Controller
         // Create PIN record
         $favor->pin()->create(['pin_code' => $pinCode]);
 
-        // Sprint 1: Auto-dispatch if no manual driver assigned
+        // Seller dispatch: broadcast first, then rotate one-by-one by distance.
         $autoAssigned = null;
         if (!$assignedDriver && $dispatchMode === 'auto') {
             try {
-                $autoAssigned = \App\Services\AutoDispatchService::dispatchFavor($favor);
-                if ($autoAssigned) {
-                    $favor->refresh();
-                }
+                \App\Services\SellerFavorDispatchService::start($favor);
+                $favor->refresh();
             } catch (\Throwable $e) {
-                // Fallback to broadcast to all couriers
+                report($e);
             }
-        }
-
-        // FCM notifications (fallback if auto-dispatch didn't assign anyone)
-        if (!$favor->courier_id) {
-            try {
-                if (gs('pn') && gs('firebase_config')) {
-                    \App\Services\FcmService::sendToAllCouriers(
-                        'Nuevo envío disponible',
-                        ($isExpress ? '⚡ EXPRESS — ' : '') . 'Recoger en ' . $store->name . ' — S/ ' . number_format($deliveryFee, 2),
-                        [
-                            'type'    => 'new_delivery_request',
-                            'favor_id' => (string) $favor->id,
-                            'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
-                        ]
-                    );
-                }
-            } catch (\Throwable $e) {}
         }
 
         // Calculate initial ETA
@@ -6567,6 +6680,7 @@ class SellerPosController extends Controller
         return response()->json([
             'status'       => 'success',
             'favor_status' => $favor->status,
+            'dispatch_mode' => $favor->dispatch_mode,
             'favor'        => [
                 'id'               => $favor->id,
                 'pickup_address'   => $favor->pickup_address,
@@ -6704,7 +6818,29 @@ class SellerPosController extends Controller
         // Broadcast status update
         event(new \App\Events\FavorStatusUpdated($favor));
 
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json(['status' => 'success', 'favor_status' => 'cancelled', 'message' => 'Solicitud cancelada.']);
+        }
+
         return back()->with('success', 'Envío #' . $favor->order_no . ' cancelado con éxito.');
+    }
+
+    public function retryFavorDispatch(Request $request, $id)
+    {
+        $seller = $this->seller();
+        $favor = \App\Models\Favor::where('seller_id', $seller->id)->findOrFail($id);
+
+        if ($favor->status !== 'searching_courier' || $favor->dispatch_mode !== 'seller_exhausted') {
+            return response()->json(['status' => 'error', 'message' => 'Esta solicitud no puede reenviarse ahora.'], 422);
+        }
+
+        \App\Services\SellerFavorDispatchService::start($favor);
+
+        return response()->json([
+            'status' => 'success',
+            'favor_status' => 'searching_courier',
+            'message' => 'Solicitud reenviada a los repartidores disponibles.',
+        ]);
     }
 
     public function requestReturn(Request $request, $id)

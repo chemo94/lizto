@@ -6,8 +6,9 @@
 
 @section('seller-content')
 <div class="s-content">
+    <section class="module-hero cash"><div><div class="module-crumb"><i class="las la-home"></i> Inicio &nbsp;/&nbsp; Finanzas &nbsp;/&nbsp; Caja</div><h2><i class="las la-cash-register"></i> Control de Caja</h2><p>Supervisa turnos, movimientos, ventas y arqueos del negocio.</p></div><div class="module-hero-stats"><div><b>{{ $registers->count() }}</b><small>Cajas</small></div><div><b>{{ $registers->filter(fn($r) => $r->openSession)->count() }}</b><small>Abiertas</small></div><div><b>{{ $openSession ? 'Activa' : 'Cerrada' }}</b><small>Caja seleccionada</small></div></div></section>
 
-    <div style="display:flex;gap:12px;margin-bottom:24px;border-bottom:1px solid var(--s-border);padding-bottom:12px">
+    <div style="display:flex;gap:8px;margin-bottom:14px;border-bottom:1px solid var(--s-border);padding-bottom:10px;overflow-x:auto">
         <a href="{{ route('seller.cash') }}" style="text-decoration:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;color:{{ request()->routeIs('seller.cash') ? '#fff' : 'var(--s-text-2)' }};background:{{ request()->routeIs('seller.cash') ? 'var(--s-primary)' : 'transparent' }};border:{{ request()->routeIs('seller.cash') ? 'none' : '1px solid var(--s-border)' }}">
             <i class="las la-cash-register" style="font-size:16px"></i> Caja Chica / POS
         </a>
@@ -323,4 +324,3 @@ function calcArqueo() {
 </script>
 @endpush
 @endsection
-

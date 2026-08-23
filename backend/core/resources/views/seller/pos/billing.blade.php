@@ -11,12 +11,18 @@
 @endsection
 
 @section('seller-content')
-<div class="s-content">
+<style>
+.billing-touch .s-table tbody td{padding-top:14px;padding-bottom:14px}.billing-touch .s-table tbody tr{transition:.15s}.billing-touch .s-table tbody tr:active{background:#fff7ed}.billing-touch .s-table td .s-btn{min-height:42px;padding:8px 12px;border-radius:9px;font-size:11px;touch-action:manipulation}.billing-touch .s-table td>div{flex-wrap:wrap}.billing-pay-dialog .s-input{min-height:48px;font-size:14px!important;border-radius:10px!important}.billing-pay-dialog select.s-input{padding-top:0!important;padding-bottom:0!important}.billing-pay-dialog input[type=checkbox],.billing-pay-dialog input[type=radio]{width:22px!important;height:22px!important;min-width:22px;accent-color:var(--s-primary)}.billing-pay-dialog label{line-height:1.3}.billing-pay-dialog .s-btn{min-height:48px;padding:10px 16px;border-radius:10px;font-size:13px;touch-action:manipulation}.billing-pay-dialog [id^="payment-row-"] button{min-width:44px;min-height:42px!important;padding:8px!important;border-radius:8px!important}.billing-pay-dialog [id^="payment-row-"] .s-input{min-height:46px!important;height:46px!important}.billing-pay-dialog #pay-submit-btn{min-height:54px;font-size:15px;font-weight:800}.billing-pay-dialog #pay-doc-result>div{min-height:46px;padding:11px 13px!important}.billing-touch .pagination .page-link{min-width:44px;min-height:44px;display:grid;place-items:center}@media(hover:none),(pointer:coarse){.billing-touch .module-hero{min-height:150px}.billing-touch .s-card{padding:20px}.billing-touch .s-table tbody td{font-size:13px}.billing-touch .s-table td .s-btn{min-height:48px;padding:10px 14px;font-size:12px}.billing-pay-dialog{width:min(720px,calc(100vw - 20px))!important;padding:22px!important}.billing-pay-dialog button:active,.billing-touch .s-btn:active{transform:scale(.97)}.billing-pay-dialog [style*="height: 28px"],.billing-pay-dialog [style*="height: 30px"]{height:48px!important;min-height:48px!important}.billing-pay-dialog [style*="width: 64px"]{width:86px!important}.billing-pay-dialog [style*="width: 100px"],.billing-pay-dialog [style*="width: 125px"],.billing-pay-dialog [style*="width: 180px"],.billing-pay-dialog [style*="width: 220px"]{width:100%!important}.billing-pay-dialog [style*="display: flex"]{row-gap:10px}.billing-pay-dialog [style*="position: absolute; top: 16px"]{width:46px;height:46px;top:8px!important;right:8px!important;border-radius:50%!important;background:#f8fafc!important}}
+.billing-touch .s-table td .s-btn{min-width:42px}@media(hover:none),(pointer:coarse){.billing-touch .s-table td .s-btn{min-width:48px}}
+</style>
+<div class="s-content billing-touch">
+    @php $pendingBillingTotal = $pendingOrders->sum('total'); $paidBillingTotal = $paidOrders->sum('total'); @endphp
+    <section class="module-hero billing"><div><div class="module-crumb"><i class="las la-home"></i> Inicio &nbsp;/&nbsp; Finanzas &nbsp;/&nbsp; Cobros</div><h2><i class="las la-hand-holding-usd"></i> Cobros y Facturación POS</h2><p>Procesa cuentas pendientes, medios de pago y comprobantes electrónicos.</p></div><div class="module-hero-stats"><div><b>{{ $pendingOrders->count() }}</b><small>Por cobrar</small></div><div><b>S/ {{ number_format($pendingBillingTotal,0) }}</b><small>Saldo pendiente</small></div><div><b>S/ {{ number_format($paidBillingTotal,0) }}</b><small>Cobrado reciente</small></div></div></section>
     
     <div style="display: flex; flex-direction: column; gap: 24px;">
         
         <!-- PENDING ORDERS -->
-        <div class="s-card">
+        <div class="s-card seller-work-card">
             <h3 style="margin-bottom: 20px; font-weight: 700; font-size: 16px; color: var(--s-text-primary); display: flex; align-items: center; gap: 8px;">
                 <i class="las la-clock" style="color: var(--s-warning); font-size: 22px;"></i> Pedidos Pendientes de Cobro ({{ $pendingOrders->count() }})
             </h3>
@@ -98,7 +104,7 @@
 
         <!-- PAID ORDERS -->
         @if($paidOrders->count())
-        <div class="s-card">
+        <div class="s-card seller-work-card">
             <h3 style="margin-bottom: 20px; font-weight: 700; font-size: 16px; color: var(--s-text-primary); display: flex; align-items: center; gap: 8px;">
                 <i class="las la-check-circle" style="color: var(--s-success); font-size: 22px;"></i> Comprobantes y Pagos Recientes
             </h3>
@@ -196,7 +202,7 @@
 
 <!-- PAYMENT MODAL -->
 <div id="pay-modal" class="s-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15,25,35,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);">
-    <div style="background: #fff; width: min(620px, calc(100vw - 32px)); padding: 24px; border-radius: 16px; border: 1px solid var(--s-border); position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-height: calc(100vh - 32px); overflow-y: auto;">
+    <div class="billing-pay-dialog" style="background: #fff; width: min(620px, calc(100vw - 32px)); padding: 24px; border-radius: 16px; border: 1px solid var(--s-border); position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-height: calc(100vh - 32px); overflow-y: auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch;">
         <button onclick="closePayModal()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 20px; color: var(--s-text-secondary); cursor: pointer;">✕</button>
         <h3 style="margin-bottom: 8px; font-weight: 800; font-size: 18px; color: var(--s-text-primary); display: flex; align-items: center; gap: 8px;">
             <i class="las la-wallet" style="color: var(--s-success); font-size: 24px;"></i> Registrar Cobro <span id="pay-order-no"></span>

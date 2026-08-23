@@ -6,9 +6,21 @@
 
 @section('seller-content')
 <div class="s-content">
+    <section class="module-hero payroll">
+        <div>
+            <div class="module-crumb"><i class="las la-home"></i> Seller / RR.HH / Planillas</div>
+            <h2>Planillas y pagos</h2>
+            <p>Calcula periodos, revisa remuneraciones y registra pagos al personal.</p>
+        </div>
+        <div class="module-hero-stats">
+            <div><b>{{ $payrolls->total() }}</b><small>Planillas</small></div>
+            <div><b>{{ $payrolls->getCollection()->where('payment_status', 'pending')->count() }}</b><small>Pendientes visibles</small></div>
+            <div><b>S/ {{ number_format($payrolls->getCollection()->sum('net_salary'), 0) }}</b><small>Neto visible</small></div>
+        </div>
+    </section>
     
     <!-- TOP ACTIONS CARD: CALCULATOR -->
-    <div class="s-card" style="margin-bottom: 24px;">
+    <div class="s-card seller-work-card" style="margin-bottom: 14px;">
         <h3 style="margin-bottom: 15px; font-weight: 700; font-size: 16px; color: var(--s-text-primary); display: flex; align-items: center; gap: 8px;">
             <i class="las la-calculator" style="color: var(--s-primary); font-size: 20px;"></i> Calcular Planilla del Periodo
         </h3>
@@ -35,7 +47,7 @@
     </div>
 
     <!-- MAIN LISTING TABLE -->
-    <div class="s-card">
+    <div class="s-card seller-work-card">
         <h3 style="margin-bottom: 20px; font-weight: 700; font-size: 16px; color: var(--s-text-primary); display: flex; align-items: center; gap: 8px;">
             <i class="las la-file-invoice-dollar" style="color: var(--s-primary); font-size: 20px;"></i> Historial de Cálculos y Pagos de Planilla
         </h3>

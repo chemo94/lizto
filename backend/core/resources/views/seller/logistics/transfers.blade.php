@@ -6,11 +6,12 @@
 
 @section('seller-content')
 <div class="s-content">
+    <section class="module-hero transfers"><div><div class="module-crumb"><i class="las la-home"></i> Inicio &nbsp;/&nbsp; Logística &nbsp;/&nbsp; Transferencias</div><h2><i class="las la-exchange-alt"></i> Transferencias de Stock</h2><p>Mueve existencias entre almacenes con trazabilidad de envío y recepción.</p></div><div class="module-hero-stats"><div><b>{{ $transfers->total() }}</b><small>Transferencias</small></div><div><b>{{ $transfers->where('status','pending')->count() }}</b><small>Pendientes visibles</small></div><div><b>{{ $transfers->where('status','sent')->count() }}</b><small>En tránsito visible</small></div></div></section>
 
-    <div class="s-grid-2" style="grid-template-columns: 1fr 1.3fr; gap: 24px; align-items: start;">
+    <div class="s-grid-2 logistics-workspace" style="grid-template-columns: 1fr 1.3fr; gap: 14px; align-items: start;">
         
         <!-- REGISTRAR TRANSFERENCIA -->
-        <div class="s-card">
+        <div class="s-card seller-work-card">
             <h3 class="s-card-title"><i class="las la-plus-circle"></i> Nueva Transferencia</h3>
 
             <form method="POST" action="{{ route('seller.logistics.transfers.store') }}" onsubmit="return validateTransferForm(event)">
@@ -74,7 +75,7 @@
         </div>
 
         <!-- HISTORIAL Y ACCIONES -->
-        <div class="s-card">
+        <div class="s-card seller-work-card">
             <h3 class="s-card-title"><i class="las la-history"></i> Historial de Envios</h3>
 
             <div class="s-table-responsive">

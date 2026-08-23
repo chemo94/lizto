@@ -6,10 +6,22 @@
 
 @section('seller-content')
 <div class="s-content">
-    <div style="display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start;">
+    <section class="module-hero hr">
+        <div>
+            <div class="module-crumb"><i class="las la-home"></i> Seller / RR.HH / Personal</div>
+            <h2>Equipo y personal</h2>
+            <p>Administra colaboradores, cargos, empresas asignadas y accesos operativos.</p>
+        </div>
+        <div class="module-hero-stats">
+            <div><b>{{ $staff->count() }}</b><small>Colaboradores</small></div>
+            <div><b>{{ $staff->where('status', 'active')->count() }}</b><small>Activos</small></div>
+            <div><b>{{ $companies->count() }}</b><small>Empresas</small></div>
+        </div>
+    </section>
+    <div class="hr-workspace" style="display: grid; grid-template-columns: 360px 1fr; gap: 14px; align-items: start;">
         
         <!-- REGISTRO / EDICION -->
-        <div class="s-card">
+        <div class="s-card seller-work-card">
             <h3 id="form-title" style="margin-bottom: 20px; font-weight: 700; font-size: 16px; color: var(--s-text-primary); display: flex; align-items: center; gap: 8px;">
                 <i class="las la-user-plus" style="color: var(--s-primary); font-size: 20px;"></i> Registrar Personal
             </h3>
@@ -151,7 +163,7 @@
         </div>
 
         <!-- LISTADO -->
-        <div class="s-card">
+        <div class="s-card seller-work-card">
             <h3 style="margin-bottom: 20px; font-weight: 700; font-size: 16px; color: var(--s-text-primary); display: flex; align-items: center; gap: 8px;">
                 <i class="las la-list" style="color: var(--s-primary); font-size: 20px;"></i> Fichas de Empleados
             </h3>

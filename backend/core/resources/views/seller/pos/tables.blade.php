@@ -11,14 +11,24 @@
 @endsection
 
 @section('seller-content')
+<style>
+.ops-head{min-height:120px;margin-bottom:16px;padding:20px 22px;border-radius:14px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:18px;background:linear-gradient(100deg,#173d55,#327b89 56%,#7ab9af);box-shadow:var(--s-shadow-sm)}.ops-head .crumb{font-size:9px;color:rgba(255,255,255,.68);margin-bottom:7px}.ops-head h2{font:800 22px 'Plus Jakarta Sans','Inter',sans-serif;margin:0 0 3px;letter-spacing:-.45px}.ops-head p{margin:0;font-size:10px;color:rgba(255,255,255,.7)}.ops-summary{display:flex;gap:8px}.ops-summary div{min-width:86px;padding:10px 12px;text-align:center;border:1px solid rgba(255,255,255,.2);border-radius:10px;background:rgba(255,255,255,.1);backdrop-filter:blur(8px)}.ops-summary b{display:block;font-size:17px}.ops-summary small{font-size:8px;color:rgba(255,255,255,.7)}.tables-workspace>.s-card{border-radius:14px;box-shadow:var(--s-shadow-sm)}.tables-workspace .s-btn-primary{background:#f97316;border-color:#f97316}.tables-workspace .s-input:focus{border-color:#f97316!important;box-shadow:0 0 0 3px rgba(249,115,22,.1)!important}@media(max-width:767px){.ops-head{align-items:flex-start;flex-direction:column}.ops-summary{width:100%;overflow:auto}.ops-summary div{flex:1}.tables-workspace{grid-template-columns:1fr!important}}
+</style>
 <div class="s-content">
     @php $areasList = \App\Models\PosArea::where('seller_id', $seller->id)->orderBy('sort_order')->get(); @endphp
     @php
         $allTables = $tables->count();
         $noAreaTables = $tables->whereNull('pos_area_id');
+        $freeTablesCount = $tables->where('status', 'free')->count();
+        $busyTablesCount = $allTables - $freeTablesCount;
     @endphp
 
-    <div class="s-grid-2" style="grid-template-columns: 1fr 1.5fr; gap: 24px; align-items: start;">
+    <section class="ops-head">
+        <div><div class="crumb"><i class="las la-home"></i> Inicio &nbsp;/&nbsp; Salón &nbsp;/&nbsp; Mesas</div><h2><i class="las la-chair"></i> Gestión de Mesas</h2><p>Organiza las áreas y la capacidad de atención de tu establecimiento.</p></div>
+        <div class="ops-summary"><div><b>{{ $allTables }}</b><small>Total mesas</small></div><div><b>{{ $freeTablesCount }}</b><small>Disponibles</small></div><div><b>{{ $busyTablesCount }}</b><small>Ocupadas</small></div><div><b>{{ $areasList->count() }}</b><small>Áreas</small></div></div>
+    </section>
+
+    <div class="s-grid-2 tables-workspace" style="grid-template-columns: 1fr 1.5fr; gap: 14px; align-items: start;">
         
         <!-- AREAS -->
         <div class="s-card">

@@ -138,7 +138,11 @@ Route::get('/delivery/store-fee-estimate', 'storeFeeEstimate')->name('store.fee.
     Route::prefix('seller')->name('seller.')->middleware([\App\Http\Middleware\CheckSubscription::class])->group(function () {
         Route::get('/pos', [\App\Http\Controllers\SellerPosController::class, 'pos'])->name('pos');
         Route::get('/dashboard', [\App\Http\Controllers\SellerPosController::class, 'dashboard'])->name('dashboard');
+        Route::get('/profile', [\App\Http\Controllers\SellerPosController::class, 'profile'])->name('profile');
+        Route::post('/profile/update', [\App\Http\Controllers\SellerPosController::class, 'profileUpdate'])->name('profile.update');
+        Route::post('/profile/password', [\App\Http\Controllers\SellerPosController::class, 'profilePassword'])->name('profile.password');
         Route::get('/orders', [\App\Http\Controllers\SellerPosController::class, 'orders'])->name('orders');
+        Route::get('/orders/{source}/{id}', [\App\Http\Controllers\SellerPosController::class, 'orderDetail'])->where('source', 'pos|delivery')->name('orders.show');
         Route::get('/customers', [\App\Http\Controllers\SellerPosController::class, 'customers'])->name('customers');
         Route::get('/products', [\App\Http\Controllers\SellerPosController::class, 'products'])->name('products');
         Route::get('/reports', [\App\Http\Controllers\SellerPosController::class, 'reports'])->name('reports');
@@ -245,6 +249,7 @@ Route::get('/delivery/store-fee-estimate', 'storeFeeEstimate')->name('store.fee.
         Route::post('/delivery/request/fee-calculate', [\App\Http\Controllers\SellerPosController::class, 'deliveryRequestFeeCalculate'])->name('delivery.request.fee-calculate');
         Route::get('/delivery/request/status/{id}', [\App\Http\Controllers\SellerPosController::class, 'deliveryRequestStatus'])->name('delivery.request.status.show');
         Route::post('/delivery/request/{id}/cancel', [\App\Http\Controllers\SellerPosController::class, 'cancelFavor'])->name('delivery.request.cancel');
+        Route::post('/delivery/request/{id}/retry', [\App\Http\Controllers\SellerPosController::class, 'retryFavorDispatch'])->name('delivery.request.retry');
         Route::post('/delivery/request/{id}/status', [\App\Http\Controllers\SellerPosController::class, 'favorStatus'])->name('delivery.request.status');
         Route::post('/delivery/request/{id}/request-return', [\App\Http\Controllers\SellerPosController::class, 'requestReturn'])->name('delivery.request.return');
         Route::get('/delivery/order/{id}/status', [\App\Http\Controllers\SellerPosController::class, 'deliveryOrderStatus'])->name('delivery.order.status.show');

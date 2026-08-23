@@ -7,9 +7,10 @@ Alertas de Stock
 
 @section('seller-content')
 <div class="s-content">
+<section class="module-hero warning"><div><div class="module-crumb"><i class="las la-home"></i> Inicio &nbsp;/&nbsp; Inventario &nbsp;/&nbsp; Alertas</div><h2><i class="las la-exclamation-triangle"></i> Alertas de Inventario</h2><p>Detecta faltantes, sobrestock y productos que requieren reposición.</p></div><div class="module-hero-stats"><div><b>{{ $outOfStockItems->count() }}</b><small>Agotados</small></div><div><b>{{ $lowStockItems->count() }}</b><small>Stock bajo</small></div><div><b>{{ $overStockItems->count() }}</b><small>Sobrestock</small></div></div></section>
 
 {{-- Summary Cards --}}
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:24px;">
+<div class="inventory-alert-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:24px;">
     <div class="s-card" style="border-left:4px solid #ef4444;">
         <div style="font-size:12px;color:var(--s-text-3);">Sin Stock</div>
         <div style="font-size:28px;font-weight:900;color:#ef4444;">{{ $outOfStockItems->count() }}</div>

@@ -6,11 +6,13 @@
 
 @section('seller-content')
 <div class="s-content">
+    @php $purchasesTotal = $purchases->sum('total'); @endphp
+    <section class="module-hero purchases"><div><div class="module-crumb"><i class="las la-home"></i> Inicio &nbsp;/&nbsp; Abastecimiento &nbsp;/&nbsp; Compras</div><h2><i class="las la-shopping-cart"></i> Compras e Ingresos</h2><p>Registra el abastecimiento y actualiza automáticamente las existencias.</p></div><div class="module-hero-stats"><div><b>{{ $purchases->count() }}</b><small>Compras</small></div><div><b>{{ $suppliers->count() }}</b><small>Proveedores</small></div><div><b>S/ {{ number_format($purchasesTotal,0) }}</b><small>Total registrado</small></div></div></section>
 
-    <div class="s-grid-2" style="grid-template-columns: 1fr 1.2fr; gap: 24px; align-items: start;">
+    <div class="s-grid-2 purchases-workspace" style="grid-template-columns: 1fr 1.2fr; gap: 14px; align-items: start;">
         
         <!-- REGISTRAR COMPRA -->
-        <div class="s-card">
+        <div class="s-card seller-work-card">
             <h3 style="margin-bottom: 20px; font-weight: 700; font-size: 16px; color: var(--s-text-primary); display: flex; align-items: center; gap: 8px;">
                 <i class="las la-plus-circle" style="color: var(--s-primary); font-size: 20px;"></i> Registrar Compra
             </h3>
@@ -116,7 +118,7 @@
         </div>
 
         <!-- HISTORIAL -->
-        <div class="s-card">
+        <div class="s-card seller-work-card">
             <h3 style="margin-bottom: 20px; font-weight: 700; font-size: 16px; color: var(--s-text-primary); display: flex; align-items: center; gap: 8px;">
                 <i class="las la-history" style="color: var(--s-primary); font-size: 20px;"></i> Historial de Compras
             </h3>

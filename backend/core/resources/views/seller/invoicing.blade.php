@@ -8,7 +8,7 @@
 <div class="s-content" style="max-width: 1400px; margin: 0 auto; padding: 20px;">
     
     <!-- SECTOR EMPRESA SELECCIONADA -->
-    <div style="background: linear-gradient(135deg, var(--s-primary) 0%, #1e8a3f 100%); border-radius: 16px; padding: 24px; color: #fff; margin-bottom: 30px; box-shadow: 0 8px 20px rgba(22, 163, 74, 0.15); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+    <div class="module-hero tax" style="margin-bottom:16px;min-height:142px;flex-wrap:wrap">
         <div>
             <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.85; font-weight: 800;">Empresa Activa para Facturación</span>
             @if($activeCompany)
@@ -39,7 +39,7 @@
     <div class="s-grid-2" style="grid-template-columns: 1fr 1.2fr; gap: 24px; align-items: start; margin-bottom: 24px;">
         
         <!-- CONFIGURACION SUNAT DE LA EMPRESA SELECCIONADA -->
-        <div class="s-card" style="box-shadow: 0 10px 30px rgba(0,0,0,0.02); border: 1px solid var(--s-border);">
+        <div class="s-card seller-work-card">
             <h3 style="margin-bottom: 24px; font-weight: 800; font-size: 18px; color: var(--s-text); display: flex; align-items: center; gap: 10px;">
                 <i class="las la-cloud-sun" style="color: var(--s-primary); font-size: 24px; background: rgba(22, 163, 74, 0.1); padding: 8px; border-radius: 10px;"></i> Credenciales SUNAT
             </h3>
@@ -95,7 +95,7 @@
         </div>
 
         <!-- DATOS DE LA EMPRESA SELECCIONADA -->
-        <div class="s-card" style="box-shadow: 0 10px 30px rgba(0,0,0,0.02); border: 1px solid var(--s-border);">
+        <div class="s-card seller-work-card">
             <h3 style="margin-bottom: 24px; font-weight: 800; font-size: 18px; color: var(--s-text); display: flex; align-items: center; gap: 10px;">
                 <i class="las la-building" style="color: var(--s-primary); font-size: 24px; background: rgba(22, 163, 74, 0.1); padding: 8px; border-radius: 10px;"></i> Modificar Datos Fiscales
             </h3>

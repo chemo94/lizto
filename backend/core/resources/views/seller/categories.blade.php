@@ -5,8 +5,12 @@
 @endsection
 
 @section('seller-content')
+<style>
+.category-head{min-height:118px;margin-bottom:16px;padding:20px 22px;border-radius:14px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:18px;background:linear-gradient(100deg,#6b2fad,#8d50c5 58%,#b58add)}.category-head h2{font:800 22px 'Plus Jakarta Sans','Inter',sans-serif;margin:0 0 4px}.category-head p{font-size:10px;color:rgba(255,255,255,.72);margin:0}.category-count{min-width:105px;padding:12px 15px;text-align:center;border:1px solid rgba(255,255,255,.2);border-radius:11px;background:rgba(255,255,255,.11)}.category-count b{display:block;font-size:20px}.category-count small{font-size:8px;color:rgba(255,255,255,.72)}.category-workspace{max-width:980px!important;display:grid;grid-template-columns:minmax(280px,.8fr) minmax(420px,1.4fr);gap:14px;align-items:start}.category-workspace>.s-card{margin:0!important;border-radius:14px;box-shadow:var(--s-shadow-sm)}@media(max-width:850px){.category-workspace{grid-template-columns:1fr}.category-head{align-items:flex-start}}
+</style>
 <div class="s-content">
-    <div style="max-width:720px">
+    <section class="category-head"><div><h2><i class="las la-tags"></i> Categorías del Menú</h2><p>Organiza los productos para agilizar la navegación del POS y de tu tienda.</p></div><div class="category-count"><b>{{ $categories->count() }}</b><small>Categorías creadas</small></div></section>
+    <div class="category-workspace">
         <!-- FORM ADD -->
         <div class="s-card" style="margin-bottom:20px">
             <h3 class="s-card-title"><i class="las la-plus-circle"></i> Nueva Categoría</h3>

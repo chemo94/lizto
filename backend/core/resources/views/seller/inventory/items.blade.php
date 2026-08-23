@@ -6,6 +6,8 @@
 
 @section('seller-content')
 <div class="s-content">
+@php $inventoryValue = $items->sum(fn($item) => (float)$item->stock * (float)$item->cost); @endphp
+<section class="module-hero inventory"><div><div class="module-crumb"><i class="las la-home"></i> Inicio &nbsp;/&nbsp; Inventario &nbsp;/&nbsp; Insumos</div><h2><i class="las la-boxes"></i> Insumos y Existencias</h2><p>Controla materias primas, costos, niveles de stock y reposición.</p></div><div class="module-hero-stats"><div><b>{{ $items->count() }}</b><small>Insumos</small></div><div><b>{{ $lowStock->count() }}</b><small>Stock crítico</small></div><div><b>S/ {{ number_format($inventoryValue,0) }}</b><small>Valor estimado</small></div></div></section>
 
 {{-- Alertas de stock bajo ─────────────────────────────────────────────────── --}}
 @if($lowStock->count())
@@ -39,7 +41,7 @@
 </div>
 
 {{-- ── Formulario agregar ────────────────────────────────────────────────── --}}
-<div class="s-card" style="margin-bottom:20px;">
+<div class="s-card seller-work-card" style="margin-bottom:20px;">
     <h3 class="s-card-title"><i class="las la-plus-circle"></i> Agregar Nuevo Insumo</h3>
     
     <div style="background: #eef2ff; border: 1px solid #c7d2fe; border-left: 5px solid #4f46e5; border-radius: 12px; padding: 16px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">

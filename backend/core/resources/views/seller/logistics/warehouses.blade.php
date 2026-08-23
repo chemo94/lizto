@@ -6,10 +6,11 @@
 
 @section('seller-content')
 <div class="s-content">
+    <section class="module-hero logistics"><div><div class="module-crumb"><i class="las la-home"></i> Inicio &nbsp;/&nbsp; Logística &nbsp;/&nbsp; Almacenes</div><h2><i class="las la-warehouse"></i> Almacenes y Stock</h2><p>Administra ubicaciones y consulta la distribución de existencias.</p></div><div class="module-hero-stats"><div><b>{{ $warehouses->count() }}</b><small>Almacenes</small></div><div><b>{{ $items->count() }}</b><small>Insumos</small></div><div><b>{{ $warehouses->where('status','active')->count() }}</b><small>Activos</small></div></div></section>
 
-    <div class="s-grid-3" style="margin-bottom:20px">
+    <div class="s-grid-3 logistics-workspace" style="margin-bottom:14px;gap:14px">
         <!-- AGREGAR ALMACÉN -->
-        <div class="s-card" style="grid-column: span 1">
+        <div class="s-card seller-work-card" style="grid-column: span 1">
             <h3 class="s-card-title"><i class="las la-plus"></i> Nuevo Almacén</h3>
             <form method="POST" action="{{ route('seller.logistics.warehouses.store') }}" class="s-form-grid">
                 @csrf
@@ -32,7 +33,7 @@
         </div>
 
         <!-- LISTADO DE ALMACENES -->
-        <div class="s-card" style="grid-column: span 2">
+        <div class="s-card seller-work-card" style="grid-column: span 2">
             <h3 class="s-card-title"><i class="las la-list"></i> Almacenes Registrados</h3>
             <div class="s-table-responsive">
                 <table class="s-table">
@@ -86,7 +87,7 @@
     </div>
 
     <!-- STOCK POR ALMACÉN -->
-    <div class="s-card">
+    <div class="s-card seller-work-card">
         <h3 class="s-card-title"><i class="las la-boxes"></i> Matriz de Stock por Almacén</h3>
         <div class="s-table-responsive" style="margin-top:15px">
             <table class="s-table">

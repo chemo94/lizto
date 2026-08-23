@@ -12,12 +12,13 @@ use Illuminate\Support\Facades\Schema;
 class SellerFavorDispatchService
 {
     public const RESPONSE_WINDOW_SECONDS = 15;
+    public const BROADCAST_WINDOW_SECONDS = 15;
 
     public static function processDueRequests(): int
     {
         return DB::transaction(function () {
             $favors = Favor::where('status', 'searching_courier')
-                ->whereIn('dispatch_mode', ['seller_nearby', 'seller_expanded'])
+                ->whereIn('dispatch_mode', ['seller_broadcast', 'seller_nearby', 'seller_expanded'])
                 ->whereNotNull('dispatch_timeout_at')
                 ->where('dispatch_timeout_at', '<=', now())
                 ->lockForUpdate()->get();
@@ -30,14 +31,27 @@ class SellerFavorDispatchService
     {
         $dispatchState = [
             'courier_id' => null,
-            'dispatch_mode' => 'seller_nearby',
-            'dispatch_timeout_at' => now(),
+            'dispatch_mode' => 'seller_broadcast',
+            'dispatch_timeout_at' => now()->addSeconds(self::BROADCAST_WINDOW_SECONDS),
         ];
         if (self::tracksAttemptedDrivers()) {
             $dispatchState['dispatch_attempted_driver_ids'] = [];
         }
         $favor->update($dispatchState);
-        return self::dispatchNext($favor->fresh());
+
+        $driverIds = self::broadcastCouriers()->pluck('id')->map(fn ($id) => (int) $id)->all();
+        if ($driverIds) {
+            FcmService::sendToDrivers($driverIds, 'Nuevo envío disponible',
+                'Solicitud #' . $favor->order_no . ' — S/ ' . number_format($favor->delivery_fee ?? 0, 2) . '. Responde antes de que inicie la asignación por cercanía.', [
+                    'type' => 'new_delivery_request',
+                    'favor_id' => (string) $favor->id,
+                    'order_no' => $favor->order_no,
+                    'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
+                ]);
+        }
+
+        event(new FavorStatusUpdated($favor->fresh(), 'broadcast_to_online_couriers'));
+        return null;
     }
 
     public static function dispatchNext(Favor $favor): ?Driver
@@ -93,13 +107,22 @@ class SellerFavorDispatchService
         $distanceSql = "(6371 * acos(cos(radians(?)) * cos(radians($latColumn)) * cos(radians($lngColumn) - radians(?)) + sin(radians(?)) * sin(radians($latColumn))))";
 
         return Driver::query()->where('status', Status::ENABLE)->where('online_status', 1)
-            ->whereIn('service_type', ['delivery', 'both'])->whereHas('wallet', fn ($q) => $q->where('balance', '>', 0))
+            ->whereIn('service_type', ['delivery', 'both'])
             ->whereNotNull('current_lat')->whereNotNull('current_lot')
             ->where('current_lat', '!=', 0)->where('current_lot', '!=', 0)
             ->when($attempted, fn ($q) => $q->whereNotIn('id', $attempted))
             ->select('drivers.*')->selectRaw("$distanceSql as dispatch_distance", [$lat, $lng, $lat])
             ->when($radius !== null, fn ($q) => $q->whereRaw("$distanceSql <= ?", [$lat, $lng, $lat, $radius]))
             ->orderBy('dispatch_distance');
+    }
+
+    private static function broadcastCouriers()
+    {
+        return Driver::query()
+            ->where('status', Status::ENABLE)
+            ->where('online_status', 1)
+            ->whereIn('service_type', ['delivery', 'both'])
+            ->get();
     }
 
     private static function tracksAttemptedDrivers(): bool
