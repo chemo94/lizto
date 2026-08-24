@@ -67,10 +67,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         mainAxisAlignment: MainAxisAlignment.start,
                         children: [
                           spaceDown(Dimensions.space15),
-                          Image.asset(
-                            MyImages.appLogoWhite,
-                            color: MyColor.colorWhite,
-                            width: MediaQuery.of(context).size.width / 2.5,
+                          Center(
+                            child: Image.asset(
+                              MyImages.appLogoWhite,
+                              color: MyColor.colorWhite,
+                              width: MediaQuery.of(context).size.width / 2.5,
+                            ),
                           ),
                           spaceDown(Dimensions.space15),
                           Text(
