@@ -3,7 +3,7 @@ description: Lizto Rider is a complete ride-sharing solution.
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 4.1.11+34
+version: 4.1.12+35
 
 environment:
   sdk: '>=3.5.0 <4.0.0'

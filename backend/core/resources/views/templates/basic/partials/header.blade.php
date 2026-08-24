@@ -42,6 +42,11 @@
 
         {{-- Right: User Auth + Cart Actions --}}
         <div class="lz-header-actions">
+            <a href="{{ route('seller.login') }}" class="lz-seller-login-btn" title="Ingresar al panel de vendedor" aria-label="Ingreso para vendedores">
+                <i class="las la-store-alt"></i>
+                <span class="d-none d-md-inline">Vendedor</span>
+            </a>
+
             {{-- User Auth Trigger / Profile --}}
             <div id="header-auth-section">
                 {{-- Logged Out State --}}
@@ -409,6 +414,45 @@
     font-weight: 700 !important;
     cursor: pointer !important;
     white-space: nowrap !important;
+}
+
+.lz-seller-login-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    height: 36px !important;
+    padding: 0 12px !important;
+    border-radius: 9999px !important;
+    border: 1.5px solid #fed7aa !important;
+    background: #fff7ed !important;
+    color: #ea580c !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    text-decoration: none !important;
+    white-space: nowrap !important;
+    transition: all .15s ease !important;
+}
+
+.lz-seller-login-btn i {
+    font-size: 18px !important;
+}
+
+.lz-seller-login-btn:hover {
+    border-color: #f97316 !important;
+    background: #f97316 !important;
+    color: #fff !important;
+    box-shadow: 0 5px 14px rgba(249,115,22,.22) !important;
+    transform: translateY(-1px);
+}
+
+@media (min-width: 992px) {
+    .lz-seller-login-btn {
+        height: 38px !important;
+        padding: 0 16px !important;
+        font-size: 13.5px !important;
+    }
 }
 
 @media (min-width: 992px) {

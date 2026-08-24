@@ -31,6 +31,22 @@
           }
         },
         {
+          "client_id": "714316853778-ncrspogk4lhon9svsvhcrcduh2keban2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jsoft.proveedor",
+            "certificate_hash": "59ca407e2c98ed9949c42d3b8b8aa220ba8d0c96"
+          }
+        },
+        {
+          "client_id": "714316853778-vf5d6eo5nsa33e5rf99mllug7treukql.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jsoft.proveedor",
+            "certificate_hash": "35adfb0fbda6373dc5ceb64f9e2777b65178b21c"
+          }
+        },
+        {
           "client_id": "714316853778-t7q3aecjcgeljj820bknm0q9iimi2sav.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -67,6 +83,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "714316853778-g1h7cka1p33rihqs4dbasreecl4289t5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jsoft.service",
+            "certificate_hash": "59ca407e2c98ed9949c42d3b8b8aa220ba8d0c96"
+          }
+        },
+        {
           "client_id": "714316853778-iqbl9uhi1vfsv2n0io5kloddvb1k0uri.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
@@ -80,6 +104,14 @@
           "android_info": {
             "package_name": "com.jsoft.service",
             "certificate_hash": "8ea2c4bbcd9fc1c65e17c500e281fe84c02ac6d3"
+          }
+        },
+        {
+          "client_id": "714316853778-v907gf2cu3t109sakbchc3sp4sqrv00i.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jsoft.service",
+            "certificate_hash": "35adfb0fbda6373dc5ceb64f9e2777b65178b21c"
           }
         },
         {
@@ -143,6 +175,14 @@
           }
         },
         {
+          "client_id": "714316853778-ncom7152kgkem0gasfelr3fsu8i4moc9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.liztogo.deliveryuser",
+            "certificate_hash": "35adfb0fbda6373dc5ceb64f9e2777b65178b21c"
+          }
+        },
+        {
           "client_id": "714316853778-t7q3aecjcgeljj820bknm0q9iimi2sav.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -178,6 +218,14 @@
         }
       },
       "oauth_client": [
+        {
+          "client_id": "714316853778-4o6o88dts51cbv3mqk0hdnvmuedh4ffv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.liztogo.repartidor",
+            "certificate_hash": "35adfb0fbda6373dc5ceb64f9e2777b65178b21c"
+          }
+        },
         {
           "client_id": "714316853778-b3ghn9lnv9e0im684vndenm6q4sc8qdn.apps.googleusercontent.com",
           "client_type": 1,
@@ -239,11 +287,35 @@
       },
       "oauth_client": [
         {
+          "client_id": "714316853778-0totmvo1b33merl58qekkoi6sf5cuj81.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.liztogo.restaurant",
+            "certificate_hash": "59ca407e2c98ed9949c42d3b8b8aa220ba8d0c96"
+          }
+        },
+        {
           "client_id": "714316853778-8nvit5ru4fpl88a0vt404sa2et0go0hi.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.liztogo.restaurant",
             "certificate_hash": "55bd87d57988c7fc02ccb25ba662e4bedecd2a09"
+          }
+        },
+        {
+          "client_id": "714316853778-9bfkg9gmh4mnijnp1pj71p5kakcmh4v1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.liztogo.restaurant",
+            "certificate_hash": "6a0cb484a94a3fb9182c4608baf0962a682c970f"
+          }
+        },
+        {
+          "client_id": "714316853778-v31pnrkv4nla7cmsi96omk8shgjhoo8a.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.liztogo.restaurant",
+            "certificate_hash": "35adfb0fbda6373dc5ceb64f9e2777b65178b21c"
           }
         },
         {
