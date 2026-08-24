@@ -52,6 +52,10 @@
 	<string>Lizto Delivery necesita acceso a tu galería para que puedas seleccionar y subir fotos, como tu foto de perfil o comprobantes dentro de la aplicación.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UISupportedInterfaceOrientations</key>
