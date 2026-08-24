@@ -57,6 +57,31 @@ class FirebasePhoneAuthService
         return hash_equals($this->phoneFor($account), $this->verifiedPhone($idToken));
     }
 
+    public function findAccount(string $idToken, string $modelClass, string $phoneColumn = 'mobile'): ?object
+    {
+        $phone = $this->verifiedPhone($idToken);
+        $digits = ltrim($phone, '+');
+        $suffix = substr($digits, -9);
+
+        return $modelClass::query()
+            ->where($phoneColumn, 'like', '%'.$suffix)
+            ->get()
+            ->first(function ($account) use ($phone, $suffix, $phoneColumn) {
+                try {
+                    if (hash_equals($phone, $this->phoneFor($account))) {
+                        return true;
+                    }
+                } catch (RuntimeException) {
+                    // Fall through to accounts that store a local number only.
+                }
+
+                $stored = preg_replace('/\D+/', '', (string) ($account->{$phoneColumn} ?? '')) ?? '';
+                $hasDialCode = preg_replace('/\D+/', '', (string) ($account->dial_code ?? '')) !== '';
+
+                return !$hasDialCode && $stored !== '' && str_ends_with($stored, $suffix);
+            });
+    }
+
     private function normalize(string $phone): string
     {
         $digits = preg_replace('/\D+/', '', $phone) ?? '';

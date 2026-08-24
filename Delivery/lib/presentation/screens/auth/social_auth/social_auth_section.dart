@@ -12,11 +12,11 @@ import 'package:lizto_delivery/presentation/components/buttons/rounded_button.da
 import 'package:lizto_delivery/presentation/components/divider/custom_spacer.dart';
 import 'package:lizto_delivery/presentation/components/image/my_local_image_widget.dart';
 import 'package:lizto_delivery/presentation/screens/auth/login/widgets/login_or_bar.dart';
+import 'package:lizto_delivery/presentation/screens/auth/social_auth/firebase_phone_login_dialog.dart';
 
 class SocialAuthSection extends StatefulWidget {
   final String googleAuthTitle;
-  final VoidCallback? onPhonePressed;
-  const SocialAuthSection({super.key, this.googleAuthTitle = 'Continuar con Google', this.onPhonePressed});
+  const SocialAuthSection({super.key, this.googleAuthTitle = 'Continuar con Google'});
 
   @override
   State<SocialAuthSection> createState() => _SocialAuthSectionState();
@@ -38,7 +38,7 @@ class _SocialAuthSectionState extends State<SocialAuthSection> {
           children: [
             Row(
               children: [
-                if (controller.authRepo.apiClient.isGoogleLoginEnabled() == true) ...[
+                if (true) ...[
                   Expanded(
                     child: RoundedButton(
                         text: "",
@@ -80,10 +80,10 @@ class _SocialAuthSectionState extends State<SocialAuthSection> {
                   ),
                 ],
                 // Add spacing if both buttons are visible
-                if (controller.authRepo.apiClient.isGoogleLoginEnabled() == true && controller.authRepo.apiClient.isAppleLoginEnabled() == true && Platform.isIOS) ...[
+                if (Platform.isIOS) ...[
                   spaceSide(Dimensions.space10),
                 ],
-                if (controller.authRepo.apiClient.isAppleLoginEnabled() == true && Platform.isIOS) ...[
+                if (Platform.isIOS) ...[
                   Expanded(
                     child: RoundedButton(
                         text: "",
@@ -130,10 +130,10 @@ class _SocialAuthSectionState extends State<SocialAuthSection> {
             RoundedButton(
               text: '',
               isOutlined: true,
-              press: () => widget.onPhonePressed?.call(),
+              press: () => showFirebasePhoneLoginDialog(context, onAuthenticated: (token) => controller.socialLoginUser(provider: 'phone', accessToken: token)),
               child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.phone_android), SizedBox(width: 10), Text('Continuar con celular')]),
             ),
-            if (controller.authRepo.apiClient.isGoogleLoginEnabled() == true || controller.authRepo.apiClient.isAppleLoginEnabled() == true || widget.onPhonePressed != null) ...[
+            if (true) ...[
               spaceDown(Dimensions.space20),
               const LoginOrBar(stock: 0.8),
             ],

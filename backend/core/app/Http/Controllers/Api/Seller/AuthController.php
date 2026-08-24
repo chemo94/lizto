@@ -60,11 +60,30 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'token'    => 'required',
-            'provider' => 'required|in:google,apple,facebook,linkedin',
+            'provider' => 'required|in:google,apple,facebook,linkedin,phone',
         ]);
 
         if ($validator->fails()) {
             return apiResponse('validation_error', 'error', $validator->errors()->all());
+        }
+
+        if ($request->provider === 'phone') {
+            try {
+                $seller = app(FirebasePhoneAuthService::class)->findAccount($request->token, Seller::class, 'phone');
+            } catch (Throwable $exception) {
+                report($exception);
+                return apiResponse('firebase_token_invalid', 'error', ['No se pudo validar el teléfono con Firebase']);
+            }
+            if (!$seller || !$seller->status) return apiResponse('phone_account_not_found', 'error', ['No existe una cuenta activa con este número celular']);
+            $token = $seller->createToken('seller_token')->plainTextToken;
+            $deviceToken = $request->device_token ?? $request->fcm_token;
+            if ($deviceToken) {
+                DeviceToken::updateOrCreate(
+                    ['token' => $deviceToken],
+                    ['seller_id' => $seller->id, 'pos_staff_id' => null, 'user_id' => null, 'driver_id' => null, 'is_app' => 1, 'app_type' => 'seller']
+                );
+            }
+            return apiResponse('login_success', 'success', ['Inicio de sesión exitoso'], ['seller' => $seller, 'access_token' => $token, 'token' => $token, 'token_type' => 'Bearer']);
         }
 
         $socialLogin = new SocialLogin('seller', $request->provider);

@@ -126,7 +126,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         mainAxisAlignment: MainAxisAlignment.start,
                         children: [
                           spaceDown(Dimensions.space15),
-                          SocialAuthSection(onPhonePressed: () => FocusScope.of(context).requestFocus(controller.emailFocusNode)),
+                          const SocialAuthSection(),
                           Form(
                             key: formKey,
                             child: Column(
