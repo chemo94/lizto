@@ -277,6 +277,10 @@ class SellerRepo {
     return await _request('${UrlContainer.baseUrl}seller/favors/$favorId', Method.getMethod, null, auth: true);
   }
 
+  Future<ResponseModel> storeFavors({int page = 1}) async {
+    return await _request('${UrlContainer.baseUrl}seller/favors?page=$page', Method.getMethod, null, auth: true);
+  }
+
   Future<ResponseModel> retryStoreFavorSearch(int favorId) async {
     return await _request('${UrlContainer.baseUrl}seller/favors/$favorId/retry-search', Method.postMethod, null, auth: true);
   }

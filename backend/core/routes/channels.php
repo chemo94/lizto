@@ -43,6 +43,7 @@ Broadcast::channel('favor.{favorId}', function ($user, $favorId) {
     $favor = Favor::find($favorId);
     if (!$favor) return false;
     return (int) $user->id === (int) $favor->user_id
+        || ($user instanceof \App\Models\Seller && (int) $favor->seller_id === (int) $user->id)
         || ($user instanceof \App\Models\Driver && (int) $favor->courier_id === (int) $user->id);
 });
 
@@ -92,6 +93,7 @@ Broadcast::channel('job.{jobId}', function ($user, $jobId) {
     $favor = Favor::find($jobId);
     if ($favor) {
         return (int) $user->id === (int) $favor->user_id
+            || ($user instanceof \App\Models\Seller && (int) $favor->seller_id === (int) $user->id)
             || ($user instanceof \App\Models\Driver && (int) $favor->courier_id === (int) $user->id);
     }
     return false;

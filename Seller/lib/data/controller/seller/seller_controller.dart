@@ -585,6 +585,20 @@ class SellerController extends GetxController {
     return null;
   }
 
+  Future<List<Map<String, dynamic>>?> getStoreFavors({int page = 1}) async {
+    final response = await sellerRepo.storeFavors(page: page);
+    if (response.statusCode == 200 && response.responseJson['status'] == 'success') {
+      final payload = response.responseJson['data']?['favors'];
+      final items = payload is Map ? payload['data'] : payload;
+      if (items is List) {
+        return items.whereType<Map>().map((item) => Map<String, dynamic>.from(item)).toList();
+      }
+      return <Map<String, dynamic>>[];
+    }
+    errorMessage = response.responseJson?['message']?.toString() ?? 'No se pudieron cargar las solicitudes';
+    return null;
+  }
+
   Future<Map<String, dynamic>?> retryStoreFavorSearch(int favorId) async {
     final response = await sellerRepo.retryStoreFavorSearch(favorId);
     if (response.statusCode == 200 && response.responseJson['status'] == 'success') {

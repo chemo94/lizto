@@ -28,8 +28,15 @@ class FavorStatusUpdated implements ShouldBroadcast
     {
         $channels = [
             new PrivateChannel('favor.' . $this->favor->id),
-            new PrivateChannel('favor-customer.' . $this->favor->user_id),
         ];
+
+        if ($this->favor->user_id) {
+            $channels[] = new PrivateChannel('favor-customer.' . $this->favor->user_id);
+        }
+
+        if ($this->favor->seller_id) {
+            $channels[] = new PrivateChannel('seller.' . $this->favor->seller_id);
+        }
 
         if ($this->favor->courier_id) {
             $channels[] = new PrivateChannel('courier.' . $this->favor->courier_id);

@@ -8,6 +8,7 @@ import 'package:lizto_store/data/controller/seller/seller_notification_service.d
 import 'package:lizto_store/data/model/delivery/delivery_models.dart';
 import 'package:lizto_store/presentation/components/image/my_network_image_widget.dart';
 import 'package:lizto_store/presentation/screens/seller/seller_favor_create_screen.dart';
+import 'package:lizto_store/presentation/screens/seller/seller_favors_screen.dart';
 import 'package:lizto_store/presentation/screens/seller/seller_menu_categories_screen.dart';
 import 'package:lizto_store/presentation/screens/seller/seller_order_detail_screen.dart';
 import 'package:lizto_store/presentation/screens/seller/seller_orders_screen.dart';
@@ -424,9 +425,16 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> with Widg
       },
       {
         'icon': Icons.motorcycle_rounded,
-        'label': 'Repartidor',
+        'label': 'Nuevo envío',
         'color': const Color(0xFFF59E0B),
         'onTap': () => Get.to(() => const SellerFavorCreateScreen()),
+        'permissions': ['pos_orders'],
+      },
+      {
+        'icon': Icons.local_shipping_outlined,
+        'label': 'Mis envíos',
+        'color': const Color(0xFF0EA5E9),
+        'onTap': () => Get.to(() => const SellerFavorsScreen()),
         'permissions': ['pos_orders'],
       },
       {

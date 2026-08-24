@@ -179,8 +179,11 @@ class CourierJobController extends Controller
                     'Un repartidor aceptó el envío #' . $job->order_no,
                     ['type' => 'favor_taken', 'favor_id' => (string) $job->id]
                 );
+                $job = $job->fresh(['courier', 'seller']);
+                event(new FavorStatusUpdated($job));
+                $this->sendStatusPush($job, 'favor', 'accepted');
                 return apiResponse('job_accepted', 'success', ['Envío aceptado directamente'], [
-                    'job' => $this->formatFavorJob($job->fresh()),
+                    'job' => $this->formatFavorJob($job),
                 ]);
             }
 
@@ -411,6 +414,12 @@ class CourierJobController extends Controller
             ]);
             $penalty = $this->registerCancellation($driver->id, $job->id, 'favor', $request->reason_code, $request->reason_detail);
             event(new FavorStatusUpdated($job->fresh()));
+            $this->sendFavorSellerPush(
+                $job->fresh('seller'),
+                'Buscando otro repartidor',
+                'El repartidor liberó la solicitud #' . $job->order_no . '. Ya estamos buscando un reemplazo.',
+                'searching_courier'
+            );
             FcmService::sendToAllCouriers('Nuevo favor disponible', 'Un repartidor canceló. El favor está disponible nuevamente.', ['job_id' => (string) $job->id, 'job_type' => 'favor']);
         } else {
             $job = DeliveryOrder::where('driver_id', $driver->id)
@@ -1017,7 +1026,6 @@ class CourierJobController extends Controller
 
     private function sendStatusPush($job, $type, $status)
     {
-        if (!$job->user) return;
         $statusMessages = [
             'delivery' => [
                 'on_way'       => ['Repartidor en camino', 'Tu pedido está en camino'],
@@ -1046,14 +1054,33 @@ class CourierJobController extends Controller
         ];
 
         if ($type === 'favor') {
-            FcmService::sendToUser($job->user, $messages[0], $messages[1], $data);
+            if ($job->user) {
+                FcmService::sendToUser($job->user, $messages[0], $messages[1], $data);
+            }
+            $this->sendFavorSellerPush($job, $messages[0], $messages[1], $status);
         } else {
+            if (!$job->user) return;
             FcmService::sendToUser($job->user, $messages[0], $messages[1], $data);
             if ($job->store && $job->store->seller) {
                 $sellerData = array_merge($data, ['order_id' => (string) $job->id]);
                 FcmService::sendToSeller($job->store->seller, $messages[0], 'Pedido #' . $job->order_no . ': ' . $messages[1], $sellerData);
             }
         }
+    }
+
+    private function sendFavorSellerPush($job, string $title, string $body, string $status): void
+    {
+        $seller = $job->relationLoaded('seller') ? $job->seller : $job->seller()->first();
+        if (!$seller) return;
+
+        FcmService::sendToSeller($seller, $title, 'Solicitud #' . $job->order_no . ': ' . $body, [
+            'type' => 'favor_status_updated',
+            'job_type' => 'favor',
+            'favor_id' => (string) $job->id,
+            'job_id' => (string) $job->id,
+            'order_no' => $job->order_no ?? '',
+            'status' => $status,
+        ]);
     }
 
     public function walletTransactions()

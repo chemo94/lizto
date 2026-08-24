@@ -16,6 +16,8 @@ import 'package:lizto_store/firebase_options.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../presentation/screens/seller/seller_order_detail_screen.dart';
+import '../../presentation/screens/seller/seller_favor_search_screen.dart';
+import '../../presentation/screens/seller/seller_favor_tracking_screen.dart';
 
 Future<void> _messageHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -274,14 +276,22 @@ class PushNotificationService {
     printX('Push data: $data');
     final orderId = data['order_id']?.toString();
     final favorId = data['favor_id']?.toString();
-    final type = data['type']?.toString() ?? data['job_type']?.toString();
-
     if (orderId != null && orderId.isNotEmpty) {
       // Navigate to seller order detail
       getx.Get.toNamed('/seller_screen');
       Future.delayed(const Duration(milliseconds: 500), () {
         getx.Get.to(() => SellerOrderDetailScreen(orderId: int.tryParse(orderId) ?? 0));
       });
+    } else if (favorId != null && favorId.isNotEmpty) {
+      final id = int.tryParse(favorId);
+      if (id == null) return;
+      final orderNo = data['order_no']?.toString() ?? '';
+      final status = data['status']?.toString() ?? '';
+      if (status == 'searching_courier') {
+        getx.Get.to(() => SellerFavorSearchScreen(favorId: id, orderNo: orderNo));
+      } else {
+        getx.Get.to(() => SellerFavorTrackingScreen(favorId: id, orderNo: orderNo));
+      }
     }
   }
 
