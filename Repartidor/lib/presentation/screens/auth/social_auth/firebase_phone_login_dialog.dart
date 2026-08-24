@@ -28,6 +28,7 @@ Future<void> showFirebasePhoneLoginDialog(BuildContext context, {required Future
               loading = true;
               setState(() {});
               try {
+                await auth.activateAppCheck();
                 await auth.sendCode(
                     phoneNumber: phone.text.trim(),
                     onAutoVerified: finish,
