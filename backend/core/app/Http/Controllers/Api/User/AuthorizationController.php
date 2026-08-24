@@ -7,6 +7,8 @@ use App\Http\Controllers\Controller;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use App\Services\FirebasePhoneAuthService;
+use Throwable;
 
 class AuthorizationController extends Controller
 {
@@ -39,7 +41,7 @@ class AuthorizationController extends Controller
             return apiResponse("already_verified", "error", $notify);
         }
 
-        if (!$this->checkCodeValidity($user) && ($type != '2fa') && ($type != 'ban')) {
+        if (!$this->checkCodeValidity($user) && ($type != '2fa') && ($type != 'ban') && $type != 'sms') {
             $user->ver_code         = verificationCode(6);
             $user->ver_code_send_at = Carbon::now();
             $user->save();
@@ -49,13 +51,23 @@ class AuthorizationController extends Controller
         }
 
         $notify[] = 'Verify your account';
-        return apiResponse("code_sent", "success", $notify);
+        return apiResponse("code_sent", "success", $notify, $type === 'sms' ? [
+            'phone_number' => app(FirebasePhoneAuthService::class)->phoneFor($user),
+            'verification_provider' => 'firebase',
+        ] : null);
     }
 
 
     public function sendVerifyCode($type)
     {
         $user = auth()->user();
+
+        if ($type === 'mobile') {
+            return apiResponse('firebase_phone_required', 'success', ['Use Firebase to resend the verification code'], [
+                'phone_number' => app(FirebasePhoneAuthService::class)->phoneFor($user),
+                'verification_provider' => 'firebase',
+            ]);
+        }
 
         if ($this->checkCodeValidity($user)) {
             $targetTime = $user->ver_code_send_at->addMinutes(2)->timestamp;
@@ -115,7 +127,7 @@ class AuthorizationController extends Controller
     public function mobileVerification(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'code' => 'required',
+            'firebase_id_token' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -123,7 +135,14 @@ class AuthorizationController extends Controller
         }
 
         $user = auth()->user();
-        if ($user->ver_code == $request->code) {
+        try {
+            $matches = app(FirebasePhoneAuthService::class)->tokenMatchesAccount($request->firebase_id_token, $user);
+        } catch (Throwable $exception) {
+            report($exception);
+            return apiResponse('firebase_token_invalid', 'error', ['No se pudo validar el teléfono con Firebase']);
+        }
+
+        if ($matches) {
             $user->sv               = Status::VERIFIED;
             $user->ver_code         = null;
             $user->ver_code_send_at = null;
@@ -134,8 +153,7 @@ class AuthorizationController extends Controller
                 'user' => $user
             ]);
         }
-        $notify[] = 'Verification code doesn\'t match';
-        return apiResponse("code_not_match", "error", $notify);
+        return apiResponse('phone_not_match', 'error', ['El teléfono verificado no corresponde a esta cuenta']);
     }
 
 }

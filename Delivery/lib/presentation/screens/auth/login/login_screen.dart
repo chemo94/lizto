@@ -126,7 +126,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         mainAxisAlignment: MainAxisAlignment.start,
                         children: [
                           spaceDown(Dimensions.space15),
-                          SocialAuthSection(),
+                          SocialAuthSection(onPhonePressed: () => FocusScope.of(context).requestFocus(controller.emailFocusNode)),
                           Form(
                             key: formKey,
                             child: Column(
@@ -139,7 +139,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   onChanged: (value) {},
                                   focusNode: controller.emailFocusNode,
                                   nextFocus: controller.passwordFocusNode,
-                                  textInputType: TextInputType.emailAddress,
+                                  textInputType: TextInputType.text,
                                   inputAction: TextInputAction.next,
                                   prefixIcon: Padding(
                                     padding: EdgeInsetsDirectional.only(start: Dimensions.space12, end: Dimensions.space8),

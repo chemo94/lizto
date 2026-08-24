@@ -392,6 +392,9 @@ Route::namespace('Api\Seller')->prefix('seller')->name('seller.')->group(functio
     Route::post('login', 'AuthController@login');
     Route::post('social-login', 'AuthController@socialLogin');
     Route::middleware('auth:sanctum')->group(function () {
+            Route::get('authorization', 'AuthController@authorization');
+            Route::get('resend-verify/mobile', 'AuthController@authorization');
+            Route::post('verify-mobile', 'AuthController@mobileVerification');
             Route::post('sunat-lookup', [\App\Http\Controllers\SellerPosController::class, 'sunatLookup']);
             Route::post('save-device-token', 'AuthController@registerDeviceToken');
             Route::get('dashboard', 'AuthController@dashboard');

@@ -21,9 +21,9 @@ class UrlContainer {
   static const String otpResend = 'otp-resend';
 
   static const String verifyEmailEndPoint = 'verify-email';
-  static const String verifySmsEndPoint = 'verify-mobile';
-  static const String resendVerifyCodeEndPoint = 'resend-verify/';
-  static const String authorizationCodeEndPoint = 'authorization';
+  static const String verifySmsEndPoint = 'seller/verify-mobile';
+  static const String resendVerifyCodeEndPoint = 'seller/resend-verify/';
+  static const String authorizationCodeEndPoint = 'seller/authorization';
   static const String dashBoardUrl = 'dashboard';
   static const String paymentHistoryEndpoint = 'payment/history';
 

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Lib\SocialLogin;
 use App\Models\DeviceToken;
 use App\Models\UserLogin;
+use App\Models\Driver;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -98,7 +99,9 @@ class LoginController extends Controller
     public function findusername()
     {
         $login     = request()->input('username');
-        $fieldType = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+        $fieldType = filter_var($login, FILTER_VALIDATE_EMAIL)
+            ? 'email'
+            : (Driver::where('mobile', $login)->exists() ? 'mobile' : 'username');
         request()->merge([$fieldType => $login]);
         return $fieldType;
     }

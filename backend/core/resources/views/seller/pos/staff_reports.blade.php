@@ -5,7 +5,7 @@
 @endsection
 
 @section('topbar-actions')
-<form method="GET" action="" style="display: flex; gap: 8px; align-items: center;">
+<form class="staff-report-topbar-filter" method="GET" action="" style="display: flex; gap: 8px; align-items: center;">
     <div style="display: flex; align-items: center; background: var(--s-surface-2); border: 1.5px solid var(--s-border); border-radius: var(--s-radius); padding: 2px 10px; height: 38px;">
         <span style="font-size: 11px; font-weight: 700; color: var(--s-text-3); text-transform: uppercase; margin-right: 8px;">Desde:</span>
         <input type="date" name="from" value="{{ $dateFrom }}" style="background:transparent; border:none; outline:none; color:var(--s-text); font-size:12px; font-weight:600;">
@@ -21,7 +21,7 @@
 @endsection
 
 @section('seller-content')
-<div class="s-content">
+<div class="s-content seller-responsive-page">
     <section class="module-hero commissions">
         <div>
             <div class="module-crumb"><i class="las la-home"></i> Seller / RR.HH / Comisiones</div>

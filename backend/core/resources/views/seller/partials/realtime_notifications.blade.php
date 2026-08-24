@@ -68,7 +68,7 @@
             };
         }
 
-        var modalHtml = '<div id="newOrderModal" style="position:fixed;top:20px;right:20px;z-index:99999;background:white;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.2);width:380px;overflow:hidden;animation:slideIn 0.4s ease-out">' +
+        var modalHtml = '<div id="newOrderModal" style="position:fixed;top:20px;right:12px;z-index:99999;background:white;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.2);width:min(380px,calc(100vw - 24px));overflow:hidden;animation:slideIn 0.4s ease-out">' +
             '<div style="background:linear-gradient(135deg,#6C63FF,#4834d4);padding:20px;color:white">' +
                 '<div style="display:flex;justify-content:space-between;align-items:center">' +
                     '<span style="font-weight:bold;font-size:18px">\u{1F514} ' + title + '</span>' +

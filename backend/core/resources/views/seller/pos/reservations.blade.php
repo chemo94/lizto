@@ -11,7 +11,7 @@
 @endsection
 
 @section('seller-content')
-<div class="s-content">
+<div class="s-content seller-responsive-page">
     <div class="s-grid-2" style="grid-template-columns: 1fr 1.8fr; gap: 24px; align-items: start;">
         
         <!-- FORMULARIO DE RESERVACIÓN -->

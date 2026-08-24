@@ -5,7 +5,7 @@
 @endsection
 
 @section('seller-content')
-<div class="s-content">
+<div class="s-content seller-responsive-page">
     <section class="module-hero hr">
         <div>
             <div class="module-crumb"><i class="las la-home"></i> Seller / RR.HH / Personal</div>

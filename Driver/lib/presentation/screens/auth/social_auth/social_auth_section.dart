@@ -5,7 +5,6 @@ import 'package:get/get.dart';
 import 'package:liztogo_pro/core/utils/dimensions.dart';
 import 'package:liztogo_pro/core/utils/my_color.dart';
 import 'package:liztogo_pro/core/utils/my_images.dart';
-import 'package:liztogo_pro/core/utils/my_strings.dart';
 import 'package:liztogo_pro/core/utils/style.dart';
 import 'package:liztogo_pro/data/controller/auth/social_auth_controller.dart';
 import 'package:liztogo_pro/data/repo/auth/social_auth_repo.dart';
@@ -16,7 +15,8 @@ import 'package:liztogo_pro/presentation/screens/auth/login/widgets/login_or_bar
 
 class SocialAuthSection extends StatefulWidget {
   final String googleAuthTitle;
-  const SocialAuthSection({super.key, this.googleAuthTitle = MyStrings.google});
+  final VoidCallback? onPhonePressed;
+  const SocialAuthSection({super.key, this.googleAuthTitle = 'Continuar con Google', this.onPhonePressed});
 
   @override
   State<SocialAuthSection> createState() => _SocialAuthSectionState();
@@ -110,7 +110,7 @@ class _SocialAuthSectionState extends State<SocialAuthSection> {
                                 ),
                           SizedBox(width: Dimensions.space10),
                           Text(
-                            MyStrings.apple.tr,
+                            'Continuar con Apple',
                             style: regularDefault.copyWith(
                               fontWeight: FontWeight.w500,
                               fontSize: 16,
@@ -128,7 +128,9 @@ class _SocialAuthSectionState extends State<SocialAuthSection> {
                 ],
               ],
             ),
-            if (controller.authRepo.apiClient.isGoogleLoginEnabled() == true || controller.authRepo.apiClient.isAppleLoginEnabled() == true) ...[
+            spaceDown(Dimensions.space12),
+            RoundedButton(text: '', isOutlined: true, press: () => widget.onPhonePressed?.call(), child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.phone_android), SizedBox(width: 10), Text('Continuar con celular')])),
+            if (controller.authRepo.apiClient.isGoogleLoginEnabled() == true || controller.authRepo.apiClient.isAppleLoginEnabled() == true || widget.onPhonePressed != null) ...[
               spaceDown(Dimensions.space20),
               const LoginOrBar(stock: 0.8),
             ],

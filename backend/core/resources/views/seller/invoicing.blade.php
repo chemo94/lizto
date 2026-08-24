@@ -5,7 +5,7 @@
 @endsection
 
 @section('seller-content')
-<div class="s-content" style="max-width: 1400px; margin: 0 auto; padding: 20px;">
+<div class="s-content seller-responsive-page" style="max-width: 1400px; margin: 0 auto; padding: 20px;">
     
     <!-- SECTOR EMPRESA SELECCIONADA -->
     <div class="module-hero tax" style="margin-bottom:16px;min-height:142px;flex-wrap:wrap">
@@ -347,7 +347,7 @@
         </form>
         
         @if($sunatInvoices->count())
-        <div class="s-table-wrapper" style="border-radius: 12px; border: 1px solid var(--s-border); overflow: hidden;">
+        <div class="s-table-wrapper" style="border-radius: 12px; border: 1px solid var(--s-border); overflow-x: auto; overflow-y: hidden;">
             <table class="s-table">
                 <thead>
                     <tr style="background: var(--s-bg-light);">
@@ -439,7 +439,7 @@
 </div>
 
 <!-- MODAL SELECCIONAR EMPRESA -->
-<div id="modal-select-company" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 9999;">
+<div id="modal-select-company" class="seller-responsive-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 9999;">
     <div class="s-card" style="width: 100%; max-width: 500px; padding: 24px; border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.15);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h3 style="margin: 0; font-weight: 900; font-size: 18px; color: var(--s-text);">Seleccionar Empresa</h3>
@@ -467,7 +467,7 @@
 </div>
 
 <!-- MODAL AGREGAR TIPO DE COMPROBANTE -->
-<div id="modal-add-invoice-type" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 9999;">
+<div id="modal-add-invoice-type" class="seller-responsive-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 9999;">
     <div class="s-card" style="width: 100%; max-width: 480px; padding: 24px; border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.15); background: var(--s-surface);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h3 style="margin: 0; font-weight: 900; font-size: 18px; color: var(--s-text);">Nuevo Tipo de Comprobante</h3>
@@ -510,7 +510,7 @@
 </div>
 
 <!-- MODAL AGREGAR EMPRESA -->
-<div id="modal-add-company" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 9999;">
+<div id="modal-add-company" class="seller-responsive-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 9999;">
     <div class="s-card" style="width: 100%; max-width: 550px; padding: 24px; border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.15);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h3 style="margin: 0; font-weight: 900; font-size: 18px; color: var(--s-text);">Registrar Nueva Empresa</h3>

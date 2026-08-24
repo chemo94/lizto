@@ -5,7 +5,7 @@
 @endsection
 
 @section('seller-content')
-<div class="s-content">
+<div class="s-content seller-responsive-page">
     <section class="module-hero payroll">
         <div>
             <div class="module-crumb"><i class="las la-home"></i> Seller / RR.HH / Planillas</div>
@@ -143,7 +143,7 @@
 </div>
 
 <!-- PAY MODAL -->
-<div id="payModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 9999;">
+<div id="payModal" class="seller-responsive-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 9999;">
     <div class="s-card" style="width: 500px; max-width: 90%; position: relative; animation: slideDown 0.3s ease-out;">
         <button type="button" onclick="closePayModal()" style="position: absolute; top: 15px; right: 15px; border: none; background: none; font-size: 24px; color: var(--s-text-muted); cursor: pointer;">&times;</button>
         

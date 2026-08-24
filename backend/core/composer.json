@@ -19,6 +19,7 @@
         "greenter/greenter": "5.2.0",
         "guzzlehttp/guzzle": "^7.8",
         "intervention/image": "^3.6",
+        "kreait/firebase-php": "^7.24",
         "laravel/framework": "^11.32.0",
         "laravel/reverb": "*",
         "laravel/sanctum": "^4.0",

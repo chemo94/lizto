@@ -33,7 +33,7 @@
         <div style="min-width: 0;">
 
             <!-- TIPO DE PEDIDO -->
-            <div style="display: flex; gap: 4px; margin-bottom: 20px; background: var(--s-surface-2); border: 1px solid var(--s-border); border-radius: var(--s-radius); padding: 5px; flex-wrap: wrap;">
+            <div class="pos-type-strip" style="display: flex; gap: 4px; margin-bottom: 20px; background: var(--s-surface-2); border: 1px solid var(--s-border); border-radius: var(--s-radius); padding: 5px; flex-wrap: wrap;">
                 @if($store->isRestaurant())
                 <button class="pos-type-btn active" id="type-dine_in" onclick="setOrderType('dine_in')">
                     <i class="las la-utensils"></i> <span>Mesa</span>
@@ -678,6 +678,14 @@
 /* CSS adicional premium para el POS */
 .pos-page-head{min-height:108px;margin-bottom:14px;padding:18px 20px;border:1px solid var(--s-border);border-radius:14px;background:#fff;box-shadow:var(--s-shadow-sm);display:flex;align-items:center;justify-content:space-between;gap:20px}.pos-page-crumb{font-size:9px;color:#94a3b8;margin-bottom:6px}.pos-page-head h2{font:800 20px 'Plus Jakarta Sans','Inter',sans-serif;color:#172033;letter-spacing:-.45px;margin:0 0 3px;display:flex;align-items:center;gap:10px}.pos-page-head h2 span{width:35px;height:35px;border-radius:10px;background:linear-gradient(135deg,#fb923c,#f4512c);display:grid;place-items:center;color:#fff;box-shadow:0 7px 16px rgba(249,115,22,.22)}.pos-page-head p{margin:0 0 0 45px;color:#8b98aa;font-size:10px}.pos-head-stats{display:flex;gap:8px}.pos-head-stats>div{min-width:86px;padding:10px 13px;border-radius:11px;background:#f8fafc;border:1px solid var(--s-border);text-align:center}.pos-head-stats b{display:block;font-size:16px;color:#172033;line-height:1.1}.pos-head-stats small{font-size:8px;color:#94a3b8}.pos-layout-grid>div:first-child{background:#fff;border:1px solid var(--s-border);border-radius:14px;padding:16px;box-shadow:var(--s-shadow-sm)}.pos-right-sticky>.s-card{border-radius:14px!important;box-shadow:var(--s-shadow-sm)!important}.pos-prod{border-width:1px;border-radius:12px}.pos-prod:hover{transform:translateY(-2px)}.pos-prod-info span{color:#f97316}.pos-type-btn.active{background:#f97316;box-shadow:0 7px 16px rgba(249,115,22,.2)}.pos-cat-tab.active{border-color:#f97316!important;background:#fff3ea!important;color:#ea580c!important}.pos-zone-tab.active{border-color:#f97316!important;background:#f97316!important}.pos-table-btn.active{border-color:#f97316;background:#fff3ea;color:#ea580c}.pos-layout-grid{gap:14px}.pos-right-sticky{gap:14px}
 @media(max-width:767px){.pos-page-head{align-items:flex-start;flex-direction:column}.pos-head-stats{width:100%;overflow-x:auto}.pos-head-stats>div{flex:1}.pos-page-head p{margin-left:0}}
+.pos-type-strip{-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
+@media(max-width:767px){
+    .pos-type-strip{flex-wrap:nowrap!important;overflow-x:auto;overflow-y:hidden;max-width:100%;padding-bottom:8px!important;overscroll-behavior-x:contain;scroll-snap-type:x proximity}
+    .pos-type-strip .pos-type-btn{flex:0 0 auto;min-width:max-content;white-space:nowrap;scroll-snap-align:start}
+    .pos-type-strip>div{flex:0 0 1px}
+    .pos-type-strip::-webkit-scrollbar{height:4px}
+    .pos-type-strip::-webkit-scrollbar-thumb{background:var(--s-border);border-radius:4px}
+}
 .pos-table-btn {
     display: flex;
     flex-direction: column;

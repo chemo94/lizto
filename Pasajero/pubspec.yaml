@@ -3,7 +3,7 @@ description: LiztoGo is a complete ride-sharing solution.
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 4.1.3+32
+version: 4.1.4+33
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
@@ -61,6 +61,7 @@ dependencies:
 
   google_maps_flutter_android: 2.18.4
   crypto: ^3.0.7
+  firebase_auth: ^6.6.0
 dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:
