@@ -4,8 +4,30 @@
 <span class="s-title-icon"><i class="las la-file-invoice"></i></span> Facturación Electrónica
 @endsection
 
+@push('style')
+<style>
+.invoicing-page,.invoicing-page *{min-width:0}
+.invoicing-page .module-hero h2{max-width:100%;overflow-wrap:anywhere}
+@media(max-width:767px){
+    .invoicing-page .module-hero{width:100%;padding:18px!important;overflow:hidden}
+    .invoicing-page .module-hero>div{width:100%}
+    .invoicing-page .module-hero h2{font-size:20px!important;line-height:1.2}
+    .invoicing-page .module-hero>div>div[style*="display: flex"]{width:100%;flex-direction:column;align-items:flex-start!important;gap:8px!important}
+    .invoicing-page .module-hero>div>div[style*="display: flex"]>span{max-width:100%;white-space:normal!important;overflow-wrap:anywhere}
+    .invoicing-page .module-hero>div:last-child{display:grid!important;grid-template-columns:1fr!important;gap:8px!important}
+    .invoicing-page .module-hero>div:last-child .s-btn{width:100%;max-width:100%;justify-content:center;white-space:normal;text-align:center}
+    .invoicing-page [style*="grid-template-columns: 1fr 1fr"],
+    .invoicing-page [style*="grid-template-columns: 1fr 1fr 1fr"],
+    .invoicing-page [style*="grid-template-columns: 1fr 1fr 1fr auto"]{grid-template-columns:minmax(0,1fr)!important}
+    .invoicing-page form [style*="display: flex"][style*="gap:"]{flex-wrap:wrap!important}
+    .invoicing-page form [style*="display: flex"][style*="gap:"]>*{max-width:100%}
+    .invoicing-page .s-card{overflow:hidden}
+}
+</style>
+@endpush
+
 @section('seller-content')
-<div class="s-content seller-responsive-page" style="max-width: 1400px; margin: 0 auto; padding: 20px;">
+<div class="s-content seller-responsive-page invoicing-page" style="max-width: 1400px; margin: 0 auto; padding: 20px;">
     
     <!-- SECTOR EMPRESA SELECCIONADA -->
     <div class="module-hero tax" style="margin-bottom:16px;min-height:142px;flex-wrap:wrap">
