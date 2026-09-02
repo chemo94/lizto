@@ -149,9 +149,9 @@
                                 box-shadow: 0 6px 16px rgba(0,0,0,0.08);"
                          @if(!session()->has('seller_staff_id'))
                          ontouchstart="startDragTouch(event, {{ $table->id }}, {{ $area->id }})" onmousedown="startDrag(event, {{ $table->id }}, {{ $area->id }})"
-                         onclick="if(!_touchDragged) { event.stopPropagation(); window.location='{{ route('seller.pos') }}?table={{ $table->id }}'; }"
+                         onclick="if(!_touchDragged) { event.stopPropagation(); window.location='{{ route('seller.pos.workspace', ['type' => 'dine_in', 'table' => $table->id]) }}'; }"
                          @else
-                         onclick="event.stopPropagation(); window.location='{{ route('seller.pos') }}?table={{ $table->id }}'"
+                         onclick="event.stopPropagation(); window.location='{{ route('seller.pos.workspace', ['type' => 'dine_in', 'table' => $table->id]) }}'"
                          @endif>
                         
                         @if($hasReservation)

@@ -8,7 +8,8 @@
 <div class="s-content">
     @if($store)
         @php
-            $activeStorePackages = $store->storePackages->filter(fn($sp) => $sp->isActive()) ?? collect();
+            $activeStorePackages = $store->storePackages->filter(fn($sp) => $sp->isActive())
+                ->sortByDesc(fn($sp) => $sp->expires_at?->timestamp ?? PHP_INT_MAX)->values() ?? collect();
             $activePaidPackage = $activeStorePackages->first(fn($sp) => $sp->package);
         @endphp
 

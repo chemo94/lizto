@@ -125,6 +125,10 @@ class Driver extends Authenticatable {
         return $this->hasMany(DriverEarningTransaction::class)->orderBy('id', 'desc');
     }
 
+    public function courierJobOffers() {
+        return $this->hasMany(CourierJobOffer::class);
+    }
+
     public function deposits() {
         return $this->hasMany(Deposit::class, 'driver_id')->where('status', '!=', Status::PAYMENT_INITIATE);
     }

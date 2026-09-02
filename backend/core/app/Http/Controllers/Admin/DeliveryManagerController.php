@@ -34,6 +34,7 @@ use App\Services\FcmService;
 use App\Events\FavorStatusUpdated;
 use App\Services\AdminDeliveryRequestDispatchService;
 use App\Services\DeliveryFinancialLedger;
+use App\Services\StoreSubscriptionService;
 use App\Models\CourierEarning;
 use App\Support\DeliveryPricing;
 use App\Models\DeviceToken;
@@ -617,18 +618,14 @@ class DeliveryManagerController extends Controller
         if ($request->filled('business_package_id')) {
             $pkg = BusinessPackage::find($request->business_package_id);
             if ($pkg) {
-                // Deactivate current active packages
-                $store->storePackages()->where('status', 'active')->update(['status' => 'expired']);
-                // Create new subscription
-                StorePackage::create([
-                    'store_id'   => $store->id,
-                    'seller_id'  => $sellerId,
-                    'package_id' => $pkg->id,
-                    'status'     => 'active',
-                    'amount_paid'=> $pkg->price,
-                    'starts_at'  => now(),
-                    'expires_at' => now()->addDays($pkg->duration_days),
-                ]);
+                $alreadyAssigned = $store->activePackagesRelation()->where('package_id', $pkg->id)->exists();
+                if (!$alreadyAssigned) {
+                    app(StoreSubscriptionService::class)->activate($store, $pkg, [
+                        'amount_paid' => $pkg->price,
+                        'payment_method' => 'admin_assignment',
+                        'notes' => 'Plan asignado desde la edición de tienda',
+                    ]);
+                }
             }
         }
 
@@ -648,15 +645,12 @@ class DeliveryManagerController extends Controller
         $package = BusinessPackage::findOrFail($data['package_id']);
 
         \Illuminate\Support\Facades\DB::transaction(function () use ($store, $package, $data) {
-            $store->storePackages()->where('status', 'active')->update(['status' => 'expired']);
-            $subscription = StorePackage::create([
-                'store_id' => $store->id,
-                'seller_id' => $store->seller_id,
-                'package_id' => $package->id,
-                'status' => 'active',
+            $trx = 'ADM-' . strtoupper(Str::random(16));
+            $subscription = app(StoreSubscriptionService::class)->activate($store, $package, [
                 'amount_paid' => $package->price,
-                'starts_at' => now(),
-                'expires_at' => now()->addDays($package->duration_days),
+                'payment_method' => strtoupper($data['payment_method']),
+                'payment_ref' => $data['payment_reference'] ?? $trx,
+                'notes' => $data['notes'] ?? 'Renovación registrada por administración',
             ]);
 
             StorePackagePayment::create([
@@ -664,7 +658,7 @@ class DeliveryManagerController extends Controller
                 'seller_id' => $store->seller_id,
                 'package_id' => $package->id,
                 'store_package_id' => $subscription->id,
-                'trx' => 'ADM-' . strtoupper(Str::random(16)),
+                'trx' => $trx,
                 'gateway_alias' => strtoupper($data['payment_method']),
                 'gateway_currency' => 'PEN',
                 'package_amount' => $package->price,
@@ -828,12 +822,18 @@ class DeliveryManagerController extends Controller
 
     public function commissionUpdate(Request $request)
     {
+        $validated = $request->validate([
+            'delivery_percent' => 'required|numeric|min:0|max:100',
+            'favor_percent' => 'required|numeric|min:0|max:100',
+            'min_commission' => 'required|numeric|min:0',
+            'courier_commission_type' => 'required|in:percent,fixed',
+            'courier_fixed_amount' => 'required|numeric|min:0',
+            'store_commission_type' => 'required|in:percent,fixed',
+            'store_commission_percent' => 'required|numeric|min:0|max:100',
+            'store_fixed_amount' => 'required|numeric|min:0',
+        ]);
         $commission = DeliveryCommission::firstOrCreate([]);
-        $commission->update($request->only([
-            'delivery_percent', 'favor_percent', 'min_commission',
-            'courier_commission_type', 'courier_fixed_amount',
-            'store_commission_type', 'store_fixed_amount',
-        ]));
+        $commission->update($validated);
         $notify[] = ['success', 'Comisión actualizada'];
         return back()->withNotify($notify);
     }
@@ -846,10 +846,10 @@ class DeliveryManagerController extends Controller
         $stores = Store::where('status', 1)->orderBy('name')->get();
         $activeDrivers = Driver::where('status', Status::ENABLE)
             ->where('online_status', 1)
-            ->where('service_type', 'delivery')
+            ->whereIn('service_type', ['delivery', 'both'])
             ->count();
         $drivers = Driver::where('status', Status::ENABLE)
-            ->where('service_type', 'delivery')
+            ->whereIn('service_type', ['delivery', 'both'])
             ->orderBy('firstname')
             ->get();
         return view('admin.delivery.request', compact('pageTitle', 'stores', 'activeDrivers', 'drivers'));
@@ -913,7 +913,10 @@ class DeliveryManagerController extends Controller
                 'order_no'        => $favor->order_no,
                 'pickup_address'  => $favor->pickup_address,
                 'delivery_address'=> $favor->delivery_address,
-                'delivery_fee'    => $favor->delivery_fee,
+                'delivery_fee'    => $favor->total,
+                'base_delivery_fee' => $favor->delivery_fee,
+                'additional_charge' => $favor->estimated_amount,
+                'total'           => $favor->total,
                 'status'          => $favor->status,
                 'courier_id'      => $favor->courier_id,
             ],
@@ -929,21 +932,36 @@ class DeliveryManagerController extends Controller
     public function requestSubmit(Request $request)
     {
         $request->validate([
-            'store_id'         => 'required|exists:stores,id',
+            'request_mode'     => 'required|in:store,custom',
+            'store_id'         => 'exclude_if:request_mode,custom|required|integer|exists:stores,id',
+            'custom_store_name'=> 'required_if:request_mode,custom|nullable|string|max:255',
+            'pickup_address'   => 'required|string|max:500',
+            'pickup_lat'       => 'required|numeric',
+            'pickup_lng'       => 'required|numeric',
             'delivery_address' => 'required|string|max:500',
             'delivery_lat'     => 'required|numeric',
             'delivery_lng'     => 'required|numeric',
             'description'      => 'required|string|max:1000',
+            'recipient_name'   => 'required|string|max:255',
             'recipient_phone'  => 'nullable|string|max:20',
+            'estimated_amount' => 'nullable|numeric|min:0|max:999999.99',
             'driver_id'        => 'nullable|string',
         ]);
 
-        $store = Store::findOrFail($request->store_id);
+        $isCustomRequest = $request->request_mode === 'custom';
+        $store = $isCustomRequest
+            ? null
+            : Store::where('status', 1)->findOrFail($request->store_id);
+
+        $pickupName = $isCustomRequest ? $request->custom_store_name : $store->name;
+        $pickupAddress = $request->pickup_address;
+        $pickupLat = (float) $request->pickup_lat;
+        $pickupLng = (float) $request->pickup_lng;
         [$deliveryLat, $deliveryLng] = DeliveryPricing::deliveryCoordinatesFromRequest($request);
 
         $estimate = DeliveryPricing::estimateForPoints(
-            (float) $store->latitude,
-            (float) $store->longitude,
+            $pickupLat,
+            $pickupLng,
             $deliveryLat,
             $deliveryLng
         );
@@ -952,14 +970,15 @@ class DeliveryManagerController extends Controller
         if (isset($estimate['distance_km']) && $estimate['distance_km'] < 1.0) {
             $deliveryFee = 4.0;
         }
-        $total = $deliveryFee;
+        $additionalCharge = round((float) ($request->estimated_amount ?? 0), 2);
+        $total = round($deliveryFee + $additionalCharge, 2);
         $orderNo = 'ENV-' . now()->format('Ymd') . '-' . strtoupper(\Str::random(5));
 
         $driverId = $request->driver_id;
         $assignedDriver = null;
         if ($driverId && $driverId !== 'all') {
             $assignedDriver = Driver::where('status', Status::ENABLE)
-                ->where('service_type', 'delivery')
+                ->whereIn('service_type', ['delivery', 'both'])
                 ->findOrFail($driverId);
         }
 
@@ -968,16 +987,16 @@ class DeliveryManagerController extends Controller
             'user_id'          => null,
             'type'             => 'send',
             'description'      => $request->description,
-            'store_name'       => $store->name,
-            'store_address'    => $store->address,
-            'estimated_amount' => 0,
-            'pickup_address'   => $store->address,
-            'pickup_lat'       => $store->latitude,
-            'pickup_lng'       => $store->longitude,
+            'store_name'       => $pickupName,
+            'store_address'    => $pickupAddress,
+            'estimated_amount' => $additionalCharge,
+            'pickup_address'   => $pickupAddress,
+            'pickup_lat'       => $pickupLat,
+            'pickup_lng'       => $pickupLng,
             'delivery_address' => $request->delivery_address,
             'delivery_lat'     => $deliveryLat,
             'delivery_lng'     => $deliveryLng,
-            'recipient_name'   => $request->recipient_name ?? 'Cliente',
+            'recipient_name'   => $request->recipient_name,
             'recipient_phone'  => $request->recipient_phone,
             'delivery_fee'     => $deliveryFee,
             'total'            => $total,
@@ -992,7 +1011,7 @@ class DeliveryManagerController extends Controller
 
         // Broadcast real-time event to online couriers
         try {
-            event(new \App\Events\NewJobAvailable($favor, 'Nuevo pedido disponible en ' . $store->name . ' — S/ ' . number_format($deliveryFee, 2)));
+            event(new \App\Events\NewJobAvailable($favor, 'Nuevo pedido disponible en ' . $pickupName . ' — Total S/ ' . number_format($total, 2)));
             event(new \App\Events\StoreFavorRequested($favor));
             if ($assignedDriver) {
                 event(new \App\Events\FavorStatusUpdated($favor, 'waiting_courier_response'));
@@ -1004,21 +1023,13 @@ class DeliveryManagerController extends Controller
         $notify = [];
 
         try {
-            $fcmData = [
-                'type'         => 'new_delivery_request',
-                'favor_id'     => (string) $favor->id,
-                'order_id'     => (string) $favor->id,
-                'job_id'       => (string) $favor->id,
-                'order_no'     => (string) $favor->order_no,
-                'for_app'      => 'courier_job_detail-' . $favor->id,
-                'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
-            ];
+            $fcmData = FcmService::courierJobPayload($favor);
 
             if ($assignedDriver) {
                 $sent = FcmService::sendToDriver(
                     $assignedDriver,
                     'Nuevo envío asignado',
-                    'Se te ha asignado un envío en ' . $store->name . ' — S/ ' . number_format($deliveryFee, 2),
+                    'Se te ha asignado un envío en ' . $pickupName . ' — Total S/ ' . number_format($total, 2),
                     $fcmData
                 );
 
@@ -1029,19 +1040,28 @@ class DeliveryManagerController extends Controller
                 }
             } else {
                 $deliveryDrivers = Driver::where('status', Status::ENABLE)
-                    ->where('service_type', 'delivery')
+                    ->where('online_status', 1)
+                    ->whereIn('service_type', ['delivery', 'both'])
                     ->get();
 
                 $driverCount = $deliveryDrivers->count();
                 $sentCount = 0;
 
                 foreach ($deliveryDrivers as $driver) {
-                    if (FcmService::sendToDriver(
+                    $driverNotified = FcmService::sendToDriver(
                         $driver,
                         'Nuevo envío disponible',
-                        'Recoger en ' . $store->name . ' — S/ ' . number_format($deliveryFee, 2),
+                        'Recoger en ' . $pickupName . ' — Total S/ ' . number_format($total, 2),
                         $fcmData
-                    )) {
+                    );
+                    \App\Services\CourierOfferTracker::offered(
+                        $driver,
+                        $favor,
+                        'admin_broadcast',
+                        (bool) $driverNotified,
+                        $favor->dispatch_timeout_at
+                    );
+                    if ($driverNotified) {
                         $sentCount++;
                     }
                 }
@@ -1380,20 +1400,29 @@ class DeliveryManagerController extends Controller
 
     private function processCommission($order)
     {
-        $commission = DeliveryCommission::first();
-        $percent = $commission?->delivery_percent ?? 10;
+        $commission = DeliveryCommission::where('status', 1)->first();
         $deliveryFee = (float) ($order->delivery_fee ?? 0);
-        $amount  = max($deliveryFee * $percent / 100, $commission?->min_commission ?? 1);
+        $earningIdentity = $order->driver ? [
+            'courier_id' => $order->driver->id,
+            'job_type' => DeliveryOrder::class,
+            'job_id' => $order->id,
+        ] : null;
+        $existingEarning = $earningIdentity ? CourierEarning::where($earningIdentity)->first() : null;
+        $quote = $order->driver
+            ? DeliveryFinancialLedger::driverCommissionQuote($order->driver, $deliveryFee, 'delivery', $commission, !$existingEarning)
+            : null;
+        $amount = $existingEarning ? (float) $existingEarning->commission : ($quote['amount'] ?? 0);
         $order->update(['commission_amount' => $amount]);
 
         if ($order->driver) {
-            $earning = CourierEarning::firstOrCreate([
-                'courier_id' => $order->driver->id,
-                'job_type' => DeliveryOrder::class,
-                'job_id' => $order->id,
-            ], [
+            $earning = CourierEarning::firstOrCreate($earningIdentity, [
                 'amount' => $deliveryFee,
                 'commission' => $amount,
+                'commission_tier' => $quote['tier_name'],
+                'commission_base_percent' => $quote['base_percent'],
+                'commission_effective_percent' => $quote['effective_percent'],
+                'commission_minimum' => $quote['minimum'],
+                'completed_jobs_snapshot' => $quote['total_completed_jobs'],
                 'description' => 'Entrega de pedido #' . $order->order_no,
             ]);
             if ($earning->wasRecentlyCreated) {
@@ -1424,19 +1453,29 @@ class DeliveryManagerController extends Controller
 
     private function processFavorCommission($favor)
     {
-        $commission = DeliveryCommission::first();
-        $percent = $commission?->favor_percent ?? 15;
-        $amount  = max($favor->total * $percent / 100, $commission?->min_commission ?? 1);
+        $commission = DeliveryCommission::where('status', 1)->first();
+        $deliveryFee = (float) $favor->total;
+        $earningIdentity = $favor->courier ? [
+            'courier_id' => $favor->courier->id,
+            'job_type' => Favor::class,
+            'job_id' => $favor->id,
+        ] : null;
+        $existingEarning = $earningIdentity ? CourierEarning::where($earningIdentity)->first() : null;
+        $quote = $favor->courier
+            ? DeliveryFinancialLedger::driverCommissionQuote($favor->courier, $deliveryFee, 'favor', $commission, !$existingEarning)
+            : null;
+        $amount = $existingEarning ? (float) $existingEarning->commission : ($quote['amount'] ?? 0);
         $favor->update(['commission_amount' => $amount]);
 
         if ($favor->courier) {
-            $earning = CourierEarning::firstOrCreate([
-                'courier_id' => $favor->courier->id,
-                'job_type' => Favor::class,
-                'job_id' => $favor->id,
-            ], [
-                'amount' => (float) $favor->total,
+            $earning = CourierEarning::firstOrCreate($earningIdentity, [
+                'amount' => $deliveryFee,
                 'commission' => $amount,
+                'commission_tier' => $quote['tier_name'],
+                'commission_base_percent' => $quote['base_percent'],
+                'commission_effective_percent' => $quote['effective_percent'],
+                'commission_minimum' => $quote['minimum'],
+                'completed_jobs_snapshot' => $quote['total_completed_jobs'],
                 'description' => 'Entrega de favor #' . $favor->order_no,
             ]);
             if ($earning->wasRecentlyCreated) {
@@ -1503,11 +1542,12 @@ class DeliveryManagerController extends Controller
     {
         $sub = StorePackage::findOrFail($id);
         $pkg = $sub->package;
-        $sub->update([
-            'status'    => 'active',
-            'starts_at' => now(),
-            'expires_at' => now()->addDays($pkg->duration_days),
-        ]);
+        app(StoreSubscriptionService::class)->activate($sub->store, $pkg, [
+            'amount_paid' => $sub->amount_paid ?: $pkg->price,
+            'payment_method' => $sub->payment_method ?: 'manual',
+            'payment_ref' => $sub->payment_ref,
+            'notes' => $sub->notes,
+        ], $sub);
         return back()->withNotify([['success', 'Suscripción activada']]);
     }
 

@@ -18,7 +18,10 @@
     $daysRemaining = null;
 
     if ($currentStore) {
-        $storeActivePackage = $currentStore->storePackages->filter(fn($sp) => $sp->isActive())->first(fn($sp) => $sp->package && in_array($sp->package->type, ['basic', 'featured', 'premium']));
+        $storeActivePackage = $currentStore->storePackages->filter(fn($sp) => $sp->isActive())
+            ->filter(fn($sp) => $sp->package && in_array($sp->package->type, ['basic', 'featured', 'premium']))
+            ->sortByDesc(fn($sp) => $sp->expires_at?->timestamp ?? PHP_INT_MAX)
+            ->first();
         if ($storeActivePackage && $storeActivePackage->expires_at) {
             $expiresAtDate = $storeActivePackage->expires_at instanceof \Carbon\Carbon ? $storeActivePackage->expires_at : \Carbon\Carbon::parse($storeActivePackage->expires_at);
             $daysRemaining = (int) now()->startOfDay()->diffInDays($expiresAtDate->startOfDay(), false);
@@ -1608,7 +1611,7 @@
                 </a>
                 @endif
                 @if(!$staffUser || $staffUser->hasPermission('pos_orders'))
-                <a href="{{ route('seller.pos') }}" data-tip="Punto de Venta" class="{{ request()->is('seller/pos') && !request()->is('seller/pos/*') ? 'active' : '' }}">
+                <a href="{{ route('seller.pos') }}" data-tip="Punto de Venta" class="{{ request()->routeIs('seller.pos', 'seller.pos.workspace') ? 'active' : '' }}">
                     <span class="s-nav-icon"><i class="las la-cash-register"></i></span> <span class="s-nav-text">Punto de Venta</span>
                 </a>
                 @endif

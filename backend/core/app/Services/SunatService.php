@@ -219,6 +219,7 @@ class SunatService
                 'cliente_tipo_doc'=> $clientData['tipo_doc'] ?? '6',
                 'cliente_num_doc' => $clientData['num_doc'] ?? '-',
                 'cliente_nombre'  => $clientData['nombre'] ?? 'CLIENTE VARIOS',
+                'cliente_direccion'=> $clientData['direccion'] ?? $clientData['address'] ?? null,
                 'detail_mode'     => $detailMode,
                 'consumption_description' => $detailMode === 'consumption' ? $consumptionDescription : null,
                 'total_gravada'   => round($order->total / 1.18, 2),
@@ -273,6 +274,10 @@ class SunatService
             ->setTipoDoc($tipoDocCliente)
             ->setNumDoc($numDocCliente)
             ->setRznSocial($clientData['nombre'] ?? $clientData['razonSocial'] ?? 'CLIENTE VARIOS');
+        $clientAddress = trim((string) ($clientData['direccion'] ?? $clientData['address'] ?? ''));
+        if ($clientAddress !== '') {
+            $client->setAddress((new Address())->setDireccion($clientAddress));
+        }
 
         $fechaEmision = now();
         if ($existingInvoice && $existingInvoice->fecha_emision) {
@@ -455,6 +460,7 @@ class SunatService
             'cliente_tipo_doc'=> $clientData['tipo_doc'] ?? '6',
             'cliente_num_doc' => $clientData['num_doc'] ?? '-',
             'cliente_nombre'  => $clientData['nombre'] ?? 'CLIENTE VARIOS',
+            'cliente_direccion'=> $clientData['direccion'] ?? $clientData['address'] ?? null,
             'detail_mode'     => $detailMode,
             'consumption_description' => $detailMode === 'consumption' ? $consumptionDescription : null,
             'total_gravada'   => round($totalGravada, 2),
@@ -623,7 +629,6 @@ class SunatService
             ->setSerie($series->series)
             ->setCorrelativo($correlativo)
             ->setFechaEmision(now())
-            ->setFormaPago(new FormaPagoContado())
             ->setTipoMoneda('PEN')
             ->setCodMotivo($tipoNota) // 01=Anulacion, etc.
             ->setDesMotivo($descripcion)

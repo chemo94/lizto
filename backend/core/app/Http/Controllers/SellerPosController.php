@@ -15,6 +15,7 @@ use App\Models\InvSupplier;
 use App\Models\PosArea;
 use App\Models\PosBankAccount;
 use App\Models\PosCashSession;
+use App\Models\PosCustomerProfile;
 use App\Models\PosExpense;
 use App\Models\PosInvoiceSeries;
 use App\Models\PosInvoiceType;
@@ -39,6 +40,7 @@ use App\Models\Zone;
 use App\Support\DeliveryPricing;
 use App\Services\FcmService;
 use App\Services\StockService;
+use App\Services\StoreSubscriptionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use chillerlan\QRCode\QRCode;
@@ -86,6 +88,7 @@ class SellerPosController extends Controller
                 // Route mapping to permission keys
                 $permissionsMap = [
                     'seller.pos' => 'pos_orders',
+                    'seller.pos.workspace' => 'pos_orders',
                     'seller.pos.floorplan' => 'pos_orders',
                     'seller.pos.tables' => 'pos_orders',
                     'seller.pos.kitchen' => 'kitchen',
@@ -105,6 +108,7 @@ class SellerPosController extends Controller
                     'seller.products.bulk.template' => 'products',
                     'seller.qrmenu' => 'products',
                     'seller.customers' => 'pos_orders',
+                    'seller.customers.update' => 'pos_orders',
                     'seller.orders' => 'pos_orders',
                     'seller.orders.cancel' => 'pos_orders',
                     'seller.orders.status' => 'pos_orders',
@@ -265,8 +269,7 @@ class SellerPosController extends Controller
         Session::forget('seller_staff_id');
         Session::put('seller_id', $accessToken->tokenable->id);
         
-        $store = Store::where('seller_id', $accessToken->tokenable->id)->first();
-        $defaultRoute = ($store && $store->isRestaurant()) ? route('seller.pos.floorplan') : route('seller.pos');
+        $defaultRoute = route('seller.dashboard');
 
         return redirect($request->redirect ?? $defaultRoute);
     }
@@ -276,9 +279,8 @@ class SellerPosController extends Controller
     public function showLogin()
     {
         if (Session::has('seller_id')) {
-            $store = $this->store();
-            if ($store && $store->isRestaurant()) {
-                return redirect()->route('seller.pos.floorplan');
+            if (!Session::has('seller_staff_id')) {
+                return redirect()->route('seller.dashboard');
             }
             return redirect()->route('seller.pos');
         }
@@ -305,10 +307,7 @@ class SellerPosController extends Controller
             if ($store && !$store->is_premium) {
                 return redirect()->route('seller.delivery.request');
             }
-            if ($store && $store->isRestaurant()) {
-                return redirect()->intended(route('seller.pos.floorplan'));
-            }
-            return redirect()->intended(route('seller.pos'));
+            return redirect()->route('seller.dashboard');
         }
 
         // 2. Check employee/staff account
@@ -333,7 +332,7 @@ class SellerPosController extends Controller
                 if ($staff->hasPermission('kitchen') && !$staff->hasPermission('pos_orders')) {
                     return redirect()->intended(route('seller.pos.kitchen'));
                 }
-                return redirect()->intended(route('seller.pos.floorplan'));
+                return redirect()->route('seller.pos');
             }
             return redirect()->intended(route('seller.pos'));
         }
@@ -559,10 +558,19 @@ class SellerPosController extends Controller
 
         $recent = $posOrders->concat($delOrders)->sortByDesc('created_at')->take(15)->values();
 
+        $customerIdentitySql = "COALESCE(NULLIF(customer_doc, ''), NULLIF(customer_phone, ''), NULLIF(customer_name, ''))";
         $customers = PosOrder::where('seller_id', $seller->id)
-            ->whereNotNull('customer_phone')
-            ->selectRaw('customer_name, customer_phone, COUNT(*) as total_orders, SUM(total) as total_spent, MAX(created_at) as last_order')
-            ->groupBy('customer_phone', 'customer_name')
+            ->where(function ($query) {
+                $query->whereNotNull('customer_doc')->where('customer_doc', '<>', '')
+                    ->orWhere(function ($q) {
+                        $q->whereNotNull('customer_phone')->where('customer_phone', '<>', '');
+                    })
+                    ->orWhere(function ($q) {
+                        $q->whereNotNull('customer_name')->where('customer_name', '<>', '');
+                    });
+            })
+            ->selectRaw("MAX(NULLIF(customer_name, '')) as customer_name, MAX(NULLIF(customer_phone, '')) as customer_phone, MAX(NULLIF(customer_doc, '')) as customer_doc, COUNT(*) as total_orders, SUM(total) as total_spent, MAX(created_at) as last_order")
+            ->groupByRaw($customerIdentitySql)
             ->orderByDesc('total_orders')
             ->limit(10)->get();
 
@@ -636,8 +644,64 @@ class SellerPosController extends Controller
     {
         $seller = $this->seller();
         $store = $this->store();
+        if (!$store || !$store->isRestaurant()) {
+            return redirect()->route('seller.pos.workspace', ['type' => 'takeaway']);
+        }
+
+        $pageTitle = 'Mesas - ' . ($store->name ?? 'Punto de Venta');
+
+        [$tables, $areas] = $this->posTableSelectionData($seller);
+
+        return view('seller.pos.selector', compact('pageTitle', 'seller', 'store', 'tables', 'areas'));
+    }
+
+    public function posWorkspace(Request $request)
+    {
+        $seller = $this->seller();
+        $store = $this->store();
+        $allowedTypes = ['dine_in', 'takeaway', 'delivery', 'rappi', 'pedidosya', 'llama', 'daz', 'lizto_delivery', 'courtesy'];
+        $orderType = in_array($request->query('type'), $allowedTypes, true)
+            ? $request->query('type')
+            : ($store?->isRestaurant() ? 'dine_in' : 'takeaway');
+        $selectedTableId = $request->integer('table') ?: null;
+
+        if ($selectedTableId) {
+            $selectedTable = PosTable::where('seller_id', $seller->id)->findOrFail($selectedTableId);
+            $selectedTableId = $selectedTable->linked_to_table_id ?: $selectedTable->id;
+        }
+        if ($store?->isRestaurant() && in_array($orderType, ['dine_in', 'courtesy'], true) && !$selectedTableId && !$request->boolean('counter')) {
+            return redirect()->route('seller.pos')->with('error', 'Selecciona una mesa o Mostrador / Barra para abrir el POS.');
+        }
+
         $pageTitle = 'POS - ' . ($store?->name ?? 'Punto de Venta');
 
+        [$tables, $areas] = $this->posTableSelectionData($seller);
+        $products = Product::where('store_id', $store?->id)->with('variations', 'addons')->active()->orderBy('store_category_id')->orderBy('sort_order')->get();
+        $categories = $store ? $store->categories()->orderBy('sort_order')->get() : collect();
+
+        $productsJson = '{}';
+        if ($products->isNotEmpty()) {
+            $productsJson = $products->keyBy('id')->map(function($p) {
+                return [
+                    'id' => $p->id, 'name' => $p->name, 'price' => $p->finalPrice(), 'barcode' => $p->barcode,
+                    'variations' => $p->variations->map(fn($v) => ['id' => $v->id, 'name' => $v->name, 'price' => (float) $v->price])->values(),
+                    'addons' => $p->addons->map(fn($a) => ['id' => $a->id, 'name' => $a->name, 'price' => (float) $a->price])->values(),
+                ];
+            })->toJson();
+        }
+
+        $pendingPayment = PosOrder::where('seller_id', $seller->id)->whereIn('status', ['delivered', 'ready'])
+            ->where('payment_status', 'pending')->with('items', 'table')->latest()->limit(10)->get();
+        $isCashOpen = PosCashSession::where('seller_id', $seller->id)->open()->exists();
+        $invoiceTypes = PosInvoiceType::where('seller_id', $seller->id)->with('series')->get();
+        $staff = \App\Models\PosStaff::where('seller_id', $seller->id)->where('status', 'active')->orderBy('name')->get();
+        $bankAccounts = PosBankAccount::where('seller_id', $seller->id)->active()->get();
+
+        return view('seller.pos.index', compact('pageTitle', 'seller', 'store', 'tables', 'areas', 'products', 'categories', 'productsJson', 'pendingPayment', 'invoiceTypes', 'isCashOpen', 'staff', 'bankAccounts', 'orderType', 'selectedTableId'));
+    }
+
+    private function posTableSelectionData($seller): array
+    {
         $tables = PosTable::where('seller_id', $seller->id)->orderBy('area')->orderBy('sort_order')->get();
         $activeOrders = PosOrder::where('seller_id', $seller->id)
             ->where('payment_status', 'pending')
@@ -652,36 +716,7 @@ class SellerPosController extends Controller
             $table->active_order = isset($activeOrders[$targetId]) ? $activeOrders[$targetId]->first() : null;
         }
         $areas = PosArea::where('seller_id', $seller->id)->orderBy('sort_order')->get();
-        $products = Product::where('store_id', $store?->id)->with('variations', 'addons')->active()->orderBy('store_category_id')->orderBy('sort_order')->get();
-        $categories = $store ? $store->categories()->orderBy('sort_order')->get() : collect();
-
-        $productsJson = '{}';
-        if ($products->isNotEmpty()) {
-            $productsJson = $products->keyBy('id')->map(function($p) {
-                return [
-                    'id'          => $p->id,
-                    'name'        => $p->name,
-                    'price'       => $p->finalPrice(),
-                    'barcode'     => $p->barcode,
-                    'variations'  => $p->variations->map(function($v) { return ['id' => $v->id, 'name' => $v->name, 'price' => (float) $v->price]; })->values(),
-                    'addons'      => $p->addons->map(function($a) { return ['id' => $a->id, 'name' => $a->name, 'price' => (float) $a->price]; })->values(),
-                ];
-            })->toJson();
-        }
-
-        // Pending orders ready for payment
-        $pendingPayment = PosOrder::where('seller_id', $seller->id)
-            ->whereIn('status', ['delivered', 'ready'])
-            ->where('payment_status', 'pending')
-            ->with('items', 'table')
-            ->latest()->limit(10)->get();
-
-        $isCashOpen = PosCashSession::where('seller_id', $seller->id)->open()->exists();
-        $invoiceTypes = PosInvoiceType::where('seller_id', $seller->id)->with('series')->get();
-        $staff = \App\Models\PosStaff::where('seller_id', $seller->id)->where('status', 'active')->orderBy('name')->get();
-
-        $bankAccounts = PosBankAccount::where('seller_id', $seller->id)->active()->get();
-        return view('seller.pos.index', compact('pageTitle', 'seller', 'store', 'tables', 'areas', 'products', 'categories', 'productsJson', 'pendingPayment', 'invoiceTypes', 'isCashOpen', 'staff', 'bankAccounts'));
+        return [$tables, $areas];
     }
 
     // ── Tables ──
@@ -872,6 +907,7 @@ class SellerPosController extends Controller
             'tipo_doc'         => 'nullable|string|in:1,6',
             'num_doc'          => 'nullable|string|max:20',
             'customer_name'    => 'nullable|string|max:255',
+            'customer_address' => 'nullable|string|max:500',
             'payment_method'   => 'nullable|string',
             'payments'         => 'nullable|array',
             'payment_accounts' => 'nullable|array',
@@ -968,6 +1004,19 @@ class SellerPosController extends Controller
             $orderData['customer_doc_type'] = $request->tipo_doc;
         }
         $order->update($orderData);
+
+        $customerAddress = trim((string) $request->input('customer_address', ''));
+        if ($request->filled('num_doc') && $request->filled('customer_name')) {
+            $profile = $this->syncPosCustomerProfile(
+                $seller,
+                (string) ($request->tipo_doc ?: (strlen((string) $request->num_doc) === 11 ? '6' : '1')),
+                (string) $request->num_doc,
+                (string) $request->customer_name,
+                $order->customer_phone,
+                $customerAddress
+            );
+            $customerAddress = (string) ($profile->address ?? $customerAddress);
+        }
 
         if ($order->pos_table_id) {
             PosTable::where('id', $order->pos_table_id)
@@ -1102,6 +1151,7 @@ class SellerPosController extends Controller
                 'tipo_doc' => $docType ?? ($tipoDoc === '01' ? '6' : '1'),
                 'num_doc'  => $request->num_doc ?? ($order->customer_doc ?? '0'),
                 'nombre'   => $request->customer_name ?? $order->customer_name ?? 'CLIENTE VARIOS',
+                'direccion'=> $customerAddress ?: $this->customerAddressByDocument($seller->id, (string) ($request->num_doc ?? $order->customer_doc)),
             ];
 
             $isElectronic = $series->invoiceType->is_electronic ?? false;
@@ -1165,6 +1215,7 @@ class SellerPosController extends Controller
                 'cliente_tipo_doc' => $clientData['tipo_doc'],
                 'cliente_num_doc'  => $clientData['num_doc'],
                 'cliente_nombre'   => $clientData['nombre'],
+                'cliente_direccion'=> $clientData['direccion'] ?: null,
                 'detail_mode'      => $detailMode,
                 'consumption_description' => $consumptionDescription,
                 'total_gravada'    => $totalGravada,
@@ -1501,17 +1552,16 @@ class SellerPosController extends Controller
                 'paid_at' => now(),
             ]);
 
-            // Activate the package for the store
+            // Activate or extend through the single subscription lifecycle.
             $package = \App\Models\BusinessPackage::find($payment->package_id);
             if ($package && $store) {
-                $expiresAt = $package->duration_days > 0 ? now()->addDays($package->duration_days) : null;
-                $store->storePackages()->where('status', 'active')->update(['status' => 'inactive']);
-                $store->storePackages()->create([
-                    'package_id' => $package->id,
-                    'status'     => 'active',
-                    'started_at' => now(),
-                    'expires_at' => $expiresAt,
+                $subscription = app(StoreSubscriptionService::class)->activate($store, $package, [
+                    'amount_paid' => $payment->package_amount,
+                    'payment_method' => 'MercadoPago',
+                    'payment_ref' => (string) ($result['id'] ?? $payment->trx),
+                    'notes' => 'Pago ' . $payment->trx,
                 ]);
+                $payment->update(['store_package_id' => $subscription->id]);
             }
 
             return response()->json([
@@ -1948,11 +1998,36 @@ class SellerPosController extends Controller
         $store = $this->store();
         $pageTitle = 'Clientes';
         $customers = PosOrder::where('seller_id', $seller->id)
-            ->whereNotNull('customer_phone')
-            ->selectRaw('customer_name, customer_phone, COUNT(*) as total_orders, SUM(total) as total_spent, MAX(created_at) as last_order')
-            ->groupBy('customer_phone', 'customer_name')
+            ->where(function ($query) {
+                $query->whereNotNull('customer_phone')
+                    ->orWhereNotNull('customer_name')
+                    ->orWhereNotNull('customer_doc');
+            })
+            ->selectRaw('customer_name, customer_phone, customer_doc, COUNT(*) as total_orders, SUM(total) as total_spent, MAX(created_at) as last_order')
+            ->groupBy('customer_phone', 'customer_name', 'customer_doc')
             ->orderByDesc('total_orders')
             ->get();
+
+        $customers->each(function ($customer) {
+            $customer->identity_key = $this->customerIdentityKey(
+                $customer->customer_doc,
+                $customer->customer_phone,
+                $customer->customer_name
+            );
+            $customer->customer_address = null;
+        });
+        $profiles = PosCustomerProfile::where('seller_id', $seller->id)
+            ->whereIn('identity_key', $customers->pluck('identity_key')->filter()->values())
+            ->get()->keyBy('identity_key');
+        $customers->each(function ($customer) use ($profiles) {
+            $profile = $profiles->get($customer->identity_key);
+            if (!$profile) return;
+            $customer->customer_name = $profile->name ?: $customer->customer_name;
+            $customer->customer_phone = $profile->phone ?: $customer->customer_phone;
+            $customer->customer_doc = $profile->document_number ?: $customer->customer_doc;
+            $customer->customer_doc_type = $profile->document_type;
+            $customer->customer_address = $profile->address;
+        });
 
         $customerGrowth = collect(range(11, 0))->map(function ($monthsAgo) use ($seller) {
             $month = now()->subMonths($monthsAgo);
@@ -1982,6 +2057,99 @@ class SellerPosController extends Controller
         ];
 
         return view('seller.customers', compact('pageTitle', 'seller', 'store', 'customers', 'customerGrowth', 'customerStats'));
+    }
+
+    public function customerUpdate(Request $request)
+    {
+        $data = $request->validate([
+            'original_key' => 'required|string|max:255',
+            'customer_doc_type' => 'required|in:1,6',
+            'customer_doc' => 'required|digits_between:8,11',
+            'customer_name' => 'required|string|max:150',
+            'customer_phone' => 'nullable|string|max:30',
+            'customer_address' => 'nullable|string|max:500',
+        ]);
+        if (($data['customer_doc_type'] === '1' && strlen($data['customer_doc']) !== 8)
+            || ($data['customer_doc_type'] === '6' && strlen($data['customer_doc']) !== 11)) {
+            return back()->withErrors(['customer_doc' => $data['customer_doc_type'] === '1'
+                ? 'El DNI debe tener 8 dígitos.' : 'El RUC debe tener 11 dígitos.'])->withInput();
+        }
+
+        $seller = $this->seller();
+        $newKey = 'doc:' . $data['customer_doc'];
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($seller, $data, $newKey) {
+            $orders = PosOrder::where('seller_id', $seller->id);
+            if (str_starts_with($data['original_key'], 'doc:')) {
+                $orders->where('customer_doc', substr($data['original_key'], 4));
+            } elseif (str_starts_with($data['original_key'], 'phone:')) {
+                $orders->where(function ($query) {
+                    $query->whereNull('customer_doc')->orWhere('customer_doc', '');
+                })->where('customer_phone', substr($data['original_key'], 6));
+            } else {
+                $orders->where(function ($query) {
+                    $query->whereNull('customer_doc')->orWhere('customer_doc', '');
+                })->where(function ($query) {
+                    $query->whereNull('customer_phone')->orWhere('customer_phone', '');
+                })->whereRaw('SHA1(LOWER(TRIM(COALESCE(customer_name, ?)))) = ?', ['', substr($data['original_key'], 5)]);
+            }
+
+            // Los datos identificativos se sincronizan; la dirección de entrega
+            // histórica de cada pedido se conserva sin modificaciones.
+            $orders->update([
+                'customer_doc_type' => $data['customer_doc_type'],
+                'customer_doc' => $data['customer_doc'],
+                'customer_name' => trim($data['customer_name']),
+                'customer_phone' => $data['customer_phone'] ? trim($data['customer_phone']) : null,
+            ]);
+
+            PosCustomerProfile::updateOrCreate(
+                ['seller_id' => $seller->id, 'identity_key' => $newKey],
+                [
+                    'document_type' => $data['customer_doc_type'],
+                    'document_number' => $data['customer_doc'],
+                    'name' => trim($data['customer_name']),
+                    'phone' => $data['customer_phone'] ? trim($data['customer_phone']) : null,
+                    'address' => $data['customer_address'] ? trim($data['customer_address']) : null,
+                ]
+            );
+            if ($data['original_key'] !== $newKey) {
+                PosCustomerProfile::where('seller_id', $seller->id)->where('identity_key', $data['original_key'])->delete();
+            }
+        });
+
+        return back()->with('success', 'Cliente actualizado correctamente.');
+    }
+
+    private function customerIdentityKey($document, $phone, $name): string
+    {
+        if (filled($document)) return 'doc:' . trim($document);
+        if (filled($phone)) return 'phone:' . trim($phone);
+        return 'name:' . sha1(mb_strtolower(trim((string) $name)));
+    }
+
+    private function syncPosCustomerProfile(Seller $seller, string $documentType, string $documentNumber, string $name, ?string $phone, ?string $address): PosCustomerProfile
+    {
+        $documentNumber = preg_replace('/\D+/', '', $documentNumber);
+        $profile = PosCustomerProfile::firstOrNew([
+            'seller_id' => $seller->id,
+            'identity_key' => 'doc:' . $documentNumber,
+        ]);
+        $profile->document_type = $documentType;
+        $profile->document_number = $documentNumber;
+        $profile->name = trim($name);
+        if (filled($phone)) $profile->phone = trim((string) $phone);
+        if (filled($address)) $profile->address = trim((string) $address);
+        $profile->save();
+        return $profile;
+    }
+
+    private function customerAddressByDocument(int $sellerId, string $documentNumber): string
+    {
+        if (!filled($documentNumber)) return '';
+        return (string) PosCustomerProfile::where('seller_id', $sellerId)
+            ->where('document_number', preg_replace('/\D+/', '', $documentNumber))
+            ->value('address');
     }
 
     // ── Orders ──
@@ -2109,18 +2277,23 @@ class SellerPosController extends Controller
             ->selectRaw('store_category_id, COUNT(*) as total')
             ->groupBy('store_category_id')->pluck('total', 'store_category_id');
 
+        $taxTypes = Product::taxTypes();
+        $taxType = $request->input('tax_type');
+        $taxType = is_string($taxType) && array_key_exists($taxType, $taxTypes) ? $taxType : null;
+
         $productsQuery = Product::where('store_id', $store->id)
             ->with('category', 'variations', 'addons', 'invProductItems.item')
             ->when($request->filled('search'), fn($query) => $query->where('name', 'like', '%' . $request->search . '%'))
             ->when($request->status === 'active', fn($query) => $query->where('status', 1))
             ->when($request->status === 'inactive', fn($query) => $query->where('status', 0))
             ->when($request->filled('category'), fn($query) => $query->where('store_category_id', $request->category))
+            ->when($taxType, fn($query) => $query->where('tax_type', $taxType))
             ->orderBy('store_category_id')->orderBy('sort_order')->orderBy('name');
         $allProducts = $productsQuery->paginate(12)->withQueryString();
 
         return view('seller.products', compact(
             'pageTitle', 'seller', 'store', 'storeCategories', 'storeType', 'warehouses',
-            'allProducts', 'cats', 'totalProducts', 'activeProducts', 'inactiveProducts', 'categoryCounts'
+            'allProducts', 'cats', 'totalProducts', 'activeProducts', 'inactiveProducts', 'categoryCounts', 'taxTypes'
         ));
     }
 
@@ -2442,6 +2615,7 @@ class SellerPosController extends Controller
                 'nombres' => $api['data']['nombre'] ?? '',
                 'apellidoPaterno' => $api['data']['apellidoPaterno'] ?? '',
                 'apellidoMaterno' => $api['data']['apellidoMaterno'] ?? '',
+                'direccion' => $api['data']['direccion'] ?? $api['data']['direccionCompleta'] ?? $api['data']['domicilioFiscal'] ?? $api['data']['address'] ?? '',
                 'numeroDocumento' => $api['data']['numdoc'] ?? $numdoc,
             ]);
         }
@@ -2451,7 +2625,7 @@ class SellerPosController extends Controller
                 'status' => true,
                 'nombre' => $api['data']['razonSocial'] ?? '',
                 'nombreComercial' => $api['data']['ncomercial'] ?? '',
-                'direccion' => $api['data']['direccion'] ?? '',
+                'direccion' => $api['data']['direccion'] ?? $api['data']['direccionCompleta'] ?? $api['data']['domicilioFiscal'] ?? $api['data']['address'] ?? '',
                 'numeroDocumento' => $api['data']['ruc'] ?? $numdoc,
             ]);
         }
@@ -4447,6 +4621,7 @@ class SellerPosController extends Controller
     public function generateInvoice(Request $request, $id)
     {
         $seller = $this->seller();
+        $store = $this->store();
         $activeCompany = $this->activeCompany();
         
         if (!$activeCompany) {
@@ -4504,6 +4679,7 @@ class SellerPosController extends Controller
                 'tipo_doc' => $request->tipo_doc ?? '6',
                 'num_doc'  => $request->num_doc ?? ($order->customer_doc ?? '0'),
                 'nombre'   => $order->customer_name ?? 'CLIENTE VARIOS',
+                'direccion'=> $this->customerAddressByDocument($seller->id, (string) ($request->num_doc ?? $order->customer_doc)),
             ];
 
             $sunatInvoice = $sunatService->sendInvoice($order, $series, $clientData);
@@ -5198,6 +5374,11 @@ class SellerPosController extends Controller
         $tradeName = $company?->trade_name ?? $seller->trade_name ?? '';
         $address = $company?->address ?? $seller->address ?? '';
         $ubigeo = $company?->ubigeo ?? $seller->ubigeo ?? '';
+        $customerAddress = trim((string) ($invoice->cliente_direccion ?? ''));
+        if ($customerAddress === '') {
+            $customerAddress = trim((string) ($this->customerAddressByDocument($seller->id, (string) $invoice->cliente_num_doc)
+                ?: $invoice->order?->delivery_address));
+        }
 
         $logoBase64 = null;
         if ($store && $store->image) {
@@ -5313,7 +5494,7 @@ class SellerPosController extends Controller
                     'unit_code' => $unitCode,
                     'sunat_code'=> $sunatCode,
                     'name'      => $item->product_name,
-                    'tax_type'  => $product ? ($product->tax_type ?? 'gravado') : 'gravado',
+                    'tax_type'  => $item->tax_type ?? ($product?->tax_type ?? 'gravado'),
                     'unit_price'=> $item->unit_price,
                 ];
             }
@@ -5323,7 +5504,7 @@ class SellerPosController extends Controller
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($viewName, compact(
             'invoice', 'seller', 'company', 'docNumber', 'businessName', 'tradeName',
-            'address', 'qrBase64', 'qrData', 'montoLetras', 'store', 'logoBase64', 'itemDetails'
+            'address', 'customerAddress', 'qrBase64', 'qrData', 'montoLetras', 'store', 'logoBase64', 'itemDetails'
         ));
 
         $paperSize = $format === 'a5' ? 'a5' : ($format === 'ticket' ? [0, 0, 226.77, 600] : 'a4');
@@ -5596,6 +5777,8 @@ class SellerPosController extends Controller
                 'tipo_doc' => $invoice->cliente_tipo_doc ?? '6',
                 'num_doc'  => $invoice->cliente_num_doc ?? '-',
                 'nombre'   => $invoice->cliente_nombre ?? 'CLIENTE VARIOS',
+                'direccion'=> $invoice->cliente_direccion
+                    ?: $this->customerAddressByDocument($seller->id, (string) ($invoice->cliente_num_doc ?? $order->customer_doc)),
             ];
 
             if (in_array($invoice->tipo_doc, ['07', '08'])) {
@@ -6573,6 +6756,17 @@ class SellerPosController extends Controller
         // Create PIN record
         $favor->pin()->create(['pin_code' => $pinCode]);
 
+        if ($assignedDriver) {
+            FcmService::sendToDriver(
+                $assignedDriver,
+                'Nuevo envío asignado',
+                'Se te ha asignado el envío #' . $favor->order_no . ' — S/ ' . number_format($favor->total, 2),
+                FcmService::courierJobPayload($favor, ['type' => 'seller_assigned_favor'])
+            );
+            event(new NewJobAvailable($favor->fresh(), 'Nuevo envío asignado #' . $favor->order_no));
+            event(new \App\Events\FavorStatusUpdated($favor->fresh(), 'waiting_courier_response'));
+        }
+
         // Seller dispatch: broadcast first, then rotate one-by-one by distance.
         $autoAssigned = null;
         if (!$assignedDriver && $dispatchMode === 'auto') {
@@ -6943,8 +7137,11 @@ class SellerPosController extends Controller
         $fromTable = PosTable::where('seller_id', $seller->id)->findOrFail($request->from_table_id);
         $toTable = PosTable::where('seller_id', $seller->id)->findOrFail($request->to_table_id);
 
-        if ($toTable->status !== 'free') {
-            return back()->with('error', 'La mesa de destino no está libre.');
+        if ($fromTable->id === $toTable->id) {
+            return $this->tableTransferResponse($request, false, 'La mesa de origen y destino no pueden ser la misma.');
+        }
+        if ($toTable->status !== 'free' || $toTable->linked_to_table_id) {
+            return $this->tableTransferResponse($request, false, 'La mesa de destino no está libre.');
         }
 
         // Find active order of fromTable
@@ -6955,7 +7152,7 @@ class SellerPosController extends Controller
             ->first();
 
         if (!$order) {
-            return back()->with('error', 'No hay comanda activa en la mesa de origen.');
+            return $this->tableTransferResponse($request, false, 'No hay una comanda activa en la mesa de origen.');
         }
 
         // Transfer order to destination table
@@ -6966,11 +7163,19 @@ class SellerPosController extends Controller
         $toTable->update(['status' => 'occupied']);
 
         // Update linked tables as well: if there were tables linked to fromTable, link them to toTable
-        PosTable::where('linked_to_table_id', $fromTable->id)->update([
+        PosTable::where('seller_id', $seller->id)->where('linked_to_table_id', $fromTable->id)->update([
             'linked_to_table_id' => $toTable->id
         ]);
 
-        return back()->with('success', 'Comanda transferida de ' . $fromTable->name . ' a ' . $toTable->name);
+        return $this->tableTransferResponse($request, true, 'Comanda transferida de ' . $fromTable->name . ' a ' . $toTable->name . '.');
+    }
+
+    private function tableTransferResponse(Request $request, bool $success, string $message)
+    {
+        if ($request->expectsJson()) {
+            return response()->json(['success' => $success, 'message' => $message], $success ? 200 : 422);
+        }
+        return back()->with($success ? 'success' : 'error', $message);
     }
 
     public function groupTables(Request $request)

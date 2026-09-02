@@ -212,6 +212,7 @@
         <form method="POST" action="" id="pay-form">
             @csrf
             <input type="hidden" name="customer_name" id="pay-customer-name">
+            <input type="hidden" name="customer_address" id="pay-customer-address">
             <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px;">
                 <label style="display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer; padding:12px 14px; border:1px solid var(--s-border); border-radius:12px; background:var(--s-bg-light);">
                     <span style="display:flex; align-items:center; gap:10px;">
@@ -266,6 +267,10 @@
                     <i class="las la-user-check"></i>
                     <span id="pay-client-badge-name"></span>
                     <button type="button" onclick="clearDocResult()" style="margin-left:auto; background:none; border:none; color:#15803d; cursor:pointer; font-size:14px; line-height:1;">✕</button>
+                </div>
+                <div id="pay-client-address-wrap" style="display:none;">
+                    <label class="s-label" style="font-weight:700;">Dirección del cliente</label>
+                    <textarea class="s-input" id="pay-client-address-display" rows="2" maxlength="500" placeholder="Dirección fiscal o domicilio" oninput="document.getElementById('pay-customer-address').value=this.value" style="resize:vertical;font-size:12px;"></textarea>
                 </div>
 
                 <div style="background: var(--s-bg-light); border: 1px solid var(--s-border); border-radius: 12px; padding: 16px;">
@@ -759,10 +764,16 @@ function clearDocResult() {
     var b = document.getElementById('pay-client-badge');
     b.style.display = 'none';
     document.getElementById('pay-customer-name').value = '';
+    document.getElementById('pay-customer-address').value = '';
+    document.getElementById('pay-client-address-display').value = '';
+    document.getElementById('pay-client-address-wrap').style.display = 'none';
 }
 
-function selectClient(name) {
+function selectClient(name, address) {
     document.getElementById('pay-customer-name').value = name;
+    document.getElementById('pay-customer-address').value = address || '';
+    document.getElementById('pay-client-address-display').value = address || '';
+    document.getElementById('pay-client-address-wrap').style.display = 'block';
     var r = document.getElementById('pay-doc-result');
     r.style.display = 'none';
     r.innerHTML = '';
@@ -790,7 +801,9 @@ function searchDoc() {
     .then(function(x) { return x.json(); })
     .then(function(d) {
         if (d.status && d.nombre) {
-            r.innerHTML = '<div onclick="selectClient(\'' + d.nombre.replace(/'/g, "\\'") + '\')" onmouseover="this.style.background=\'rgba(34,197,94,0.2)\'" onmouseout="this.style.background=\'rgba(34,197,94,0.1)\'" style="cursor:pointer; background:rgba(34,197,94,0.1); color:#15803d; border:1px solid rgba(34,197,94,0.3); border-radius:6px; padding:8px 12px; font-weight:700; display:flex; justify-content:space-between; align-items:center; transition:background 0.2s;"><span>✓ ' + d.nombre + '</span><span style="font-size:10px; background:#22c55e; color:#fff; padding:2px 6px; border-radius:4px; text-transform:uppercase; letter-spacing:0.5px;">Seleccionar</span></div>';
+            selectClient(d.nombre, d.direccion || '');
+            r.style.display = 'block';
+            r.innerHTML = '<div style="background:rgba(34,197,94,0.1);color:#15803d;border-radius:6px;padding:8px 12px;font-weight:700;">✓ Datos del cliente cargados automáticamente</div>';
         } else {
             r.innerHTML = '<div style="color:var(--s-danger-text); padding:4px 6px;">✗ ' + (d.result || 'No encontrado') + '</div>';
         }

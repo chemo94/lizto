@@ -145,7 +145,7 @@
         </tr>
         <tr>
             <td class="label">Dirección:</td>
-            <td class="value">-</td>
+            <td class="value">{{ $customerAddress ?: '—' }}</td>
             <td class="label">Moneda:</td>
             <td class="value">{{ ($invoice->moneda ?? 'PEN') === 'PEN' ? 'SOLES (PEN)' : (($invoice->moneda ?? 'PEN') === 'USD' ? 'DÓLARES (USD)' : ($invoice->moneda ?? 'PEN')) }}</td>
         </tr>
@@ -222,7 +222,7 @@
                 @foreach($invoice->order->items as $item)
                     @php
                         $product = $item->product;
-                        $taxType = $product ? $product->tax_type : 'gravado';
+                        $taxType = $item->tax_type ?? ($product?->tax_type ?? 'gravado');
                         $afectLabel = $taxType === 'exonerado' ? 'Exonerado' : ($taxType === 'inafecto' ? 'Inafecto' : 'Gravado');
                         
                         if ($taxType === 'exonerado' || $taxType === 'inafecto') {

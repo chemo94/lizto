@@ -137,6 +137,7 @@ Route::get('/delivery/store-fee-estimate', 'storeFeeEstimate')->name('store.fee.
     Route::get('/seller/token-login', [\App\Http\Controllers\SellerPosController::class, 'tokenLogin'])->name('seller.token.login');
     Route::prefix('seller')->name('seller.')->middleware([\App\Http\Middleware\CheckSubscription::class])->group(function () {
         Route::get('/pos', [\App\Http\Controllers\SellerPosController::class, 'pos'])->name('pos');
+        Route::get('/pos/workspace', [\App\Http\Controllers\SellerPosController::class, 'posWorkspace'])->name('pos.workspace');
         Route::get('/dashboard', [\App\Http\Controllers\SellerPosController::class, 'dashboard'])->name('dashboard');
         Route::get('/profile', [\App\Http\Controllers\SellerPosController::class, 'profile'])->name('profile');
         Route::post('/profile/update', [\App\Http\Controllers\SellerPosController::class, 'profileUpdate'])->name('profile.update');
@@ -144,6 +145,7 @@ Route::get('/delivery/store-fee-estimate', 'storeFeeEstimate')->name('store.fee.
         Route::get('/orders', [\App\Http\Controllers\SellerPosController::class, 'orders'])->name('orders');
         Route::get('/orders/{source}/{id}', [\App\Http\Controllers\SellerPosController::class, 'orderDetail'])->where('source', 'pos|delivery')->name('orders.show');
         Route::get('/customers', [\App\Http\Controllers\SellerPosController::class, 'customers'])->name('customers');
+        Route::post('/customers/update', [\App\Http\Controllers\SellerPosController::class, 'customerUpdate'])->name('customers.update');
         Route::get('/products', [\App\Http\Controllers\SellerPosController::class, 'products'])->name('products');
         Route::get('/reports', [\App\Http\Controllers\SellerPosController::class, 'reports'])->name('reports');
         Route::get('/declarations', [\App\Http\Controllers\SellerPosController::class, 'declarations'])->name('declarations');

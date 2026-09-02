@@ -355,6 +355,7 @@ Route::namespace('Api\Driver')->prefix('driver')->group(function () {
                     Route::get('jobs/history', '\App\Http\Controllers\Api\Driver\CourierJobController@jobHistory');
                     Route::get('jobs/{id}', '\App\Http\Controllers\Api\Driver\CourierJobController@jobDetail');
                     Route::post('jobs/{id}/accept', '\App\Http\Controllers\Api\Driver\CourierJobController@acceptJob');
+                    Route::post('jobs/{id}/reject', '\App\Http\Controllers\Api\Driver\CourierJobController@rejectJob');
                     Route::post('jobs/{id}/status', '\App\Http\Controllers\Api\Driver\CourierJobController@updateJobStatus');
                     Route::post('jobs/{id}/cancel', '\App\Http\Controllers\Api\Driver\CourierJobController@cancelJob');
                     Route::post('jobs/{id}/location', '\App\Http\Controllers\Api\Driver\CourierJobController@sendLocation');
@@ -395,7 +396,7 @@ Route::namespace('Api\Seller')->prefix('seller')->name('seller.')->group(functio
             Route::get('authorization', 'AuthController@authorization');
             Route::get('resend-verify/mobile', 'AuthController@authorization');
             Route::post('verify-mobile', 'AuthController@mobileVerification');
-            Route::post('sunat-lookup', [\App\Http\Controllers\SellerPosController::class, 'sunatLookup']);
+            Route::post('sunat-lookup', [\App\Http\Controllers\Api\Seller\PanelController::class, 'sunatLookup']);
             Route::post('save-device-token', 'AuthController@registerDeviceToken');
             Route::get('dashboard', 'AuthController@dashboard');
             Route::get('profile', 'AuthController@profile');
@@ -452,7 +453,7 @@ Route::namespace('Api\Seller')->prefix('seller')->name('seller.')->group(functio
             });
 
             // SUNAT lookup endpoint
-            Route::post('sunat-lookup', [\App\Http\Controllers\SellerPosController::class, 'sunatLookup']);
+            Route::post('sunat-lookup', [\App\Http\Controllers\Api\Seller\PanelController::class, 'sunatLookup']);
 
             // Business packages
             Route::controller('PackageController')->prefix('packages')->group(function () {

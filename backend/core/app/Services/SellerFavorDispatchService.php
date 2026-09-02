@@ -41,15 +41,15 @@ class SellerFavorDispatchService
 
         $driverIds = self::broadcastCouriers()->pluck('id')->map(fn ($id) => (int) $id)->all();
         if ($driverIds) {
-            FcmService::sendToDrivers($driverIds, 'Nuevo envío disponible',
-                'Solicitud #' . $favor->order_no . ' — S/ ' . number_format($favor->delivery_fee ?? 0, 2) . '. Responde antes de que inicie la asignación por cercanía.', [
-                    'type' => 'new_delivery_request',
-                    'favor_id' => (string) $favor->id,
-                    'order_no' => $favor->order_no,
-                    'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
-                ]);
+            foreach (Driver::whereIn('id', $driverIds)->get() as $driver) {
+                $notified = FcmService::sendToDriver($driver, 'Nuevo envío disponible',
+                    'Solicitud #' . $favor->order_no . ' — S/ ' . number_format($favor->total ?? $favor->delivery_fee ?? 0, 2) . '. Responde antes de que inicie la asignación por cercanía.',
+                    FcmService::courierJobPayload($favor));
+                CourierOfferTracker::offered($driver, $favor, 'seller_broadcast', (bool) $notified, $favor->dispatch_timeout_at);
+            }
         }
 
+        event(new \App\Events\NewJobAvailable($favor->fresh(), 'Nuevo envío disponible #' . $favor->order_no));
         event(new FavorStatusUpdated($favor->fresh(), 'broadcast_to_online_couriers'));
         return null;
     }
@@ -57,6 +57,8 @@ class SellerFavorDispatchService
     public static function dispatchNext(Favor $favor): ?Driver
     {
         if ($favor->status !== 'searching_courier') return null;
+
+        CourierOfferTracker::expireOpen($favor, $favor->courier_id ? (int) $favor->courier_id : null);
 
         $attempted = self::tracksAttemptedDrivers()
             ? collect($favor->dispatch_attempted_driver_ids ?? [])->map(fn ($id) => (int) $id)->filter()->values()->all()
@@ -87,11 +89,10 @@ class SellerFavorDispatchService
         }
         $favor->update($dispatchState);
 
-        FcmService::sendToDriver($courier, '¿Puedes realizar este envío?',
-            'Tienes 15 segundos para responder al envío #' . $favor->order_no . '.', [
-                'type' => 'seller_targeted_favor', 'favor_id' => (string) $favor->id,
-                'order_no' => $favor->order_no, 'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
-            ]);
+        $notified = FcmService::sendToDriver($courier, '¿Puedes realizar este envío?',
+            'Tienes 15 segundos para responder al envío #' . $favor->order_no . '.',
+            FcmService::courierJobPayload($favor, ['type' => 'seller_targeted_favor']));
+        CourierOfferTracker::offered($courier, $favor, $mode, (bool) $notified, $favor->dispatch_timeout_at);
         event(new FavorStatusUpdated($favor->fresh(), 'waiting_courier_response'));
         return $courier;
     }

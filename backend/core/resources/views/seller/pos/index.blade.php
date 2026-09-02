@@ -10,6 +10,9 @@
 @section('topbar-actions')
 <div style="display: flex; gap: 8px;">
     @if($store->isRestaurant())
+    <a href="{{ route('seller.pos') }}" class="s-btn s-btn-outline s-btn-sm" style="border-radius: 10px;">
+        <i class="las la-th-large"></i> Cambiar mesa
+    </a>
     <a href="{{ route('seller.pos.kitchen') }}" class="s-btn s-btn-primary s-btn-sm" style="border-radius: 10px;">
         <i class="las la-utensils"></i> Cocina
     </a>
@@ -1165,13 +1168,14 @@ function initDeliveryAutocomplete() {
 @push('script')
 <script>
 var ALL_PRODUCTS = {!! $productsJson ?: '{}' !!};
-var cart = [], orderType = '{{ $store->isRestaurant() ? 'dine_in' : 'takeaway' }}', selTable = null, deliveryFee = 0, dLat = null, dLng = null;
+var cart = [], orderType = @json($orderType ?? ($store->isRestaurant() ? 'dine_in' : 'takeaway')), selTable = null, deliveryFee = 0, dLat = null, dLng = null;
 var activeOrderId = null, activeOrderItems = [];
 
 // Auto-seleccionar mesa por URL param
 (function(){
     var params = new URLSearchParams(window.location.search);
-    var tid = params.get('table');
+    var tid = @json($selectedTableId ?? null) || params.get('table');
+    setOrderType(orderType);
     if(tid){
         selTable = tid;
         setTimeout(function(){ selectTable(tid); }, 300);

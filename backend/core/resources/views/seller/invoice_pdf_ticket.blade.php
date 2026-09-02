@@ -140,6 +140,10 @@
             <td class="val">{{ $invoice->cliente_num_doc }}</td>
         </tr>
         <tr>
+            <td class="lbl">Dirección:</td>
+            <td class="val">{{ $customerAddress ?: '—' }}</td>
+        </tr>
+        <tr>
             <td class="lbl">F. Emisión:</td>
             <td class="val">{{ $invoice->fecha_emision?->format('d/m/Y H:i') }}</td>
         </tr>

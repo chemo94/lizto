@@ -17,6 +17,7 @@ use App\Models\PosCashSession;
 use App\Models\Product;
 use App\Models\SellerCompany;
 use App\Models\Store;
+use App\Models\SunatInvoice;
 use App\Services\KardexService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -856,7 +857,7 @@ class InventoryController extends Controller
         $start = "{$year}-{$mon}-01";
         $end   = date('Y-m-t', strtotime($start));
 
-        // Ventas directas (tienda)
+        // Ventas manuales registradas desde inventario.
         $salesData = InvSale::where('seller_id', $seller->id)
             ->where('status', 'completed')
             ->whereBetween('document_date', [$start, $end])
@@ -868,6 +869,22 @@ class InventoryController extends Controller
                 SUM(total)             as total_ventas,
                 COUNT(*)               as num_ventas
             ')->first();
+
+        // Los comprobantes emitidos desde el POS no crean registros en inv_sales;
+        // sus importes tributarios se conservan en sunat_invoices.
+        $electronicSales = SunatInvoice::where('seller_id', $seller->id)
+            ->whereIn('tipo_doc', ['01', '03', '07', '08'])
+            ->where('fecha_emision', '>=', $start)
+            ->where('fecha_emision', '<', date('Y-m-d', strtotime($end . ' +1 day')))
+            ->where(function ($query) {
+                $query->whereNull('cdr_status')
+                    ->orWhereNotIn('cdr_status', ['rejected', 'error', 'cancelled', 'voided']);
+            })
+            ->selectRaw("\n                SUM(CASE WHEN tipo_doc = '07' THEN -total_gravada ELSE total_gravada END) as total_gravado,\n                SUM(CASE WHEN tipo_doc = '07' THEN -total_exonerada ELSE total_exonerada END) as total_exonerado,\n                SUM(CASE WHEN tipo_doc = '07' THEN -total_inafecta ELSE total_inafecta END) as total_inafecto,\n                SUM(CASE WHEN tipo_doc = '07' THEN -total_igv ELSE total_igv END) as total_igv_ventas,\n                SUM(CASE WHEN tipo_doc = '07' THEN -total ELSE total END) as total_ventas,\n                COUNT(*) as num_ventas\n            ")->first();
+
+        foreach (['total_gravado', 'total_exonerado', 'total_inafecto', 'total_igv_ventas', 'total_ventas', 'num_ventas'] as $field) {
+            $salesData->{$field} = (float) ($salesData->{$field} ?? 0) + (float) ($electronicSales->{$field} ?? 0);
+        }
 
         // Compras (IGV pagado)
         $purchasesData = InvPurchase::where('seller_id', $seller->id)

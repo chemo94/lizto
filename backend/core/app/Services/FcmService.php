@@ -7,6 +7,39 @@ use Illuminate\Support\Facades\Log;
 
 class FcmService
 {
+    public static function courierJobPayload($job, array $extra = []): array
+    {
+        $isDelivery = $job instanceof \App\Models\DeliveryOrder;
+        $baseFee = (float) ($job->delivery_fee ?? 0);
+        $payableAmount = $isDelivery ? $baseFee : (float) ($job->total ?? $baseFee);
+
+        return array_merge([
+            'type'             => 'new_delivery_request',
+            'job_type'         => $isDelivery ? 'delivery' : 'favor',
+            'job_id'           => (string) $job->id,
+            'favor_id'         => $isDelivery ? '' : (string) $job->id,
+            'order_id'         => (string) $job->id,
+            'order_no'         => (string) ($job->order_no ?? $job->id),
+            'store_name'       => (string) ($job->store_name ?? ($isDelivery ? $job->store?->name : ($job->seller?->name ?? 'Lizto'))),
+            'customer_name'    => (string) ($job->recipient_name ?? $job->user?->fullname ?? 'Cliente'),
+            'customer_phone'   => (string) ($job->recipient_phone ?? $job->user?->mobile ?? ''),
+            'pickup_address'   => (string) ($job->pickup_address ?? ($isDelivery ? $job->store?->address : '')),
+            'pickup_lat'       => (string) ($job->pickup_lat ?? ($isDelivery ? $job->store?->latitude : '')),
+            'pickup_lng'       => (string) ($job->pickup_lng ?? ($isDelivery ? $job->store?->longitude : '')),
+            'delivery_address' => (string) ($job->delivery_address ?? ($isDelivery ? $job->shipping_address : '')),
+            'delivery_lat'     => (string) ($job->delivery_lat ?? ($isDelivery ? $job->latitude : '')),
+            'delivery_lng'     => (string) ($job->delivery_lng ?? ($isDelivery ? $job->longitude : '')),
+            'delivery_fee'     => (string) $payableAmount,
+            'base_delivery_fee'=> (string) $baseFee,
+            'additional_charge'=> (string) ($isDelivery ? 0 : ($job->estimated_amount ?? 0)),
+            'total'            => (string) ($job->total ?? $payableAmount),
+            'total_earning'    => (string) $payableAmount,
+            'description'      => (string) ($job->description ?? $job->notes ?? ''),
+            'for_app'          => 'courier_job_detail-' . $job->id,
+            'click_action'     => 'FLUTTER_NOTIFICATION_CLICK',
+        ], $extra);
+    }
+
     public static function sendToUser($user, string $title, string $body, array $data = [])
     {
         $tokens = DeviceToken::where('user_id', $user->id)->pluck('token')->toArray();
@@ -44,7 +77,7 @@ class FcmService
 
     public static function sendToAllCouriers(string $title, string $body, array $data = [])
     {
-        $drivers = \App\Models\Driver::where('service_type', 'delivery')
+        $drivers = \App\Models\Driver::whereIn('service_type', ['delivery', 'both'])
             ->where('status', 1)->get();
 
         $count = 0;

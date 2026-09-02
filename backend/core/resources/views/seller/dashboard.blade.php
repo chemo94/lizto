@@ -482,7 +482,7 @@
                             </td>
                             <td><span class="s-badge s-badge-blue">{{ $c->total_orders }}</span></td>
                             <td><b>S/ {{ number_format($c->total_spent,2) }}</b></td>
-                            <td style="font-size:11px;color:var(--s-text-3)">{{ $c->last_order?->format('d/m') }}</td>
+                            <td style="font-size:11px;color:var(--s-text-3)">{{ $c->last_order ? \Carbon\Carbon::parse($c->last_order)->format('d/m') : '—' }}</td>
                         </tr>
                         @empty
                         <tr><td colspan="4"><div class="s-empty"><i class="las la-users"></i><p>Sin clientes</p></div></td></tr>
@@ -495,7 +495,7 @@
 
 </div>
 
-@push('scripts')
+@push('script')
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
