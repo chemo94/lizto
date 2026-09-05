@@ -2,7 +2,7 @@
 @section('content')
 <style>
 .sl-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f0fdf4,#f8fff8);padding:92px 20px 40px}
-.sl-box{width:100%;max-width:520px;background:#fff;border-radius:20px;padding:40px 36px;box-shadow:0 12px 50px rgba(7,83,33,.1)}
+.sl-box{width:100%;max-width:900px;background:#fff;border-radius:20px;padding:40px 36px;box-shadow:0 12px 50px rgba(7,83,33,.1)}
 .sl-box h2{font-size:24px;font-weight:800;color:#1a2e1a;margin:0;text-align:center}
 .sl-box>p{font-size:13px;color:#68736c;margin:4px 0 24px;text-align:center}
 .sl-tabs{display:flex;gap:4px;background:#f0f4f0;border-radius:12px;padding:4px;margin-bottom:24px}
@@ -14,6 +14,7 @@
 .sl-error{background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:10px;font-size:13px;font-weight:600;margin-bottom:14px}.sl-success{background:#dcfce7;color:#166534;padding:10px 14px;border-radius:10px;font-size:13px;font-weight:600;margin-bottom:14px}
 .sl-back{display:block;margin-top:16px;color:#16a34a;font-size:13px;font-weight:700;text-decoration:none;text-align:center}
 .sunat-row{display:flex;gap:6px}.sunat-row input{flex:1}.sunat-row button{padding:10px 16px;border:none;border-radius:10px;background:#3b82f6;color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.sl-plans{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:8px 0 18px}.sl-plan{display:block;border:2px solid #e5e7eb;border-radius:14px;padding:14px;cursor:pointer;transition:.18s;background:#fff;position:relative}.sl-plan:has(input:checked){border-color:#16a34a;background:#f0fdf4;box-shadow:0 0 0 3px rgba(22,163,74,.1)}.sl-plan input{position:absolute;opacity:0}.sl-plan b{display:block;font-size:14px;color:#172554}.sl-plan strong{display:block;font-size:20px;color:#16a34a;margin:5px 0}.sl-plan small{display:block;font-size:11px;color:#64748b;line-height:1.35}.sl-plan-trial{display:inline-block!important;color:#15803d!important;background:#dcfce7;border-radius:999px;padding:3px 7px;margin-top:7px;font-weight:800}.sl-plan.delivery{border-color:#bfdbfe}.sl-plan.delivery strong{color:#2563eb}@media(max-width:760px){.sl-box{padding:28px 18px}.sl-plans{grid-template-columns:1fr 1fr}.sl-row{grid-template-columns:1fr}}@media(max-width:440px){.sl-plans{grid-template-columns:1fr}}
 </style>
 
 <div class="sl-page">
@@ -44,6 +45,23 @@
         <!-- Register Form -->
         <form method="POST" action="{{ route('seller.register') }}" class="sl-form" id="tab-register">
             @csrf
+            @php $registrationPlans = \App\Models\BusinessPackage::active()->orderBy('sort_order')->get(); @endphp
+            <div class="sl-field">
+                <label>¿Cómo deseas usar Lizto? *</label>
+                <div class="sl-plans">
+                    @foreach($registrationPlans as $plan)
+                    <label class="sl-plan {{ $plan->service_mode === 'delivery_only' ? 'delivery' : '' }}">
+                        <input type="radio" name="package_id" value="{{ $plan->id }}" data-mode="{{ $plan->service_mode }}" {{ (string)old('package_id') === (string)$plan->id ? 'checked' : '' }} required>
+                        <b>{{ $plan->name }}</b>
+                        <strong>S/ {{ number_format($plan->price, 2) }}</strong>
+                        <small>por 30 días</small>
+                        <small>{{ $plan->description }}</small>
+                        <small class="sl-plan-trial">Primer mes gratis</small>
+                    </label>
+                    @endforeach
+                </div>
+                <input type="hidden" name="service_mode" id="reg-service-mode" value="{{ old('service_mode') }}">
+            </div>
             <div class="sl-row">
                 <div class="sl-field"><label>Nombre *</label><input type="text" name="name" value="{{ old('name') }}" required></div>
                 <div class="sl-field"><label>Email *</label><input type="email" name="email" value="{{ old('email') }}" placeholder="correo@ejemplo.com" required></div>
@@ -89,7 +107,7 @@
                     @endforeach
                 </select>
             </div>
-            <button type="submit" class="sl-btn">Registrarse</button>
+            <button type="submit" class="sl-btn">Crear cuenta y activar mes gratis</button>
         </form>
 
         <a href="{{ route('home') }}" class="sl-back"><i class="las la-arrow-left"></i> Volver al inicio</a>
@@ -121,6 +139,10 @@ function searchRucReg(){
     }).catch(function(){r.innerHTML='<span style="color:#dc2626">Error</span>'})
 }
 window.addEventListener('load',function(){
+    document.querySelectorAll('input[name="package_id"]').forEach(function(input){
+        input.addEventListener('change',function(){document.getElementById('reg-service-mode').value=this.dataset.mode})
+        if(input.checked) document.getElementById('reg-service-mode').value=input.dataset.mode
+    });
     var a=document.getElementById('reg-address');
     if(a&&window.google&&google.maps&&google.maps.places){
         new google.maps.places.Autocomplete(a,{componentRestrictions:{country:'pe'}}).addListener('place_changed',function(){
@@ -145,6 +167,7 @@ window.addEventListener('load',function(){
         })
     }
 });
+@if($errors->any()) switchTab('register'); @endif
 </script>
 @endpush
 @endsection

@@ -59,13 +59,13 @@
 
     <div style="text-align:center;margin-bottom:32px">
         <h2 style="font-weight:900;font-size:24px;margin:0 0 6px">Escoge el plan ideal para tu negocio</h2>
-        <p style="color:var(--s-text-3);font-size:14px;margin:0">Elige el plan que mejor se adapte al tamaño de tu empresa</p>
+        <p style="color:var(--s-text-3);font-size:14px;margin:0">Sistema completo para restaurantes o modalidad Solo Envíos</p>
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px">
         @php
-            $planColors = ['basic'=>'#3b82f6','featured'=>'#f59e0b','premium'=>'#8b5cf6'];
-            $planIcons = ['basic'=>'la-rocket','featured'=>'la-star','premium'=>'la-crown'];
+            $planColors = ['basic'=>'#3b82f6','featured'=>'#f59e0b','premium'=>'#8b5cf6','delivery'=>'#06b6d4'];
+            $planIcons = ['basic'=>'la-rocket','featured'=>'la-star','premium'=>'la-crown','delivery'=>'la-motorcycle'];
         @endphp
         @foreach($packages as $pkg)
         @php
@@ -90,6 +90,7 @@
                         @endif
                     </div>
                     <h3 style="font-weight:900;font-size:18px;margin:0 0 4px">{{ $pkg->name }}</h3>
+                    <div style="font-size:10px;font-weight:800;text-transform:uppercase;color:{{ $planColors[$pkg->type] ?? 'var(--s-primary)' }};margin-bottom:6px">{{ $pkg->service_mode === 'delivery_only' ? 'Solo solicitar envíos' : 'Sistema de restaurante' }}</div>
                     @if($pkg->description)
                     <p style="font-size:12px;color:var(--s-text-3);line-height:1.35;margin:0 0 10px">{{ $pkg->description }}</p>
                     @endif

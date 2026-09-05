@@ -40,8 +40,8 @@ class CourierJobController extends Controller
         $radius = (float) ($request->radius ?? gs('delivery_coverage_radius') ?? 8);
 
         $deliveryQuery = DeliveryOrder::whereNull('driver_id')
-            ->where('status', 'ready')
-            ->with('store', 'user');
+            ->whereIn('status', ['confirmed', 'preparing', 'ready'])
+            ->with('store', 'user', 'items.variation', 'items.addons');
 
         $favorQuery = Favor::where('status', 'searching_courier')
             ->where(function ($query) use ($driver) {
@@ -144,7 +144,15 @@ class CourierJobController extends Controller
             ]);
         }
 
-        $job = DeliveryOrder::where('driver_id', $driver->id)->with('store', 'user', 'items')->findOrFail($id);
+        $job = DeliveryOrder::where(function ($query) use ($driver) {
+                $query->where('driver_id', $driver->id)
+                    ->orWhere(function ($available) {
+                        $available->whereNull('driver_id')
+                            ->whereIn('status', ['confirmed', 'preparing', 'ready']);
+                    });
+            })
+            ->with('store', 'user', 'items.variation', 'items.addons')
+            ->findOrFail($id);
         return apiResponse('job_detail', 'success', ['Detalle del pedido'], [
             'job' => $this->formatJob($job, 'delivery'),
         ]);
@@ -210,8 +218,9 @@ class CourierJobController extends Controller
             return apiResponse('bid_placed', 'success', ['Oferta enviada'], ['bid' => $bid]);
         }
 
-        // Only accept if status is 'ready'
-        $job = DeliveryOrder::where('status', 'ready')->whereNull('driver_id')->findOrFail($id);
+        // The courier search starts as soon as the seller confirms the order.
+        $job = DeliveryOrder::whereIn('status', ['confirmed', 'preparing', 'ready'])
+            ->whereNull('driver_id')->findOrFail($id);
         $job->update([
             'driver_id'          => $driver->id,
             'status'             => 'on_way',
@@ -963,8 +972,8 @@ class CourierJobController extends Controller
             'id'              => $order->id,
             'type'            => $type,
             'order_no'        => $order->order_no,
-            'customer_name'   => $order->user?->fullname,
-            'customer_phone'  => $order->user?->mobile,
+            'customer_name'   => $order->contact_name ?: $order->user?->fullname,
+            'customer_phone'  => $order->contact_phone ?: $order->user?->mobile,
             'pickup_address'  => $order->store?->address,
             'pickup_lat'      => $order->store?->latitude,
             'pickup_lng'      => $order->store?->longitude,
@@ -972,11 +981,29 @@ class CourierJobController extends Controller
             'delivery_lat'    => $order->delivery_lat,
             'delivery_lng'    => $order->delivery_lng,
             'amount'          => $order->total,
+            'subtotal'        => $order->subtotal,
             'delivery_fee'    => $order->delivery_fee,
+            'tip'             => $order->tip,
             'total_earning'   => $order->delivery_fee ?? 0,
             'status'          => $order->status,
             'store_name'      => $order->store?->name,
             'description'     => $order->notes,
+            'items'           => $order->items->map(fn ($item) => [
+                'id' => $item->id,
+                'product_id' => $item->product_id,
+                'name' => $item->product_name,
+                'quantity' => (int) $item->quantity,
+                'unit_price' => (float) $item->unit_price,
+                'total_price' => (float) $item->total_price,
+                'variation' => $item->variation ? [
+                    'name' => $item->variation->variation_name,
+                    'price' => (float) $item->variation->variation_price,
+                ] : null,
+                'addons' => $item->addons->map(fn ($addon) => [
+                    'name' => $addon->addon_name,
+                    'price' => (float) $addon->addon_price,
+                ])->values(),
+            ])->values(),
             'payment_method_code' => (string) ($order->payment_method_code ?? '0'),
             'payment_method_name' => $paymentName,
             'payment_status'  => (int) $order->payment_status,

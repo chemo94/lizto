@@ -25,3 +25,5 @@ backend/response.txt
 **/.idea/
 **/.DS_Store
 **/._*
+output/
+tmp/

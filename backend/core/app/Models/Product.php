@@ -94,6 +94,7 @@ class Product extends Model
 
     public function finalPrice()
     {
-        return $this->discount_price ?? $this->price;
+        $discountPrice = (float) ($this->discount_price ?? 0);
+        return $discountPrice > 0 ? $discountPrice : (float) $this->price;
     }
 }

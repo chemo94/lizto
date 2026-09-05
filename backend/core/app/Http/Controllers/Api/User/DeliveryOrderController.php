@@ -71,7 +71,9 @@ class DeliveryOrderController extends Controller
                 if ($variation) {
                     $variationName  = $variation->name;
                     $variationPrice = $variation->price;
-                    $unitPrice      = $variation->price;
+                    if ((float) $variation->price > 0) {
+                        $unitPrice = (float) $variation->price;
+                    }
                 }
             }
 

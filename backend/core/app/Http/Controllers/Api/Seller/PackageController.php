@@ -28,6 +28,15 @@ class PackageController extends Controller
         ]);
     }
 
+    public function onboardingPlans()
+    {
+        $packages = BusinessPackage::active()->orderBy('service_mode')->orderBy('sort_order')->get();
+        return apiResponse('onboarding_packages', 'success', ['Modalidades disponibles. El primer mes es gratis para cuentas nuevas.'], [
+            'trial_days' => 30,
+            'packages' => $packages,
+        ]);
+    }
+
     public function myPackages(Request $request)
     {
         $seller = $this->seller();

@@ -392,6 +392,8 @@ Route::namespace('Api\Driver')->prefix('driver')->group(function () {
 Route::namespace('Api\Seller')->prefix('seller')->name('seller.')->group(function () {
     Route::post('login', 'AuthController@login');
     Route::post('social-login', 'AuthController@socialLogin');
+    Route::get('onboarding/packages', 'PackageController@onboardingPlans');
+    Route::post('register', [\App\Http\Controllers\Api\Seller\PanelController::class, 'register']);
     Route::middleware('auth:sanctum')->group(function () {
             Route::get('authorization', 'AuthController@authorization');
             Route::get('resend-verify/mobile', 'AuthController@authorization');
@@ -466,7 +468,7 @@ Route::namespace('Api\Seller')->prefix('seller')->name('seller.')->group(functio
             });
 
             // Seller Panel (dashboard, tables, cash, billing, etc.) — requires active subscription
-            Route::middleware(\App\Http\Middleware\CheckSubscription::class)->controller('\App\Http\Controllers\Api\Seller\PanelController')->prefix('panel')->group(function () {
+            Route::middleware(\App\Http\Middleware\CheckSubscription::class . ':restaurant_platform')->controller('\App\Http\Controllers\Api\Seller\PanelController')->prefix('panel')->group(function () {
 
                 Route::get('dashboard', 'dashboard');
                 Route::get('tables', 'tables');
@@ -500,8 +502,6 @@ Route::namespace('Api\Seller')->prefix('seller')->name('seller.')->group(functio
                 Route::post('notifications/send', 'sendNotification');
                 Route::get('qrmenu', 'qrMenu');
                 Route::get('reports', 'reports');
-                Route::post('register', 'register');
-
                 // Mozo ordering endpoints
                 Route::get('products', 'products');
                 Route::post('order/create', 'orderCreate');
@@ -509,7 +509,7 @@ Route::namespace('Api\Seller')->prefix('seller')->name('seller.')->group(functio
             });
 
             // Store favors (solicitar repartidor para entregas propias)
-            Route::controller('\App\Http\Controllers\Api\StoreFavorController')->prefix('favors')->group(function () {
+            Route::middleware(\App\Http\Middleware\CheckSubscription::class . ':delivery_requests')->controller('\App\Http\Controllers\Api\StoreFavorController')->prefix('favors')->group(function () {
             Route::post('fee-estimate', 'feeEstimate');
             Route::post('create', 'create');
             Route::get('/', 'myFavors');

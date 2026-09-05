@@ -47,6 +47,7 @@ use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 use chillerlan\QRCode\Output\QRMarkupSVG;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class SellerPosController extends Controller
@@ -279,6 +280,10 @@ class SellerPosController extends Controller
     public function showLogin()
     {
         if (Session::has('seller_id')) {
+            $store = Store::where('seller_id', Session::get('seller_id'))->first();
+            if ($store?->isDeliveryOnlyMode()) {
+                return redirect()->route('seller.delivery.request');
+            }
             if (!Session::has('seller_staff_id')) {
                 return redirect()->route('seller.dashboard');
             }
@@ -304,7 +309,7 @@ class SellerPosController extends Controller
             Session::forget('seller_staff_id');
             Session::put('seller_id', $seller->id);
             $store = Store::where('seller_id', $seller->id)->first();
-            if ($store && !$store->is_premium) {
+            if ($store?->isDeliveryOnlyMode()) {
                 return redirect()->route('seller.delivery.request');
             }
             return redirect()->route('seller.dashboard');
@@ -325,7 +330,7 @@ class SellerPosController extends Controller
                 return redirect()->route('seller.declarations');
             }
             $store = Store::where('seller_id', $staff->seller_id)->first();
-            if ($store && !$store->is_premium) {
+            if ($store?->isDeliveryOnlyMode()) {
                 return redirect()->route('seller.delivery.request');
             }
             if ($store && $store->isRestaurant()) {
@@ -362,12 +367,20 @@ class SellerPosController extends Controller
             'trade_name'    => 'nullable|string|max:200',
             'ruc_number'    => 'nullable|string|max:15',
             'store_type'    => 'required|in:restaurant,supermarket,pharmacy,liquor_store,pet_shop',
+            'service_mode'  => 'required|in:restaurant,delivery_only',
+            'package_id'    => 'required|integer|exists:business_packages,id',
         ], [
             'address.not_in' => 'Debe buscar y seleccionar una dirección del autocompletado de Google Maps',
             'latitude.required' => 'Debe seleccionar una dirección válida del autocompletado de Google Maps',
             'longitude.required' => 'Debe seleccionar una dirección válida del autocompletado de Google Maps',
         ]);
 
+        $package = \App\Models\BusinessPackage::active()->findOrFail($request->package_id);
+        if ($package->service_mode !== $request->service_mode) {
+            return back()->withErrors(['package_id' => 'El plan no corresponde a la modalidad seleccionada.'])->withInput();
+        }
+
+        [$seller, $store, $sellerCompany] = DB::transaction(function () use ($request, $package) {
         $seller = \App\Models\Seller::create([
             'name'            => $request->name,
             'email'           => $request->email,
@@ -382,13 +395,6 @@ class SellerPosController extends Controller
             'status'          => 1,
         ]);
 
-        // Capture optional register RUC
-        $rucVal = $request->business_name ? '20' . getNumber(9) : null; // Default random RUC if not provided or let's inspect the request details
-        if ($request->has('business_name') || $request->has('trade_name')) {
-            // Let's check if the form had a RUC field. The form had: id="reg-ruc" but didn't have name="ruc"!
-            // Let's update register action to check for RUC.
-        }
-
         // Auto-create store
         $subCat = \App\Models\SubCategory::first();
         $store = \App\Models\Store::create([
@@ -399,11 +405,13 @@ class SellerPosController extends Controller
             'latitude'        => $request->latitude,
             'longitude'       => $request->longitude,
             'store_type'      => $request->store_type ?? 'restaurant',
+            'service_mode'    => $request->service_mode,
             'status'          => 1,
             'is_open'         => 1,
         ]);
 
         // Auto-create SellerCompany for invoicing using registration data if business_name is provided
+        $sellerCompany = null;
         if ($request->business_name) {
             $companyRuc = $request->input('ruc_number') ?: '20000000000';
             $sellerCompany = \App\Models\SellerCompany::create([
@@ -414,11 +422,16 @@ class SellerPosController extends Controller
                 'address'         => $request->address,
                 'ubigeo'          => '150101',
             ]);
-            Session::put('active_company_id', $sellerCompany->id);
         }
 
+        app(StoreSubscriptionService::class)->startTrial($store, $package);
+        return [$seller, $store, $sellerCompany];
+        });
+
         Session::put('seller_id', $seller->id);
-        return redirect()->route('seller.delivery.request')->with('success', '¡Bienvenido! Tu tienda ha sido creada. Puedes empezar solicitando un envío gratis.');
+        if ($sellerCompany) Session::put('active_company_id', $sellerCompany->id);
+        $destination = $store->isDeliveryOnlyMode() ? 'seller.delivery.request' : 'seller.dashboard';
+        return redirect()->route($destination)->with('success', '¡Bienvenido! Tu primer mes gratis ya está activo.');
     }
 
     // ── Dashboard ──
@@ -1387,7 +1400,7 @@ class SellerPosController extends Controller
         $seller = $this->seller();
         $store = $this->store();
         $pageTitle = 'Planes y Precios';
-        $packages = \App\Models\BusinessPackage::active()->orderBy('sort_order')->get();
+        $packages = \App\Models\BusinessPackage::active()->orderBy('service_mode')->orderBy('sort_order')->get();
         $activePackageTypes = $store?->storePackages->filter(fn($sp) => $sp->isActive())->pluck('package.type')->toArray() ?? [];
         $mercadoPagoCurrency = \App\Models\GatewayCurrency::where('gateway_alias', 'MercadoPago')->orderByDesc('id')->first();
         $payments = \App\Models\StorePackagePayment::where('seller_id', $seller->id)->where('status', '!=', 'initiated')->with('package')->latest()->get();

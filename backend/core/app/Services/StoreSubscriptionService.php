@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\BusinessPackage;
 use App\Models\Store;
 use App\Models\StorePackage;
+use App\Models\SellerTrial;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
 
 class StoreSubscriptionService
@@ -55,6 +57,7 @@ class StoreSubscriptionService
                     $pendingSubscription->update(['status' => 'cancelled']);
                 }
 
+                $this->syncStoreMode($store, $package, $attributes);
                 return $current->refresh();
             }
 
@@ -75,10 +78,47 @@ class StoreSubscriptionService
 
             if ($pendingSubscription) {
                 $pendingSubscription->fill($values)->save();
+                $this->syncStoreMode($store, $package, $attributes);
                 return $pendingSubscription->refresh();
             }
-
-            return StorePackage::create($values);
+            $subscription = StorePackage::create($values);
+            $this->syncStoreMode($store, $package, $attributes);
+            return $subscription;
         });
+    }
+
+    public function startTrial(Store $store, BusinessPackage $package): StorePackage
+    {
+        return DB::transaction(function () use ($store, $package) {
+            if (SellerTrial::where('seller_id', $store->seller_id)->lockForUpdate()->exists()) {
+                throw ValidationException::withMessages(['package_id' => 'El primer mes gratis ya fue utilizado.']);
+            }
+
+            $subscription = $this->activate($store, $package, [
+                'amount_paid' => 0,
+                'payment_method' => 'trial',
+                'payment_ref' => 'TRIAL-' . $store->seller_id,
+                'notes' => 'Primer mes gratis',
+            ]);
+
+            SellerTrial::create([
+                'seller_id' => $store->seller_id,
+                'store_id' => $store->id,
+                'package_id' => $package->id,
+                'starts_at' => $subscription->starts_at,
+                'expires_at' => $subscription->expires_at,
+            ]);
+
+            return $subscription;
+        });
+    }
+
+    private function syncStoreMode(Store $store, BusinessPackage $package, array $attributes): void
+    {
+        $store->update(['service_mode' => $package->service_mode ?: Store::SERVICE_MODE_RESTAURANT]);
+        if (($attributes['payment_method'] ?? null) !== 'trial') {
+            SellerTrial::where('seller_id', $store->seller_id)
+                ->whereNull('converted_at')->update(['converted_at' => now()]);
+        }
     }
 }

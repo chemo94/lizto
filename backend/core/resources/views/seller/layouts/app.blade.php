@@ -1598,6 +1598,14 @@
             }
         @endphp
         <div class="s-side-scroll">
+            @if($store?->isDeliveryOnlyMode())
+            <div class="s-nav-section s-nav">
+                <span class="s-nav-label">Envíos</span>
+                <a href="{{ route('seller.delivery.request') }}" data-tip="Solicitar Envío" class="{{ request()->routeIs('seller.delivery.request*') ? 'active' : '' }}">
+                    <span class="s-nav-icon"><i class="las la-motorcycle"></i></span> <span class="s-nav-text">Solicitar Envío</span>
+                </a>
+            </div>
+            @else
             <!-- PRINCIPAL -->
             @if(!$staffUser || $staffUser->hasPermission('pos_orders') || $staffUser->hasPermission('kitchen') || $staffUser->hasPermission('billing'))
             <div class="s-nav-section s-nav">
@@ -1827,6 +1835,7 @@
                 </a>
                 @endif
             </div>
+            @endif
             @endif
         </div>
 

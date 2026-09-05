@@ -14,6 +14,8 @@ class Store extends Model
     const TYPE_PHARMACY    = 'pharmacy';
     const TYPE_LIQUOR      = 'liquor_store';
     const TYPE_PET_SHOP    = 'pet_shop';
+    const SERVICE_MODE_RESTAURANT = 'restaurant';
+    const SERVICE_MODE_DELIVERY_ONLY = 'delivery_only';
 
     public static function types(): array
     {
@@ -29,6 +31,16 @@ class Store extends Model
     public function isRestaurant(): bool
     {
         return $this->store_type === self::TYPE_RESTAURANT;
+    }
+
+    public function isDeliveryOnlyMode(): bool
+    {
+        return $this->service_mode === self::SERVICE_MODE_DELIVERY_ONLY;
+    }
+
+    public function usesRestaurantPlatform(): bool
+    {
+        return !$this->isDeliveryOnlyMode();
     }
 
     protected $guarded = ['id'];

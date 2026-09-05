@@ -16,6 +16,8 @@ class CheckSubscription
         'notifications' => ['premium'],
         'inventory'     => ['featured', 'premium'],
         'cover_video'   => ['premium'],
+        'restaurant_platform' => ['basic', 'featured', 'premium'],
+        'delivery_requests' => ['basic', 'featured', 'premium', 'delivery'],
     ];
 
     public function handle(Request $request, Closure $next, string $feature = '')
@@ -45,14 +47,6 @@ class CheckSubscription
             'seller.pricing',
             'seller.pricing.checkout',
             'seller.pricing.return',
-            'seller.delivery.request',
-            'seller.delivery.request.submit',
-            'seller.delivery.fee-calculate',
-            'seller.delivery.request.status.show',
-            'seller.delivery.request.cancel',
-            'seller.delivery.request.status',
-            'seller.delivery.request.return',
-            'seller.delivery.order.status.show',
             'seller.logout',
             'seller.login',
             'seller.web.login',
@@ -62,7 +56,7 @@ class CheckSubscription
             'seller.save-token'
         ];
 
-        if (in_array($route, $exempted) || $request->is('seller/delivery*') || ($route && str_starts_with($route, 'seller.delivery'))) {
+        if (in_array($route, $exempted)) {
             return $next($request);
         }
 
@@ -74,6 +68,22 @@ class CheckSubscription
         }
 
         $activePackage = $store->storePackages->filter(fn($sp) => $sp->isActive())->first();
+
+        if ($feature === '' && $store->isDeliveryOnlyMode()) {
+            $allowedForDeliveryOnly = $route && (
+                str_starts_with($route, 'seller.delivery.request') ||
+                str_starts_with($route, 'seller.delivery.order.status') ||
+                str_starts_with($route, 'seller.pricing') ||
+                str_starts_with($route, 'seller.profile') ||
+                in_array($route, ['seller.logout', 'seller.save-token'], true)
+            );
+            if (!$allowedForDeliveryOnly) {
+                if ($request->expectsJson() || $request->is('api/*')) {
+                    return response()->json(['status' => 'error', 'message' => 'Esta función requiere un plan para restaurante.'], 403);
+                }
+                return redirect()->route('seller.delivery.request')->with('info', 'Tu modalidad Solo Envíos incluye solicitudes y seguimiento de repartidores.');
+            }
+        }
         $hasAccess = false;
 
         if ($activePackage && $activePackage->package) {

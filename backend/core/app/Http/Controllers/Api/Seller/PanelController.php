@@ -19,11 +19,14 @@ use App\Models\PosTable;
 use App\Models\PosTransaction;
 use App\Models\Seller;
 use App\Models\Store;
+use App\Models\BusinessPackage;
 use App\Models\SunatInvoice;
 use App\Services\FcmService;
+use App\Services\StoreSubscriptionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class PanelController extends Controller
 {
@@ -1091,10 +1094,34 @@ class PanelController extends Controller
             'name' => 'required|string|max:100', 'email' => 'required|email|unique:sellers,email',
             'password' => 'required|min:6', 'phone' => 'required|string|max:20',
             'address' => 'required|string|max:500', 'zone_id' => 'required|exists:zones,id',
+            'latitude' => 'required|numeric', 'longitude' => 'required|numeric',
+            'store_type' => 'required|in:restaurant,supermarket,pharmacy,liquor_store,pet_shop',
+            'service_mode' => 'required|in:restaurant,delivery_only',
+            'package_id' => 'required|integer|exists:business_packages,id',
         ]);
-        $seller = Seller::create($request->only(['name','email','phone','address','zone_id','business_name','trade_name']) + ['password' => Hash::make($request->password), 'status' => 1]);
-        $subCat = \App\Models\SubCategory::first();
-        $store = Store::create(['seller_id' => $seller->id, 'sub_category_id' => $subCat?->id ?? 1, 'name' => $request->trade_name ?: $request->business_name ?: $request->name, 'address' => $request->address, 'latitude' => $request->latitude, 'longitude' => $request->longitude, 'status' => 1, 'is_open' => 1]);
+
+        $package = BusinessPackage::active()->findOrFail($request->package_id);
+        if ($package->service_mode !== $request->service_mode) {
+            return apiResponse('invalid_package_mode', 'error', ['El plan no corresponde a la modalidad seleccionada']);
+        }
+
+        [$seller, $store] = DB::transaction(function () use ($request, $package) {
+            $seller = Seller::create($request->only(['name','email','phone','address','zone_id','business_name','trade_name']) + [
+                'password' => Hash::make($request->password), 'status' => 1,
+                'document_type' => $request->ruc_number ? 'RUC' : null,
+                'document_number' => $request->ruc_number,
+            ]);
+            $subCat = \App\Models\SubCategory::first();
+            $store = Store::create([
+                'seller_id' => $seller->id, 'sub_category_id' => $subCat?->id ?? 1,
+                'name' => $request->trade_name ?: $request->business_name ?: $request->name,
+                'address' => $request->address, 'latitude' => $request->latitude,
+                'longitude' => $request->longitude, 'store_type' => $request->store_type,
+                'service_mode' => $request->service_mode, 'status' => 1, 'is_open' => 1,
+            ]);
+            app(StoreSubscriptionService::class)->startTrial($store, $package);
+            return [$seller, $store];
+        });
         $token = $seller->createToken('auth_token')->plainTextToken;
 
         $deviceToken = $request->device_token ?? $request->fcm_token;
@@ -1106,7 +1133,11 @@ class PanelController extends Controller
             );
         }
 
-        return apiResponse('registered', 'success', ['Registro exitoso'], compact('seller', 'store', 'token'));
+        $store->load('activePackagesRelation');
+        return apiResponse('registered', 'success', ['Registro exitoso. Tu primer mes gratis está activo.'], [
+            'seller' => $seller, 'store' => $store, 'token' => $token,
+            'service_mode' => $store->service_mode, 'trial_days' => 30,
+        ]);
     }
 
     // ── Products (for mozo ordering) ──
