@@ -61,7 +61,7 @@ class DeliveryController extends GetxController {
   String subCategoryImagePath = 'assets/images/sub_category';
   String storeImagePath = 'assets/images/store';
   String storeCoverPath = 'assets/images/store_cover';
-  String productImagePath = 'storage';
+  String productImagePath = 'assets/images/product';
   String? paymentRedirectUrl;
   Map<String, dynamic>? mpCheckoutData;
   int? pendingOrderId;
@@ -84,7 +84,14 @@ class DeliveryController extends GetxController {
   String categoryHomeSearchQuery = '';
   String categoryHomeStoreImagePath = 'assets/images/store';
   String categoryHomeSubCategoryImagePath = 'assets/images/sub_category';
-  String categoryHomeProductImagePath = 'storage';
+  String categoryHomeProductImagePath = 'assets/images/product';
+
+  String _productImagePath(dynamic value, [String fallback = 'assets/images/product']) {
+    final path = (value ?? fallback).toString().trim();
+    if (path.isEmpty) return fallback;
+    if (path == 'storage' || path == '/storage') return 'assets/images/product';
+    return path;
+  }
 
   // Cart state
   List<CartItemModel> cartItems = [];
@@ -150,7 +157,7 @@ class DeliveryController extends GetxController {
           premiumSections = data['sections'] ?? [];
           storeImagePath = data['store_image_path'] ?? storeImagePath;
           storeCoverPath = data['store_cover_path'] ?? storeCoverPath;
-          productImagePath = data['product_image_path'] ?? productImagePath;
+          productImagePath = _productImagePath(data['product_image_path'], productImagePath);
         }
       }
       loadNearbyStores();
@@ -186,7 +193,7 @@ class DeliveryController extends GetxController {
   /// Loads the complete home page for a specific service (general category).
   /// Tries the dedicated `/home` endpoint first; falls back to combining
   /// subcategories + nearby stores filtered by subcategory IDs.
-  Future<void> loadCategoryHome(int categoryId) async {
+  Future<void> loadCategoryHome(int categoryId, {bool top = false, bool fast = false, bool highRating = false, String sort = 'relevance'}) async {
     categoryHomeLoading = true;
     categoryHomeSections = [];
     categoryHomeSubCategories = [];
@@ -204,6 +211,10 @@ class DeliveryController extends GetxController {
         categoryId,
         lat: userLat,
         lng: userLng,
+        top: top,
+        fast: fast,
+        highRating: highRating,
+        sort: sort,
       );
 
       if (response.statusCode == 200) {
@@ -214,7 +225,7 @@ class DeliveryController extends GetxController {
           categoryHomeSubCategories = data['sub_categories'] != null ? (data['sub_categories'] as List).map((x) => SubCategoryModel.fromJson(x)).toList() : [];
           categoryHomeStoreImagePath = data['store_image_path'] ?? storeImagePath;
           categoryHomeSubCategoryImagePath = data['sub_category_image_path'] ?? subCategoryImagePath;
-          categoryHomeProductImagePath = data['product_image_path'] ?? productImagePath;
+          categoryHomeProductImagePath = _productImagePath(data['product_image_path'], productImagePath);
 
           // Also grab flat store list if backend provides one
           if (data['stores'] != null) {
@@ -323,12 +334,12 @@ class DeliveryController extends GetxController {
   }
 
   /// Search stores within a specific service category.
-  Future<void> searchWithinCategory(int categoryId, String query) async {
+  Future<void> searchWithinCategory(int categoryId, String query, {bool top = false, bool fast = false, bool highRating = false, String sort = 'relevance'}) async {
     categoryHomeSearchQuery = query;
     update();
     if (query.trim().isEmpty) return;
     try {
-      final resp = await deliveryRepo.searchCategoryStores(categoryId, query, lat: userLat, lng: userLng);
+      final resp = await deliveryRepo.searchCategoryStores(categoryId, query, lat: userLat, lng: userLng, top: top, fast: fast, highRating: highRating, sort: sort);
       if (resp.statusCode == 200) {
         final json = resp.responseJson;
         if (json['status'] == MyStrings.success && json['data'] != null) {
@@ -615,7 +626,7 @@ class DeliveryController extends GetxController {
           selectedStore = StoreModel.fromJson(data['store']);
           storeCategories = (data['store']['categories'] as List).map((x) => StoreCategoryModel.fromJson(x)).toList();
           storeImagePath = data['store_image_path'] ?? '';
-          productImagePath = data['product_image_path'] ?? '';
+          productImagePath = _productImagePath(data['product_image_path']);
         }
       }
     } catch (e) {
@@ -988,7 +999,7 @@ class DeliveryController extends GetxController {
           } else if (raw is List) {
             orders = raw.map((x) => DeliveryOrderModel.fromJson(x)).toList();
           }
-          orderProductImagePath = json['data']['product_image_path'] ?? '';
+          orderProductImagePath = _productImagePath(json['data']['product_image_path']);
           orderStoreImagePath = json['data']['store_image_path'] ?? '';
           DeliveryCacheService.cacheOrders(orders);
         }
@@ -1009,7 +1020,7 @@ class DeliveryController extends GetxController {
         var json = response.responseJson;
         if (json['status'] == MyStrings.success && json['data'] != null) {
           selectedOrder = DeliveryOrderModel.fromJson(json['data']['order']);
-          orderProductImagePath = json['data']['product_image_path'] ?? '';
+          orderProductImagePath = _productImagePath(json['data']['product_image_path']);
           orderStoreImagePath = json['data']['store_image_path'] ?? '';
           orderDriverImagePath = json['data']['driver_image_path'] ?? '';
         }

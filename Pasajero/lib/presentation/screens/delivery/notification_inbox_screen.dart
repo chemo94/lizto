@@ -100,19 +100,27 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
 
   Color _iconColor(String type) {
     switch (type) {
-      case 'delivery': return MyColor.primaryColor;
-      case 'favor': return const Color(0xFFF59E0B);
-      case 'courier': return const Color(0xFF8B5CF6);
-      default: return MyColor.bodyMutedTextColor;
+      case 'delivery':
+        return MyColor.primaryColor;
+      case 'favor':
+        return const Color(0xFFF59E0B);
+      case 'courier':
+        return const Color(0xFF8B5CF6);
+      default:
+        return MyColor.bodyMutedTextColor;
     }
   }
 
   IconData _icon(String type) {
     switch (type) {
-      case 'delivery': return Icons.delivery_dining_rounded;
-      case 'favor': return Icons.volunteer_activism_rounded;
-      case 'courier': return Icons.motorcycle_rounded;
-      default: return Icons.notifications_rounded;
+      case 'delivery':
+        return Icons.delivery_dining_rounded;
+      case 'favor':
+        return Icons.volunteer_activism_rounded;
+      case 'courier':
+        return Icons.motorcycle_rounded;
+      default:
+        return Icons.notifications_rounded;
     }
   }
 

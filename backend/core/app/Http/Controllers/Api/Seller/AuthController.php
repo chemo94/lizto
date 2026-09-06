@@ -176,7 +176,7 @@ class AuthController extends Controller
             'total_products'  => $totalProducts,
             'receivable_balance' => (float) $seller->receivable_balance,
             'store_image_path' => getFilePath('store'),
-            'product_image_path' => 'storage',
+            'product_image_path' => getFilePath('product'),
         ]);
     }
 

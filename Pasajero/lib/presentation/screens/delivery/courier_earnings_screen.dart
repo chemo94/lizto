@@ -80,8 +80,7 @@ class _CourierEarningsScreenState extends State<CourierEarningsScreen> {
       child: Column(children: [
         Text('Balance total', style: regularDefault.copyWith(color: MyColor.colorWhite.withValues(alpha: 0.8))),
         SizedBox(height: Dimensions.space8),
-        Text('S/ ${e.totalEarnings?.toStringAsFixed(2) ?? "0.00"}',
-            style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: MyColor.colorWhite)),
+        Text('S/ ${e.totalEarnings?.toStringAsFixed(2) ?? "0.00"}', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: MyColor.colorWhite)),
         SizedBox(height: Dimensions.space16),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -114,7 +113,8 @@ class _CourierEarningsScreenState extends State<CourierEarningsScreen> {
       ),
       child: Row(children: [
         Container(
-          width: 40, height: 40,
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(Dimensions.defaultRadius)),
           child: Icon(Icons.payments_rounded, color: color, size: 22),
         ),

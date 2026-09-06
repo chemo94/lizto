@@ -190,7 +190,7 @@ class DeliveryOrderController extends Controller
         return apiResponse('order_created', 'success', ['Pedido creado correctamente'], [
             'order'              => $order,
             'delivery_estimate'  => $estimate,
-            'product_image_path' => 'storage',
+            'product_image_path' => getFilePath('product'),
             'store_image_path'   => getFilePath('store'),
         ]);
     }
@@ -205,7 +205,7 @@ class DeliveryOrderController extends Controller
 
         return apiResponse('rider_orders', 'success', ['Tus pedidos'], [
             'orders'             => $orders,
-            'product_image_path' => 'storage',
+            'product_image_path' => getFilePath('product'),
             'store_image_path'   => getFilePath('store'),
         ]);
     }
@@ -219,7 +219,7 @@ class DeliveryOrderController extends Controller
 
         return apiResponse('order_detail', 'success', ['Detalle del pedido'], [
             'order'              => $order,
-            'product_image_path' => 'storage',
+            'product_image_path' => getFilePath('product'),
             'store_image_path'   => getFilePath('store'),
             'driver_image_path'  => getFilePath('driver'),
             'driver' => $order->driver ? [

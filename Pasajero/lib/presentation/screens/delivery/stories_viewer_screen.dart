@@ -36,11 +36,11 @@ class _StoriesViewerScreenState extends State<StoriesViewerScreen> with SingleTi
     final id = story['id'] as int?;
     if (id != null) {
       await DeliveryRepo(apiClient: Get.find()).apiClient.request(
-        '${UrlContainer.baseUrl}delivery/stories/view/$id',
-        'post',
-        null,
-        passHeader: true,
-      );
+            '${UrlContainer.baseUrl}delivery/stories/view/$id',
+            'post',
+            null,
+            passHeader: true,
+          );
     }
   }
 
@@ -108,32 +108,46 @@ class _StoriesViewerScreenState extends State<StoriesViewerScreen> with SingleTi
             _goPrev();
           }
         },
-        onLongPressStart: (_) { _paused = true; _progressCtrl?.stop(); },
-        onLongPressEnd: (_) { _paused = false; _progressCtrl?.forward(); },
+        onLongPressStart: (_) {
+          _paused = true;
+          _progressCtrl?.stop();
+        },
+        onLongPressEnd: (_) {
+          _paused = false;
+          _progressCtrl?.forward();
+        },
         child: Stack(children: [
           MyImageWidget(
             imageUrl: '${widget.mediaPath}/${story['media_url']?.toString().split('/').last ?? story['media_url'] ?? ''}',
-            height: double.infinity, width: double.infinity, boxFit: BoxFit.contain,
+            height: double.infinity,
+            width: double.infinity,
+            boxFit: BoxFit.contain,
           ),
           SafeArea(
             child: Column(children: [
-              Padding(padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8), child: Row(children: List.generate(widget.stories.length, (i) => Expanded(
-                child: Container(
-                  height: 3,
-                  margin: EdgeInsets.symmetric(horizontal: 2),
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(i < _currentIdx ? 1 : (i == _currentIdx ? 1 : 0.3)), borderRadius: BorderRadius.circular(2)),
-                ),
-              )))),
-              Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Row(children: [
-                Container(width: 36, height: 36, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)), child: ClipOval(child: MyImageWidget(imageUrl: widget.storeImage, boxFit: BoxFit.cover))),
-                SizedBox(width: 10),
-                Expanded(child: Text(widget.storeName, style: boldDefault.copyWith(color: Colors.white))),
-                IconButton(icon: const Icon(Icons.close, color: Colors.white), onPressed: () => Get.back()),
-              ])),
+              Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  child: Row(
+                      children: List.generate(
+                          widget.stories.length,
+                          (i) => Expanded(
+                                child: Container(
+                                  height: 3,
+                                  margin: EdgeInsets.symmetric(horizontal: 2),
+                                  decoration: BoxDecoration(color: Colors.white.withOpacity(i < _currentIdx ? 1 : (i == _currentIdx ? 1 : 0.3)), borderRadius: BorderRadius.circular(2)),
+                                ),
+                              )))),
+              Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(children: [
+                    Container(width: 36, height: 36, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)), child: ClipOval(child: MyImageWidget(imageUrl: widget.storeImage, boxFit: BoxFit.cover))),
+                    SizedBox(width: 10),
+                    Expanded(child: Text(widget.storeName, style: boldDefault.copyWith(color: Colors.white))),
+                    IconButton(icon: const Icon(Icons.close, color: Colors.white), onPressed: () => Get.back()),
+                  ])),
             ]),
           ),
-          if (story['caption'] != null && (story['caption'] as String).isNotEmpty)
-            Positioned(bottom: 40, left: 16, right: 16, child: Text(story['caption'], style: regularDefault.copyWith(color: Colors.white), textAlign: TextAlign.center)),
+          if (story['caption'] != null && (story['caption'] as String).isNotEmpty) Positioned(bottom: 40, left: 16, right: 16, child: Text(story['caption'], style: regularDefault.copyWith(color: Colors.white), textAlign: TextAlign.center)),
         ]),
       ),
     );
