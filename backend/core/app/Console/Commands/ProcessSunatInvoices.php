@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\PosInvoiceSeries;
 use App\Models\SunatInvoice;
+use App\Models\PosCustomerProfile;
 use App\Services\SunatService;
 use Illuminate\Console\Command;
 
@@ -52,6 +53,9 @@ class ProcessSunatInvoices extends Command
                     'tipo_doc' => $invoice->cliente_tipo_doc ?? '1',
                     'num_doc'  => $invoice->cliente_num_doc ?? '0',
                     'nombre'   => $invoice->cliente_nombre ?? 'CLIENTE VARIOS',
+                    'direccion'=> $invoice->cliente_direccion ?: (string) PosCustomerProfile::where('seller_id', $invoice->seller_id)
+                        ->where('document_number', preg_replace('/\D+/', '', (string) ($invoice->cliente_num_doc ?? '')))
+                        ->value('address'),
                 ];
 
                 if (in_array($invoice->tipo_doc, ['07', '08'])) {
@@ -117,6 +121,15 @@ class ProcessSunatInvoices extends Command
 
         foreach ($pendingCdr as $invoice) {
             try {
+                if ($invoice->tipo_doc === 'RA' && $invoice->original_invoice_id) {
+                    try {
+                        $updated = app(\App\Services\VoidedCancellation::class)->submit($invoice);
+                        $this->line('  RA '.$invoice->serie.'-'.$invoice->correlativo.': '.$updated->cdr_status);
+                    } catch (\Throwable $e) {
+                        $this->warn('  RA: '.$e->getMessage());
+                    }
+                    continue;
+                }
                 $company = $this->validateInvoice($invoice);
                 if (!$company) continue;
 

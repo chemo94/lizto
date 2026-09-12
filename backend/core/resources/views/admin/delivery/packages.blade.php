@@ -50,12 +50,13 @@
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-sm">
-                        <thead><tr><th>Tienda</th><th>Paquete</th><th>Estado</th><th>Acción</th></tr></thead>
+                        <thead><tr><th>Tienda</th><th>Paquete</th><th>Vigencia</th><th>Estado</th><th>Acción</th></tr></thead>
                         <tbody>
                             @forelse($subscriptions as $sub)
                             <tr>
                                 <td>{{ $sub->store?->name }}</td>
                                 <td>{{ $sub->package?->name }}</td>
+                                <td><small>{{ $sub->starts_at?->format('d/m/Y H:i') ?? '—' }}<br>{{ $sub->expires_at?->format('d/m/Y H:i') ?? 'Sin límite' }}</small></td>
                                 <td><span class="badge badge--{{ $sub->status === 'active' ? 'success' : ($sub->status === 'cancelled' ? 'danger' : 'warning') }}">{{ $sub->status }}</span></td>
                                 <td>
                                     @if($sub->status === 'pending')
@@ -67,7 +68,7 @@
                                 </td>
                             </tr>
                             @empty
-                            <tr><td colspan="4" class="text-center">Sin suscripciones</td></tr>
+                            <tr><td colspan="5" class="text-center">Sin suscripciones</td></tr>
                             @endforelse
                         </tbody>
                     </table>

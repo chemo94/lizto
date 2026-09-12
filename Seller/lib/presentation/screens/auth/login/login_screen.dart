@@ -72,10 +72,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         mainAxisAlignment: MainAxisAlignment.start,
                         children: [
                           spaceDown(Dimensions.space15),
-                          Image.asset(
-                            MyImages.appLogoWhite,
-                            color: MyColor.colorWhite,
-                            width: MediaQuery.of(context).size.width / 2.5,
+                          Center(
+                            child: Image.asset(
+                              MyImages.appLogoWhite,
+                              color: MyColor.colorWhite,
+                              width: MediaQuery.of(context).size.width / 2.5,
+                            ),
                           ),
                           spaceDown(Dimensions.space15),
                           Text(
@@ -126,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         mainAxisAlignment: MainAxisAlignment.start,
                         children: [
                           spaceDown(Dimensions.space15),
-                          SocialAuthSection(),
+                          const SocialAuthSection(),
                           Form(
                             key: formKey,
                             child: Column(
@@ -139,7 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   onChanged: (value) {},
                                   focusNode: controller.emailFocusNode,
                                   nextFocus: controller.passwordFocusNode,
-                                  textInputType: TextInputType.emailAddress,
+                                  textInputType: TextInputType.text,
                                   inputAction: TextInputAction.next,
                                   prefixIcon: Padding(
                                     padding: EdgeInsetsDirectional.only(start: Dimensions.space12, end: Dimensions.space8),

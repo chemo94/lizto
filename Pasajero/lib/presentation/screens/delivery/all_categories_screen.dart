@@ -6,7 +6,6 @@ import 'package:liztogo/core/utils/style.dart';
 import 'package:liztogo/data/controller/delivery/delivery_controller.dart';
 import 'package:liztogo/presentation/components/animated_screen_entrance.dart';
 import 'package:liztogo/presentation/components/image/my_network_image_widget.dart';
-import 'package:liztogo/presentation/screens/delivery/favor_home_screen.dart';
 import 'package:liztogo/presentation/screens/delivery/sub_category_screen.dart';
 
 class AllCategoriesScreen extends StatelessWidget {
@@ -41,8 +40,7 @@ class AllCategoriesScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.arrow_back_ios_new_rounded,
-                      color: MyColor.primaryTextColor, size: 18),
+                  child: const Icon(Icons.arrow_back_ios_new_rounded, color: MyColor.primaryTextColor, size: 18),
                 ),
               ),
             ),
@@ -77,7 +75,7 @@ class AllCategoriesScreen extends StatelessWidget {
                     return GestureDetector(
                       onTap: () {
                         if (cat.isFavorCategory) {
-                          Get.to(() => const FavorHomeScreen());
+                          Get.offAllNamed('/dashboard_screen', arguments: 1);
                         } else {
                           Get.to(() => SubCategoryScreen(categoryId: cat.id ?? 0, categoryName: cat.name ?? ''));
                         }

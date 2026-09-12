@@ -8,6 +8,8 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use App\Services\FirebasePhoneAuthService;
+use Throwable;
 
 class AuthorizationController extends Controller
 {
@@ -61,7 +63,7 @@ class AuthorizationController extends Controller
 
         $codeValid = $this->checkCodeValidity($driver);
 
-        if (!$codeValid && ($type != '2fa') && ($type != 'ban')) {
+        if (!$codeValid && ($type != '2fa') && ($type != 'ban') && $type != 'sms') {
             $code = verificationCode(6);
             $driver->ver_code         = $code;
             $driver->ver_code_send_at = Carbon::now();
@@ -98,13 +100,23 @@ class AuthorizationController extends Controller
         }
 
         $notify[] = 'Verify your account';
-        return apiResponse("code_sent", "success", $notify);
+        return apiResponse("code_sent", "success", $notify, $type === 'sms' ? [
+            'phone_number' => app(FirebasePhoneAuthService::class)->phoneFor($driver),
+            'verification_provider' => 'firebase',
+        ] : null);
     }
 
 
     public function sendVerifyCode($type)
     {
         $driver = auth()->user();
+
+        if ($type === 'mobile') {
+            return apiResponse('firebase_phone_required', 'success', ['Use Firebase to resend the verification code'], [
+                'phone_number' => app(FirebasePhoneAuthService::class)->phoneFor($driver),
+                'verification_provider' => 'firebase',
+            ]);
+        }
 
         Log::channel('driver_otp')->info('=== DRIVER OTP: sendVerifyCode() called ===', [
             'driver_id'  => $driver->id,
@@ -192,7 +204,7 @@ class AuthorizationController extends Controller
     public function mobileVerification(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'code' => 'required',
+            'firebase_id_token' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -200,7 +212,14 @@ class AuthorizationController extends Controller
         }
 
         $driver = auth()->user();
-        if ($driver->ver_code == $request->code) {
+        try {
+            $matches = app(FirebasePhoneAuthService::class)->tokenMatchesAccount($request->firebase_id_token, $driver);
+        } catch (Throwable $exception) {
+            report($exception);
+            return apiResponse('firebase_token_invalid', 'error', ['No se pudo validar el teléfono con Firebase']);
+        }
+
+        if ($matches) {
             $driver->sv               = Status::VERIFIED;
             $driver->ver_code         = null;
             $driver->ver_code_send_at = null;
@@ -211,8 +230,7 @@ class AuthorizationController extends Controller
                 'driver' => $driver
             ]);
         }
-        $notify[] = 'Verification code doesn\'t match';
-        return apiResponse("code_not_match", "error", $notify);
+        return apiResponse('phone_not_match', 'error', ['El teléfono verificado no corresponde a esta cuenta']);
     }
 
     public function g2faVerification(Request $request)

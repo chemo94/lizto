@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\DeliveryOrder;
+use App\Models\DeliveryCommission;
 use App\Models\Driver;
 use App\Models\DriverCashTransaction;
 use App\Models\DriverEarningTransaction;
@@ -18,56 +19,103 @@ use Illuminate\Validation\ValidationException;
 
 class DeliveryFinancialLedger
 {
-    public static function getDriverDynamicCommissionPercent($driverId, float $basePercent = 20.0): array
+    public static function getDriverDynamicCommissionPercent($driverId, float $basePercent = 20.0, bool $includeCurrentJob = false): array
     {
-        $startOfWeek = now()->startOfWeek();
-        $endOfWeek   = now()->endOfWeek();
+        $completedJobs = \App\Models\CourierEarning::where('courier_id', $driverId)->count();
+        if ($includeCurrentJob) {
+            $completedJobs++;
+        }
 
-        $completedDeliveries = DeliveryOrder::where('driver_id', $driverId)
-            ->where('status', 'delivered')
-            ->whereBetween('updated_at', [$startOfWeek, $endOfWeek])
-            ->count();
+        return self::commissionTierForCompletedJobs($completedJobs, $basePercent);
+    }
 
-        $completedFavors = Favor::where('courier_id', $driverId)
-            ->where('status', 'delivered')
-            ->whereBetween('updated_at', [$startOfWeek, $endOfWeek])
-            ->count();
-
-        $totalWeeklyJobs = $completedDeliveries + $completedFavors;
-
-        if ($totalWeeklyJobs > 30) {
-            $effectivePercent = max(5.0, $basePercent - 8.0);
-            $tierName = 'Diamante';
-            $tierBadge = '💎';
+    public static function commissionTierForCompletedJobs(int $completedJobs, float $basePercent): array
+    {
+        if ($completedJobs >= 30) {
+            $effectivePercent = 0.0;
+            $tierName = 'Preferente';
+            $tierBadge = '⭐';
             $nextTierNeeded = 0;
-            $nextTierName = 'Máximo Nivel';
-        } elseif ($totalWeeklyJobs >= 16) {
+            $nextTierName = 'Nivel máximo';
+        } elseif ($completedJobs >= 20) {
             $effectivePercent = max(5.0, $basePercent - 5.0);
-            $tierName = 'Oro';
-            $tierBadge = '🥇';
-            $nextTierNeeded = 31 - $totalWeeklyJobs;
-            $nextTierName = 'Diamante';
-        } elseif ($totalWeeklyJobs >= 6) {
-            $effectivePercent = max(5.0, $basePercent - 3.0);
             $tierName = 'Plata';
             $tierBadge = '🥈';
-            $nextTierNeeded = 16 - $totalWeeklyJobs;
-            $nextTierName = 'Oro';
-        } else {
-            $effectivePercent = $basePercent;
+            $nextTierNeeded = 30 - $completedJobs;
+            $nextTierName = 'Preferente';
+        } elseif ($completedJobs >= 10) {
+            $effectivePercent = max(5.0, $basePercent - 3.0);
             $tierName = 'Bronce';
             $tierBadge = '🥉';
-            $nextTierNeeded = 6 - $totalWeeklyJobs;
+            $nextTierNeeded = 20 - $completedJobs;
             $nextTierName = 'Plata';
+        } else {
+            $effectivePercent = $basePercent;
+            $tierName = 'Inicial';
+            $tierBadge = '🛵';
+            $nextTierNeeded = 10 - $completedJobs;
+            $nextTierName = 'Bronce';
         }
 
         return [
             'effective_percent' => $effectivePercent,
-            'total_weekly_jobs' => $totalWeeklyJobs,
+            'total_weekly_jobs' => $completedJobs,
+            'total_completed_jobs' => $completedJobs,
             'tier_name'         => $tierName,
             'tier_badge'        => $tierBadge,
             'next_tier_needed'  => $nextTierNeeded,
             'next_tier_name'    => $nextTierName,
+        ];
+    }
+
+    public static function driverCommissionQuote(Driver $driver, float $deliveryFee, string $type, ?DeliveryCommission $config = null, bool $includeCurrentJob = true): array
+    {
+        $config ??= DeliveryCommission::where('status', 1)->first();
+        $basePercent = (float) ($type === 'favor'
+            ? ($config?->favor_percent ?? 15)
+            : ($config?->delivery_percent ?? 10));
+        $minimum = max(0, (float) ($config?->min_commission ?? 1));
+        $tier = self::getDriverDynamicCommissionPercent($driver->id, $basePercent, $includeCurrentJob);
+        $commissionType = $config?->courier_commission_type ?? 'percent';
+
+        if ($tier['tier_name'] === 'Preferente') {
+            $amount = $minimum;
+        } elseif ($commissionType === 'fixed') {
+            $amount = max((float) ($config?->courier_fixed_amount ?? 0), $minimum);
+        } else {
+            $amount = max($deliveryFee * $tier['effective_percent'] / 100, $minimum);
+        }
+
+        return array_merge($tier, [
+            'base_percent' => $basePercent,
+            'commission_type' => $commissionType,
+            'minimum' => $minimum,
+            'amount' => round(min(max(0, $deliveryFee), max(0, $amount)), 2),
+        ]);
+    }
+
+    public static function driverOfferMetrics(int $driverId, int $days = 30): array
+    {
+        $offers = \App\Models\CourierJobOffer::where('driver_id', $driverId)
+            ->where('notification_delivered', true)
+            ->where('offered_at', '>=', now()->subDays($days))
+            ->get();
+        $received = $offers->count();
+        $accepted = $offers->where('status', 'accepted')->count();
+        $rejected = $offers->where('status', 'rejected')->count();
+        $expired = $offers->where('status', 'expired')->count();
+        $responded = $accepted + $rejected;
+
+        return [
+            'period_days' => $days,
+            'minimum_sample' => 10,
+            'eligible_for_review' => $received >= 10,
+            'received' => $received,
+            'responded' => $responded,
+            'accepted' => $accepted,
+            'rejected' => $rejected,
+            'missed' => $expired,
+            'response_rate' => $received > 0 ? round($responded * 100 / $received, 1) : 100.0,
         ];
     }
 

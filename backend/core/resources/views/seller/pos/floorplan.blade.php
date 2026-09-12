@@ -18,10 +18,18 @@
 @endsection
 
 @section('seller-content')
+<style>
+.floor-head{min-height:112px;margin-bottom:16px;padding:20px 22px;border:1px solid var(--s-border);border-radius:14px;background:#fff;box-shadow:var(--s-shadow-sm);display:flex;align-items:center;justify-content:space-between;gap:18px}.floor-head h2{font:800 21px 'Plus Jakarta Sans','Inter',sans-serif;color:#172033;margin:0 0 4px;letter-spacing:-.45px}.floor-head h2 i{color:#f97316}.floor-head p{margin:0;color:#94a3b8;font-size:10px}.floor-legend{display:flex;gap:8px}.floor-legend span{padding:9px 12px;border:1px solid var(--s-border);border-radius:9px;background:#f8fafc;font-size:9px;font-weight:700;color:#64748b}.floor-legend i{margin-right:5px}.floor-area>.s-card,.floor-selector-card{border-radius:14px!important;box-shadow:var(--s-shadow-sm)!important}.area-tab-btn.s-btn-primary{background:#f97316!important;border-color:#f97316!important}@media(max-width:767px){.floor-head{align-items:flex-start;flex-direction:column}.floor-legend{width:100%;overflow:auto}}
+</style>
 <div class="s-content">
+    @php $floorTables = $areas->flatMap->tables; @endphp
+    <section class="floor-head">
+        <div><h2><i class="las la-border-all"></i> Plano del Salón</h2><p>Visualiza la ocupación y organiza la distribución de mesas por área.</p></div>
+        <div class="floor-legend"><span><i class="las la-circle" style="color:#10b981"></i>{{ $floorTables->where('status','free')->count() }} disponibles</span><span><i class="las la-circle" style="color:#f59e0b"></i>{{ $floorTables->where('status','!=','free')->count() }} ocupadas</span><span><i class="las la-layer-group" style="color:#8b5cf6"></i>{{ $areas->count() }} áreas</span></div>
+    </section>
     
     <!-- SELECTOR DE AREA -->
-    <div class="s-card" style="margin-bottom: 24px; padding: 12px 20px;">
+    <div class="s-card floor-selector-card" style="margin-bottom: 14px; padding: 12px 20px;">
         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                 @foreach($areas as $index => $area)
@@ -141,9 +149,9 @@
                                 box-shadow: 0 6px 16px rgba(0,0,0,0.08);"
                          @if(!session()->has('seller_staff_id'))
                          ontouchstart="startDragTouch(event, {{ $table->id }}, {{ $area->id }})" onmousedown="startDrag(event, {{ $table->id }}, {{ $area->id }})"
-                         onclick="if(!_touchDragged) { event.stopPropagation(); window.location='{{ route('seller.pos') }}?table={{ $table->id }}'; }"
+                         onclick="if(!_touchDragged) { event.stopPropagation(); window.location='{{ route('seller.pos.workspace', ['type' => 'dine_in', 'table' => $table->id]) }}'; }"
                          @else
-                         onclick="event.stopPropagation(); window.location='{{ route('seller.pos') }}?table={{ $table->id }}'"
+                         onclick="event.stopPropagation(); window.location='{{ route('seller.pos.workspace', ['type' => 'dine_in', 'table' => $table->id]) }}'"
                          @endif>
                         
                         @if($hasReservation)

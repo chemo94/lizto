@@ -30,6 +30,7 @@ class SocialAuthRepo {
     if (provider == 'apple') {
       map = {'token': accessToken, 'provider': "apple"};
     }
+    if (provider == 'phone') map = {'token': accessToken, 'provider': 'phone'};
 
     if (map != null) {
       map['device_token'] = await FirebaseMessaging.instance.getToken() ?? '';

@@ -4,11 +4,33 @@
 <span class="s-title-icon"><i class="las la-file-invoice"></i></span> Facturación Electrónica
 @endsection
 
+@push('style')
+<style>
+.invoicing-page,.invoicing-page *{min-width:0}
+.invoicing-page .module-hero h2{max-width:100%;overflow-wrap:anywhere}
+@media(max-width:767px){
+    .invoicing-page .module-hero{width:100%;padding:18px!important;overflow:hidden}
+    .invoicing-page .module-hero>div{width:100%}
+    .invoicing-page .module-hero h2{font-size:20px!important;line-height:1.2}
+    .invoicing-page .module-hero>div>div[style*="display: flex"]{width:100%;flex-direction:column;align-items:flex-start!important;gap:8px!important}
+    .invoicing-page .module-hero>div>div[style*="display: flex"]>span{max-width:100%;white-space:normal!important;overflow-wrap:anywhere}
+    .invoicing-page .module-hero>div:last-child{display:grid!important;grid-template-columns:1fr!important;gap:8px!important}
+    .invoicing-page .module-hero>div:last-child .s-btn{width:100%;max-width:100%;justify-content:center;white-space:normal;text-align:center}
+    .invoicing-page [style*="grid-template-columns: 1fr 1fr"],
+    .invoicing-page [style*="grid-template-columns: 1fr 1fr 1fr"],
+    .invoicing-page [style*="grid-template-columns: 1fr 1fr 1fr auto"]{grid-template-columns:minmax(0,1fr)!important}
+    .invoicing-page form [style*="display: flex"][style*="gap:"]{flex-wrap:wrap!important}
+    .invoicing-page form [style*="display: flex"][style*="gap:"]>*{max-width:100%}
+    .invoicing-page .s-card{overflow:hidden}
+}
+</style>
+@endpush
+
 @section('seller-content')
-<div class="s-content" style="max-width: 1400px; margin: 0 auto; padding: 20px;">
+<div class="s-content seller-responsive-page invoicing-page" style="max-width: 1400px; margin: 0 auto; padding: 20px;">
     
     <!-- SECTOR EMPRESA SELECCIONADA -->
-    <div style="background: linear-gradient(135deg, var(--s-primary) 0%, #1e8a3f 100%); border-radius: 16px; padding: 24px; color: #fff; margin-bottom: 30px; box-shadow: 0 8px 20px rgba(22, 163, 74, 0.15); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+    <div class="module-hero tax" style="margin-bottom:16px;min-height:142px;flex-wrap:wrap">
         <div>
             <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.85; font-weight: 800;">Empresa Activa para Facturación</span>
             @if($activeCompany)
@@ -39,7 +61,7 @@
     <div class="s-grid-2" style="grid-template-columns: 1fr 1.2fr; gap: 24px; align-items: start; margin-bottom: 24px;">
         
         <!-- CONFIGURACION SUNAT DE LA EMPRESA SELECCIONADA -->
-        <div class="s-card" style="box-shadow: 0 10px 30px rgba(0,0,0,0.02); border: 1px solid var(--s-border);">
+        <div class="s-card seller-work-card">
             <h3 style="margin-bottom: 24px; font-weight: 800; font-size: 18px; color: var(--s-text); display: flex; align-items: center; gap: 10px;">
                 <i class="las la-cloud-sun" style="color: var(--s-primary); font-size: 24px; background: rgba(22, 163, 74, 0.1); padding: 8px; border-radius: 10px;"></i> Credenciales SUNAT
             </h3>
@@ -95,7 +117,7 @@
         </div>
 
         <!-- DATOS DE LA EMPRESA SELECCIONADA -->
-        <div class="s-card" style="box-shadow: 0 10px 30px rgba(0,0,0,0.02); border: 1px solid var(--s-border);">
+        <div class="s-card seller-work-card">
             <h3 style="margin-bottom: 24px; font-weight: 800; font-size: 18px; color: var(--s-text); display: flex; align-items: center; gap: 10px;">
                 <i class="las la-building" style="color: var(--s-primary); font-size: 24px; background: rgba(22, 163, 74, 0.1); padding: 8px; border-radius: 10px;"></i> Modificar Datos Fiscales
             </h3>
@@ -347,7 +369,7 @@
         </form>
         
         @if($sunatInvoices->count())
-        <div class="s-table-wrapper" style="border-radius: 12px; border: 1px solid var(--s-border); overflow: hidden;">
+        <div class="s-table-wrapper" style="border-radius: 12px; border: 1px solid var(--s-border); overflow-x: auto; overflow-y: hidden;">
             <table class="s-table">
                 <thead>
                     <tr style="background: var(--s-bg-light);">
@@ -386,13 +408,13 @@
                                 <a href="{{ route('seller.invoice.detail', $inv->id) }}" class="s-btn s-btn-ghost s-btn-xs" title="Ver detalle" style="padding:4px 8px;">
                                     <i class="las la-eye" style="font-size:16px;color:var(--s-primary);"></i>
                                 </a>
-                                <a href="{{ route('seller.invoice.pdf', [$inv->id, 'a4']) }}" class="s-btn s-btn-ghost s-btn-xs" title="Descargar PDF" style="padding:4px 8px;">
+                                <a href="{{ route('seller.invoice.pdf', [$inv->id, 'a4']) }}" class="s-btn s-btn-ghost s-btn-xs" title="Previsualizar PDF" style="padding:4px 8px;">
                                     <i class="las la-file-pdf" style="font-size:16px;color:#dc2626;"></i>
                                 </a>
                                 <a href="{{ route('seller.invoice.xml', $inv->id) }}" class="s-btn s-btn-ghost s-btn-xs" title="Descargar XML" style="padding:4px 8px;">
                                     <i class="las la-file-code" style="font-size:16px;color:#8b5cf6;"></i>
                                 </a>
-                                <a href="{{ route('seller.invoice.pdf', [$inv->id, 'ticket']) }}" class="s-btn s-btn-ghost s-btn-xs" title="Descargar Ticket" style="padding:4px 8px;">
+                                <a href="{{ route('seller.invoice.pdf', [$inv->id, 'ticket']) }}" class="s-btn s-btn-ghost s-btn-xs" title="Previsualizar Ticket" style="padding:4px 8px;">
                                     <i class="las la-receipt" style="font-size:16px;color:var(--s-info);"></i>
                                 </a>
                                 @if(in_array($inv->cdr_status, ['pending', 'error', 'rejected']))
@@ -439,7 +461,7 @@
 </div>
 
 <!-- MODAL SELECCIONAR EMPRESA -->
-<div id="modal-select-company" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 9999;">
+<div id="modal-select-company" class="seller-responsive-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 9999;">
     <div class="s-card" style="width: 100%; max-width: 500px; padding: 24px; border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.15);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h3 style="margin: 0; font-weight: 900; font-size: 18px; color: var(--s-text);">Seleccionar Empresa</h3>
@@ -467,7 +489,7 @@
 </div>
 
 <!-- MODAL AGREGAR TIPO DE COMPROBANTE -->
-<div id="modal-add-invoice-type" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 9999;">
+<div id="modal-add-invoice-type" class="seller-responsive-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 9999;">
     <div class="s-card" style="width: 100%; max-width: 480px; padding: 24px; border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.15); background: var(--s-surface);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h3 style="margin: 0; font-weight: 900; font-size: 18px; color: var(--s-text);">Nuevo Tipo de Comprobante</h3>
@@ -510,7 +532,7 @@
 </div>
 
 <!-- MODAL AGREGAR EMPRESA -->
-<div id="modal-add-company" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 9999;">
+<div id="modal-add-company" class="seller-responsive-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 9999;">
     <div class="s-card" style="width: 100%; max-width: 550px; padding: 24px; border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.15);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h3 style="margin: 0; font-weight: 900; font-size: 18px; color: var(--s-text);">Registrar Nueva Empresa</h3>

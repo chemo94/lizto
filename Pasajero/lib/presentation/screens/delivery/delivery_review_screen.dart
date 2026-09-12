@@ -165,8 +165,7 @@ class _DeliveryReviewScreenState extends State<DeliveryReviewScreen> {
               );
               if (ok && mounted) {
                 Get.back();
-                Get.snackbar('Gracias', 'Tu calificación ha sido enviada',
-                    backgroundColor: const Color(0xFF10B981), colorText: MyColor.colorWhite);
+                Get.snackbar('Gracias', 'Tu calificación ha sido enviada', backgroundColor: const Color(0xFF10B981), colorText: MyColor.colorWhite);
               }
             },
             isOutlined: false,
@@ -179,12 +178,18 @@ class _DeliveryReviewScreenState extends State<DeliveryReviewScreen> {
 
   String get _ratingLabel {
     switch (_rating.round()) {
-      case 1: return 'Muy mala';
-      case 2: return 'Mala';
-      case 3: return 'Regular';
-      case 4: return 'Buena';
-      case 5: return 'Excelente';
-      default: return '';
+      case 1:
+        return 'Muy mala';
+      case 2:
+        return 'Mala';
+      case 3:
+        return 'Regular';
+      case 4:
+        return 'Buena';
+      case 5:
+        return 'Excelente';
+      default:
+        return '';
     }
   }
 }

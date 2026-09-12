@@ -160,9 +160,7 @@ class CourierJobModel {
         pinCode: json["pin_code"]?.toString(),
         estimatedMinutes: _pInt(json["estimated_minutes"]),
         eta: json["eta"] is Map ? Map<String, dynamic>.from(json["eta"]) : null,
-        confirmationRequirements: json["confirmation_requirements"] is Map
-            ? Map<String, dynamic>.from(json["confirmation_requirements"])
-            : null,
+        confirmationRequirements: json["confirmation_requirements"] is Map ? Map<String, dynamic>.from(json["confirmation_requirements"]) : null,
         // Sprint 2: Package details
         packageWeightKg: _pDouble(json["package_weight_kg"]),
         packageDimensions: json["package_dimensions"]?.toString(),
@@ -189,14 +187,7 @@ class CourierJobModel {
 
   bool get isDelivery => type == 'delivery';
   bool get isFavor => type == 'favor';
-  bool get isDigitalWallet =>
-      paymentWallet == 'yape' ||
-      paymentWallet == 'plin' ||
-      (paymentQrString != null && paymentQrString!.isNotEmpty) ||
-      (paymentMethodName != null &&
-          (paymentMethodName!.toLowerCase().contains('yape') ||
-              paymentMethodName!.toLowerCase().contains('plin') ||
-              paymentMethodName!.toLowerCase().contains('qr')));
+  bool get isDigitalWallet => paymentWallet == 'yape' || paymentWallet == 'plin' || (paymentQrString != null && paymentQrString!.isNotEmpty) || (paymentMethodName != null && (paymentMethodName!.toLowerCase().contains('yape') || paymentMethodName!.toLowerCase().contains('plin') || paymentMethodName!.toLowerCase().contains('qr')));
   bool get isActive => status != null && status != 'delivered' && status != 'cancelled';
   bool get requiresPin => payerType == 'recipient';
   bool get hasReturn => returnStatus != null && returnStatus!.isNotEmpty;
@@ -357,8 +348,8 @@ class CourierEarningsModel {
   double? weekEarnings;
   double? monthEarnings;
   double? totalEarnings;
-  double? earningBalance;   // Real spendable balance after admin settlements
-  double? totalPaid;        // Total already paid/settled by admin
+  double? earningBalance; // Real spendable balance after admin settlements
+  double? totalPaid; // Total already paid/settled by admin
   int? todayJobs;
   int? weekJobs;
   int? monthJobs;
@@ -369,6 +360,14 @@ class CourierEarningsModel {
   String? tierBadge;
   double? effectivePercent;
   int? totalWeeklyJobs;
+  int? totalCompletedJobs;
+  double? baseCommissionPercent;
+  double? minimumCommission;
+  int? offersReceived;
+  int? offersResponded;
+  int? offersMissed;
+  double? responseRate;
+  bool? eligibleForReview;
   int? nextTierNeeded;
   String? nextTierName;
 
@@ -389,6 +388,14 @@ class CourierEarningsModel {
     this.tierBadge,
     this.effectivePercent,
     this.totalWeeklyJobs,
+    this.totalCompletedJobs,
+    this.baseCommissionPercent,
+    this.minimumCommission,
+    this.offersReceived,
+    this.offersResponded,
+    this.offersMissed,
+    this.responseRate,
+    this.eligibleForReview,
     this.nextTierNeeded,
     this.nextTierName,
   });
@@ -405,13 +412,19 @@ class CourierEarningsModel {
         monthJobs: _pInt(json["month_jobs"]),
         totalJobs: _pInt(json["total_jobs"]),
         avgRating: _pDouble(json["avg_rating"]),
-        recentSettlements: json["recent_settlements"] != null
-            ? (json["recent_settlements"] as List).map((x) => EarningSettlement.fromJson(x)).toList()
-            : [],
+        recentSettlements: json["recent_settlements"] != null ? (json["recent_settlements"] as List).map((x) => EarningSettlement.fromJson(x)).toList() : [],
         tierName: json["tier_name"]?.toString(),
         tierBadge: json["tier_badge"]?.toString(),
         effectivePercent: _pDouble(json["effective_percent"]),
         totalWeeklyJobs: _pInt(json["total_weekly_jobs"]),
+        totalCompletedJobs: _pInt(json["total_completed_jobs"] ?? json["total_weekly_jobs"]),
+        baseCommissionPercent: _pDouble(json["base_commission_percent"]),
+        minimumCommission: _pDouble(json["minimum_commission"]),
+        offersReceived: _pInt(json["offer_metrics"]?["received"]),
+        offersResponded: _pInt(json["offer_metrics"]?["responded"]),
+        offersMissed: _pInt(json["offer_metrics"]?["missed"]),
+        responseRate: _pDouble(json["offer_metrics"]?["response_rate"]),
+        eligibleForReview: json["offer_metrics"]?["eligible_for_review"] == true || json["offer_metrics"]?["eligible_for_review"] == 1,
         nextTierNeeded: _pInt(json["next_tier_needed"]),
         nextTierName: json["next_tier_name"]?.toString(),
       );

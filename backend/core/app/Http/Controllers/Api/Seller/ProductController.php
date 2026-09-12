@@ -23,7 +23,7 @@ class ProductController extends Controller
             'products'           => $products,
             'store'              => $store,
             'store_categories'   => $store->categories,
-            'product_image_path' => 'storage',
+            'product_image_path' => getFilePath('product'),
             'store_category_image' => getFilePath('store_category'),
         ]);
     }

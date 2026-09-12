@@ -137,9 +137,15 @@ Route::get('/delivery/store-fee-estimate', 'storeFeeEstimate')->name('store.fee.
     Route::get('/seller/token-login', [\App\Http\Controllers\SellerPosController::class, 'tokenLogin'])->name('seller.token.login');
     Route::prefix('seller')->name('seller.')->middleware([\App\Http\Middleware\CheckSubscription::class])->group(function () {
         Route::get('/pos', [\App\Http\Controllers\SellerPosController::class, 'pos'])->name('pos');
+        Route::get('/pos/workspace', [\App\Http\Controllers\SellerPosController::class, 'posWorkspace'])->name('pos.workspace');
         Route::get('/dashboard', [\App\Http\Controllers\SellerPosController::class, 'dashboard'])->name('dashboard');
+        Route::get('/profile', [\App\Http\Controllers\SellerPosController::class, 'profile'])->name('profile');
+        Route::post('/profile/update', [\App\Http\Controllers\SellerPosController::class, 'profileUpdate'])->name('profile.update');
+        Route::post('/profile/password', [\App\Http\Controllers\SellerPosController::class, 'profilePassword'])->name('profile.password');
         Route::get('/orders', [\App\Http\Controllers\SellerPosController::class, 'orders'])->name('orders');
+        Route::get('/orders/{source}/{id}', [\App\Http\Controllers\SellerPosController::class, 'orderDetail'])->where('source', 'pos|delivery')->name('orders.show');
         Route::get('/customers', [\App\Http\Controllers\SellerPosController::class, 'customers'])->name('customers');
+        Route::post('/customers/update', [\App\Http\Controllers\SellerPosController::class, 'customerUpdate'])->name('customers.update');
         Route::get('/products', [\App\Http\Controllers\SellerPosController::class, 'products'])->name('products');
         Route::get('/reports', [\App\Http\Controllers\SellerPosController::class, 'reports'])->name('reports');
         Route::get('/declarations', [\App\Http\Controllers\SellerPosController::class, 'declarations'])->name('declarations');
@@ -190,6 +196,7 @@ Route::get('/delivery/store-fee-estimate', 'storeFeeEstimate')->name('store.fee.
         Route::get('/products/bulk-template', [\App\Http\Controllers\SellerPosController::class, 'downloadTemplate'])->name('products.bulk-template');
         Route::post('/products/bulk-store', [\App\Http\Controllers\SellerPosController::class, 'bulkStore'])->name('products.bulk-store');
         Route::post('/products/ocr-parse', [\App\Http\Controllers\SellerPosController::class, 'ocrParse'])->name('products.ocr-parse');
+        Route::get('/products/export/stock', [\App\Http\Controllers\SellerPosController::class, 'exportProductsStock'])->name('products.export.stock');
 
         Route::get('/delivery', [\App\Http\Controllers\SellerPosController::class, 'delivery'])->name('delivery');
         Route::post('/logo-update', [\App\Http\Controllers\SellerPosController::class, 'logoUpdate'])->name('logo.update');
@@ -207,6 +214,7 @@ Route::get('/delivery/store-fee-estimate', 'storeFeeEstimate')->name('store.fee.
             Route::get('/invoicing/invoice/{id}/pdf/{format}', [\App\Http\Controllers\SellerPosController::class, 'invoicePdf'])->name('invoice.pdf');
             Route::get('/invoicing/invoice/{id}/cdr', [\App\Http\Controllers\SellerPosController::class, 'invoiceCdr'])->name('invoice.cdr');
             Route::get('/invoicing/invoice/{id}/xml', [\App\Http\Controllers\SellerPosController::class, 'invoiceXml'])->name('invoice.xml');
+            Route::post('/invoicing/invoice/{id}/baja', [\App\Http\Controllers\SellerPosController::class, 'invoiceRequestRa'])->name('invoice.baja');
             Route::post('/invoicing/invoice/{id}/void', [\App\Http\Controllers\SellerPosController::class, 'invoiceVoid'])->name('invoice.void');
             Route::post('/invoicing/invoice/{id}/resend', [\App\Http\Controllers\SellerPosController::class, 'resendToSunat'])->name('invoice.resend');
             Route::post('/orders/{id}/resend-receipt', [\App\Http\Controllers\SellerPosController::class, 'resendReceipt'])->name('orders.resend-receipt');
@@ -245,6 +253,7 @@ Route::get('/delivery/store-fee-estimate', 'storeFeeEstimate')->name('store.fee.
         Route::post('/delivery/request/fee-calculate', [\App\Http\Controllers\SellerPosController::class, 'deliveryRequestFeeCalculate'])->name('delivery.request.fee-calculate');
         Route::get('/delivery/request/status/{id}', [\App\Http\Controllers\SellerPosController::class, 'deliveryRequestStatus'])->name('delivery.request.status.show');
         Route::post('/delivery/request/{id}/cancel', [\App\Http\Controllers\SellerPosController::class, 'cancelFavor'])->name('delivery.request.cancel');
+        Route::post('/delivery/request/{id}/retry', [\App\Http\Controllers\SellerPosController::class, 'retryFavorDispatch'])->name('delivery.request.retry');
         Route::post('/delivery/request/{id}/status', [\App\Http\Controllers\SellerPosController::class, 'favorStatus'])->name('delivery.request.status');
         Route::post('/delivery/request/{id}/request-return', [\App\Http\Controllers\SellerPosController::class, 'requestReturn'])->name('delivery.request.return');
         Route::get('/delivery/order/{id}/status', [\App\Http\Controllers\SellerPosController::class, 'deliveryOrderStatus'])->name('delivery.order.status.show');

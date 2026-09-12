@@ -10,7 +10,6 @@ import 'package:liztogo/data/model/delivery/delivery_models.dart';
 import 'package:liztogo/presentation/screens/delivery/order_confirmation_screen.dart';
 import 'package:liztogo/data/model/webview/webview_model.dart';
 import 'package:liztogo/presentation/screens/web_view/web_view_screen.dart';
-import 'package:liztogo/presentation/screens/delivery/order_detail_screen.dart';
 import 'package:liztogo/presentation/screens/delivery/mercadopago_checkout_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
@@ -64,16 +63,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final store = widget.store;
     final top = MediaQuery.of(context).padding.top;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FA),
-      body: GetBuilder<DeliveryController>(
-        builder: (c) {
-          final deliveryFee = c.estimatedDeliveryFee;
-          _gatewayFee = _calcGatewayFee(c.cartSubtotal + deliveryFee + _selectedTip - _discount);
-          double total = c.cartSubtotal + deliveryFee + _selectedTip - _discount + _gatewayFee;
-          if (total < 0) total = 0;
+    return GetBuilder<DeliveryController>(
+      builder: (c) {
+        final deliveryFee = c.estimatedDeliveryFee;
+        _gatewayFee = _calcGatewayFee(c.cartSubtotal + deliveryFee + _selectedTip - _discount);
+        double total = c.cartSubtotal + deliveryFee + _selectedTip - _discount + _gatewayFee;
+        if (total < 0) total = 0;
 
-          return Column(
+        return Scaffold(
+          backgroundColor: const Color(0xFFF7F8FA),
+          resizeToAvoidBottomInset: false,
+          body: Column(
             children: [
               // ── Premium Header ──
               Container(
@@ -291,8 +291,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       ),
                     ),
                     const SizedBox(height: Dimensions.space16),
-
-                    // ── Tip Selector ──
                     _SectionCard(
                       icon: Icons.volunteer_activism_rounded,
                       title: 'Propina para el repartidor',
@@ -332,7 +330,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         }).toList(),
                       ),
                     ),
-
                     const SizedBox(height: Dimensions.space16),
 
                     // ── Payment Methods ──
@@ -643,104 +640,38 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     const SizedBox(height: Dimensions.space24),
 
                     // ── Place Order Button ──
-                    GestureDetector(
-                      onTap: c.checkoutLoading
-                          ? null
-                          : () async {
-                              if (!_canPlaceOrder(c, store)) return;
-                              final errorMsg = await c.createOrder(
-                                storeId: store.id ?? 0,
-                                deliveryAddress: _addressCtrl.text.trim(),
-                                deliveryLat: _deliveryLat,
-                                deliveryLng: _deliveryLng,
-                                contactPhone: _phoneCtrl.text.trim(),
-                                contactName: _nameCtrl.text.trim(),
-                                notes: _notesCtrl.text.trim(),
-                                tip: _selectedTip > 0 ? _selectedTip : null,
-                                gatewayCode: _selectedGateway?.code,
-                                cashPayAmount: _selectedGateway?.isCash == true ? double.tryParse(_cashPayAmountCtrl.text.trim()) : null,
-                                couponCode: _discount > 0 ? _couponCtrl.text.trim() : null,
-                                scheduledTime: _scheduledDate?.toIso8601String(),
-                              );
-                              if (errorMsg == null && mounted) {
-                                if (c.mpCheckoutData != null) {
-                                  final mpData = c.mpCheckoutData!;
-                                  final orderId = c.pendingOrderId ?? 0;
-                                  c.mpCheckoutData = null;
-                                  c.pendingOrderId = null;
-                                  await Get.to(() => DeliveryMercadoPagoCheckoutScreen(mpData: mpData, orderId: orderId));
-                                  // Safety net: if user manually pressed back before attempting payment,
-                                  // the order won't have been deleted yet — delete it now.
-                                  // (If payment was rejected/errored, MP screen already deleted it — this call is a no-op.)
-                                  if (orderId > 0) {
-                                    await c.deletePendingOrder(orderId);
-                                  }
-                                } else if (c.paymentRedirectUrl != null && c.paymentRedirectUrl!.isNotEmpty) {
-                                  final redirectUrl = c.paymentRedirectUrl!;
-                                  final orderId = c.pendingOrderId;
-                                  c.paymentRedirectUrl = null;
-                                  c.pendingOrderId = null;
-                                  final result = await Get.to(() => MyWebViewScreen(model: WebviewModel(url: redirectUrl, rideId: '')));
-                                  if (result == 'success') {
-                                    if (mounted) {
-                                      Get.off(() => const OrderConfirmationScreen());
-                                    }
-                                  } else {
-                                    if (orderId != null) {
-                                      await c.deletePendingOrder(orderId);
-                                    }
-                                    if (mounted) {
-                                      Get.snackbar(
-                                        'Pago cancelado',
-                                        'El pago no fue procesado o fue cancelado. El pedido no ha sido creado.',
-                                        backgroundColor: MyColor.redCancelTextColor,
-                                        colorText: Colors.white,
-                                        duration: const Duration(seconds: 4),
-                                        icon: const Icon(Icons.warning_amber_rounded, color: Colors.white),
-                                      );
-                                    }
-                                  }
-                                } else {
-                                  Get.off(() => const OrderConfirmationScreen());
-                                }
-                              } else if (mounted) {
-                                Get.snackbar(
-                                  'Error al crear pedido',
-                                  errorMsg ?? 'No se pudo crear el pedido',
-                                  backgroundColor: MyColor.redCancelTextColor,
-                                  colorText: Colors.white,
-                                  duration: const Duration(seconds: 5),
-                                  icon: const Icon(Icons.error_rounded, color: Colors.white),
-                                );
-                              }
-                            },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: 58,
-                        decoration: BoxDecoration(
-                          color: c.checkoutLoading ? MyColor.primaryColor.withValues(alpha: 0.6) : MyColor.primaryColor,
-                          borderRadius: BorderRadius.circular(18),
-                          boxShadow: [
-                            BoxShadow(
-                              color: MyColor.primaryColor.withValues(alpha: 0.45),
-                              blurRadius: 20,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: c.checkoutLoading
-                            ? const Center(child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
-                            : Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.shopping_bag_rounded, color: Colors.white, size: 22),
-                                  const SizedBox(width: Dimensions.space10),
-                                  Text(
-                                    'Confirmar pedido · S/ ${total.toStringAsFixed(2)}',
-                                    style: boldDefault.copyWith(color: Colors.white, fontSize: 16),
-                                  ),
-                                ],
+                    Offstage(
+                      offstage: true,
+                      child: GestureDetector(
+                        onTap: c.checkoutLoading ? null : () => _confirmOrder(c, store),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          height: 58,
+                          decoration: BoxDecoration(
+                            color: c.checkoutLoading ? MyColor.primaryColor.withValues(alpha: 0.6) : MyColor.primaryColor,
+                            borderRadius: BorderRadius.circular(18),
+                            boxShadow: [
+                              BoxShadow(
+                                color: MyColor.primaryColor.withValues(alpha: 0.45),
+                                blurRadius: 20,
+                                offset: const Offset(0, 8),
                               ),
+                            ],
+                          ),
+                          child: c.checkoutLoading
+                              ? const Center(child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.shopping_bag_rounded, color: Colors.white, size: 22),
+                                    const SizedBox(width: Dimensions.space10),
+                                    Text(
+                                      'Confirmar pedido · S/ ${total.toStringAsFixed(2)}',
+                                      style: boldDefault.copyWith(color: Colors.white, fontSize: 16),
+                                    ),
+                                  ],
+                                ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: Dimensions.space32),
@@ -748,13 +679,86 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
               ),
             ],
-          );
-        },
-      ),
+          ),
+          bottomNavigationBar: _buildConfirmOrderButton(c, store, total),
+        );
+      },
     );
   }
 
   // ── Helpers ──
+
+  Widget _buildConfirmOrderButton(DeliveryController c, StoreModel store, double total) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(Dimensions.space16, Dimensions.space10, Dimensions.space16, Dimensions.space12),
+        decoration: const BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Color(0x18000000), blurRadius: 16, offset: Offset(0, -4))]),
+        child: GestureDetector(
+          onTap: c.checkoutLoading ? null : () => _confirmOrder(c, store),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            height: 58,
+            decoration: BoxDecoration(
+              color: c.checkoutLoading ? MyColor.primaryColor.withValues(alpha: 0.6) : MyColor.primaryColor,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: c.checkoutLoading
+                ? const Center(child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+                : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    const Icon(Icons.shopping_bag_rounded, color: Colors.white, size: 22),
+                    const SizedBox(width: Dimensions.space10),
+                    Text('Confirmar pedido · S/ ${total.toStringAsFixed(2)}', style: boldDefault.copyWith(color: Colors.white, fontSize: 16)),
+                  ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmOrder(DeliveryController c, StoreModel store) async {
+    if (!_canPlaceOrder(c, store)) return;
+    final errorMsg = await c.createOrder(
+      storeId: store.id ?? 0,
+      deliveryAddress: _addressCtrl.text.trim(),
+      deliveryLat: _deliveryLat,
+      deliveryLng: _deliveryLng,
+      contactPhone: _phoneCtrl.text.trim(),
+      contactName: _nameCtrl.text.trim(),
+      notes: _notesCtrl.text.trim(),
+      tip: _selectedTip > 0 ? _selectedTip : null,
+      gatewayCode: _selectedGateway?.code,
+      cashPayAmount: _selectedGateway?.isCash == true ? double.tryParse(_cashPayAmountCtrl.text.trim()) : null,
+      couponCode: _discount > 0 ? _couponCtrl.text.trim() : null,
+      scheduledTime: _scheduledDate?.toIso8601String(),
+    );
+    if (errorMsg != null || !mounted) {
+      if (mounted) Get.snackbar('Error al crear pedido', errorMsg ?? 'No se pudo crear el pedido', backgroundColor: MyColor.redCancelTextColor, colorText: Colors.white);
+      return;
+    }
+    if (c.mpCheckoutData != null) {
+      final mpData = c.mpCheckoutData!;
+      final orderId = c.pendingOrderId ?? 0;
+      c.mpCheckoutData = null;
+      c.pendingOrderId = null;
+      await Get.to(() => MercadoPagoCheckoutScreen(mpData: mpData, orderId: orderId));
+      if (orderId > 0) await c.deletePendingOrder(orderId);
+      if (mounted) Get.snackbar('Pago cancelado', 'El pago no fue procesado o fue cancelado. El pedido no ha sido creado.', backgroundColor: MyColor.redCancelTextColor, colorText: Colors.white);
+    } else if (c.paymentRedirectUrl != null && c.paymentRedirectUrl!.isNotEmpty) {
+      final redirectUrl = c.paymentRedirectUrl!;
+      final orderId = c.pendingOrderId;
+      c.paymentRedirectUrl = null;
+      c.pendingOrderId = null;
+      final result = await Get.to(() => MyWebViewScreen(model: WebviewModel(url: redirectUrl, rideId: '')));
+      if (result == 'success') {
+        if (mounted) Get.off(() => const OrderConfirmationScreen());
+      } else if (orderId != null) {
+        await c.deletePendingOrder(orderId);
+      }
+    } else {
+      Get.off(() => const OrderConfirmationScreen());
+    }
+  }
 
   Future<void> _loadCheckoutDefaults() async {
     final c = Get.find<DeliveryController>();

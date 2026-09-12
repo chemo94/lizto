@@ -5,7 +5,7 @@
 @endsection
 
 @section('topbar-actions')
-<form method="GET" action="" style="display: flex; gap: 8px; align-items: center;">
+<form class="staff-report-topbar-filter" method="GET" action="" style="display: flex; gap: 8px; align-items: center;">
     <div style="display: flex; align-items: center; background: var(--s-surface-2); border: 1.5px solid var(--s-border); border-radius: var(--s-radius); padding: 2px 10px; height: 38px;">
         <span style="font-size: 11px; font-weight: 700; color: var(--s-text-3); text-transform: uppercase; margin-right: 8px;">Desde:</span>
         <input type="date" name="from" value="{{ $dateFrom }}" style="background:transparent; border:none; outline:none; color:var(--s-text); font-size:12px; font-weight:600;">
@@ -21,11 +21,23 @@
 @endsection
 
 @section('seller-content')
-<div class="s-content">
+<div class="s-content seller-responsive-page">
+    <section class="module-hero commissions">
+        <div>
+            <div class="module-crumb"><i class="las la-home"></i> Seller / RR.HH / Comisiones</div>
+            <h2>Rendimiento y comisiones</h2>
+            <p>Compara ventas atribuidas, pedidos atendidos y comisiones generadas.</p>
+        </div>
+        <div class="module-hero-stats">
+            <div><b>S/ {{ number_format($totalSalesAll, 0) }}</b><small>Ventas</small></div>
+            <div><b>S/ {{ number_format($totalCommissionsAll, 0) }}</b><small>Comisiones</small></div>
+            <div><b>{{ $totalOrdersAll }}</b><small>Pedidos</small></div>
+        </div>
+    </section>
     
     <!-- KPI CARDS -->
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px;">
-        <div class="s-card" style="display: flex; align-items: center; gap: 16px; padding: 20px;">
+    <div class="hr-workspace" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 14px;">
+        <div class="s-card seller-work-card" style="display: flex; align-items: center; gap: 16px; padding: 20px;">
             <div style="width: 52px; height: 52px; background: var(--s-accent-light); color: var(--s-accent-dark); border-radius: 50%; display: grid; place-items: center; font-size: 28px;">
                 <i class="las la-hand-holding-usd"></i>
             </div>
@@ -35,7 +47,7 @@
             </div>
         </div>
 
-        <div class="s-card" style="display: flex; align-items: center; gap: 16px; padding: 20px;">
+        <div class="s-card seller-work-card" style="display: flex; align-items: center; gap: 16px; padding: 20px;">
             <div style="width: 52px; height: 52px; background: var(--s-primary-light); color: var(--s-primary); border-radius: 50%; display: grid; place-items: center; font-size: 28px;">
                 <i class="las la-calculator"></i>
             </div>
@@ -45,7 +57,7 @@
             </div>
         </div>
 
-        <div class="s-card" style="display: flex; align-items: center; gap: 16px; padding: 20px;">
+        <div class="s-card seller-work-card" style="display: flex; align-items: center; gap: 16px; padding: 20px;">
             <div style="width: 52px; height: 52px; background: var(--s-warning-bg); color: var(--s-warning-text); border-radius: 50%; display: grid; place-items: center; font-size: 28px;">
                 <i class="las la-receipt"></i>
             </div>
@@ -57,7 +69,7 @@
     </div>
 
     <!-- COMPARATIVO POR PERSONAL -->
-    <div class="s-card" style="margin-bottom: 24px;">
+    <div class="s-card seller-work-card" style="margin-bottom: 14px;">
         <h3 style="margin-bottom: 20px; font-weight: 700; font-size: 16px; color: var(--s-text-primary); display: flex; align-items: center; gap: 8px;">
             <i class="las la-users" style="color: var(--s-primary); font-size: 20px;"></i> Rendimiento y Comisiones por Mesero
         </h3>

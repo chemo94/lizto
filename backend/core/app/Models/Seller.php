@@ -13,7 +13,7 @@ class Seller extends Authenticatable
     protected $guarded = ['id'];
 
     protected $hidden = ['password', 'remember_token'];
-    protected $casts = ['status' => 'integer', 'is_verified' => 'integer', 'receivable_balance' => 'double'];
+    protected $casts = ['status' => 'integer', 'is_verified' => 'integer', 'receivable_balance' => 'double', 'phone_verified_at' => 'datetime'];
 
     public function wallet()
     {

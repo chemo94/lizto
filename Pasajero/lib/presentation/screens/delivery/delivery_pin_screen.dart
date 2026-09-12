@@ -77,7 +77,8 @@ class _PinInputStatefulState extends State<_PinInputStateful> {
           children: List.generate(widget.length, (i) {
             return Container(
               margin: EdgeInsets.symmetric(horizontal: Dimensions.space8),
-              width: 52, height: 60,
+              width: 52,
+              height: 60,
               decoration: BoxDecoration(
                 color: widget.isError ? MyColor.redCancelTextColor.withValues(alpha: 0.1) : MyColor.colorWhite,
                 borderRadius: BorderRadius.circular(Dimensions.defaultRadius),
@@ -93,7 +94,8 @@ class _PinInputStatefulState extends State<_PinInputStateful> {
               child: Center(
                 child: i < _pin.length
                     ? Container(
-                        width: 16, height: 16,
+                        width: 16,
+                        height: 16,
                         decoration: BoxDecoration(
                           color: widget.isError ? MyColor.redCancelTextColor : MyColor.primaryColor,
                           shape: BoxShape.circle,
@@ -140,9 +142,7 @@ class _PinInputStatefulState extends State<_PinInputStateful> {
           border: Border.all(color: MyColor.borderColor.withValues(alpha: 0.5)),
         ),
         child: Center(
-          child: icon != null
-              ? Icon(icon, size: 24, color: MyColor.primaryTextColor)
-              : Text(label, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: MyColor.primaryTextColor)),
+          child: icon != null ? Icon(icon, size: 24, color: MyColor.primaryTextColor) : Text(label, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: MyColor.primaryTextColor)),
         ),
       ),
     );
@@ -166,9 +166,11 @@ class _DeliveryPinScreenState extends State<DeliveryPinScreen> {
     // Simulate pin verification - would call API in production
     Future.delayed(const Duration(milliseconds: 500), () {
       if (pin == '1234') {
-        setState(() { _verified = true; _error = false; });
-        Get.snackbar('Verificado', 'Entrega confirmada correctamente',
-            backgroundColor: const Color(0xFF10B981), colorText: MyColor.colorWhite);
+        setState(() {
+          _verified = true;
+          _error = false;
+        });
+        Get.snackbar('Verificado', 'Entrega confirmada correctamente', backgroundColor: const Color(0xFF10B981), colorText: MyColor.colorWhite);
         Future.delayed(const Duration(seconds: 1), () => Get.back(result: true));
       } else {
         setState(() => _error = true);

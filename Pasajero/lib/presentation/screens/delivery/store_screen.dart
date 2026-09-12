@@ -63,11 +63,7 @@ class _StoreScreenState extends State<StoreScreen> with TickerProviderStateMixin
   List<StoreCategoryModel> _getFilteredCats(DeliveryController c) {
     if (_searchQuery.isEmpty) return c.storeCategories;
     return c.storeCategories.where((cat) {
-      final filteredProducts = (cat.products ?? [])
-          .where((p) =>
-              (p.name ?? '').toLowerCase().contains(_searchQuery) ||
-              (p.description ?? '').toLowerCase().contains(_searchQuery))
-          .toList();
+      final filteredProducts = (cat.products ?? []).where((p) => (p.name ?? '').toLowerCase().contains(_searchQuery) || (p.description ?? '').toLowerCase().contains(_searchQuery)).toList();
       return filteredProducts.isNotEmpty;
     }).toList();
   }
@@ -149,13 +145,7 @@ class _StoreScreenState extends State<StoreScreen> with TickerProviderStateMixin
                 child: Column(
                   children: List.generate(cats.length, (catIndex) {
                     final cat = cats[catIndex];
-                    final products = _searchQuery.isEmpty
-                        ? (cat.products ?? [])
-                        : (cat.products ?? [])
-                            .where((p) =>
-                                (p.name ?? '').toLowerCase().contains(_searchQuery) ||
-                                (p.description ?? '').toLowerCase().contains(_searchQuery))
-                            .toList();
+                    final products = _searchQuery.isEmpty ? (cat.products ?? []) : (cat.products ?? []).where((p) => (p.name ?? '').toLowerCase().contains(_searchQuery) || (p.description ?? '').toLowerCase().contains(_searchQuery)).toList();
                     if (products.isEmpty) return const SizedBox.shrink();
                     return _CategorySection(
                       key: _catKeys[catIndex],
@@ -175,9 +165,7 @@ class _StoreScreenState extends State<StoreScreen> with TickerProviderStateMixin
             ],
           ),
           // ── Premium Floating Cart Bar ──
-          bottomNavigationBar: controller.hasItemsInCart
-              ? FloatingCartBar(controller: controller)
-              : null,
+          bottomNavigationBar: controller.hasItemsInCart ? FloatingCartBar(controller: controller) : null,
         );
       },
     );
@@ -210,8 +198,7 @@ class _StoreScreenState extends State<StoreScreen> with TickerProviderStateMixin
   }
 
   void _showProductConfigDialog(DeliveryController controller, ProductModel product) {
-    ProductVariationModel? selectedVar =
-        (product.variations?.isNotEmpty ?? false) ? product.variations!.first : null;
+    ProductVariationModel? selectedVar = (product.variations?.isNotEmpty ?? false) ? product.variations!.first : null;
     List<ProductAddonModel> selectedAddons = [];
 
     showModalBottomSheet(
@@ -221,7 +208,9 @@ class _StoreScreenState extends State<StoreScreen> with TickerProviderStateMixin
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
           double calcPrice() {
-            double base = selectedVar?.price ?? product.finalPrice;
+            double base = (selectedVar != null && (selectedVar!.price ?? 0) > 0)
+                ? selectedVar!.price!
+                : product.finalPrice;
             for (var a in selectedAddons) {
               base += a.price ?? 0;
             }
@@ -316,9 +305,7 @@ class _StoreParallaxHeader extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             MyImageWidget(
-              imageUrl: store.coverImage != null
-                  ? '${controller.storeCoverPath}/${store.coverImage}'
-                  : '${controller.storeImagePath}/${store.image}',
+              imageUrl: store.coverImage != null ? '${controller.storeCoverPath}/${store.coverImage}' : '${controller.storeImagePath}/${store.image}',
               height: 260,
               width: double.infinity,
               boxFit: BoxFit.cover,
@@ -451,7 +438,7 @@ class _StoreInfoCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        store.description?.isNotEmpty == true ? store.description! : 'Tienda en Lizto',
+                        store.description?.isNotEmpty == true ? store.description! : 'Tienda en LiztoGo',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: regularDefault.copyWith(color: MyColor.bodyMutedTextColor, height: 1.3),
@@ -644,15 +631,11 @@ class _CategoryRailDelegate extends SliverPersistentHeaderDelegate {
                 color: isSelected ? MyColor.primaryColor : MyColor.colorWhite,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: isSelected ? MyColor.primaryColor : MyColor.neutral200),
-                boxShadow: isSelected
-                    ? [BoxShadow(color: MyColor.primaryColor.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 3))]
-                    : [],
+                boxShadow: isSelected ? [BoxShadow(color: MyColor.primaryColor.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 3))] : [],
               ),
               child: Text(
                 categories[i].name ?? '',
-                style: isSelected
-                    ? semiBoldSmall.copyWith(color: Colors.white, fontSize: 13)
-                    : regularSmall.copyWith(color: MyColor.bodyMutedTextColor, fontSize: 13),
+                style: isSelected ? semiBoldSmall.copyWith(color: Colors.white, fontSize: 13) : regularSmall.copyWith(color: MyColor.bodyMutedTextColor, fontSize: 13),
               ),
             ),
           );
@@ -662,8 +645,7 @@ class _CategoryRailDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  bool shouldRebuild(_CategoryRailDelegate old) =>
-      old.selectedIndex != selectedIndex || old.categories != categories;
+  bool shouldRebuild(_CategoryRailDelegate old) => old.selectedIndex != selectedIndex || old.categories != categories;
 }
 
 // ── Category Section ──
@@ -916,8 +898,6 @@ class _QtySelector extends StatelessWidget {
   }
 }
 
-
-
 // ── Product Config Bottom Sheet ──
 
 class _ProductConfigSheet extends StatelessWidget {
@@ -968,11 +948,9 @@ class _ProductConfigSheet extends StatelessWidget {
                 children: [
                   Text(product.name ?? '', style: boldLarge.copyWith(fontSize: 20)),
                   const SizedBox(height: Dimensions.space4),
-                  if (product.description?.isNotEmpty == true)
-                    Text(product.description!, style: regularDefault.copyWith(color: MyColor.bodyMutedTextColor)),
+                  if (product.description?.isNotEmpty == true) Text(product.description!, style: regularDefault.copyWith(color: MyColor.bodyMutedTextColor)),
                   const SizedBox(height: Dimensions.space4),
                   Text('S/ ${product.finalPrice.toStringAsFixed(2)}', style: boldDefault.copyWith(color: MyColor.primaryColor, fontSize: 18)),
-
                   if ((product.variations?.length ?? 0) > 0) ...[
                     const SizedBox(height: Dimensions.space20),
                     Row(
@@ -1015,17 +993,24 @@ class _ProductConfigSheet extends StatelessWidget {
                               ),
                               const SizedBox(width: Dimensions.space12),
                               Expanded(child: Text(v.name ?? '', style: regularDefault.copyWith(color: MyColor.primaryTextColor))),
-                              Text(
-                                '+ S/ ${v.price?.toStringAsFixed(2) ?? "0.00"}',
-                                style: semiBoldSmall.copyWith(color: MyColor.primaryColor),
-                              ),
+                              Builder(builder: (_) {
+                                final varPrice = v.price ?? 0;
+                                final diff = varPrice - product.finalPrice;
+                                String priceText = 'S/ ${varPrice.toStringAsFixed(2)}';
+                                if (diff.abs() > 0.01) {
+                                  priceText += ' (${diff > 0 ? "+S/ " : "-S/ "}${diff.abs().toStringAsFixed(2)})';
+                                }
+                                return Text(
+                                  priceText,
+                                  style: semiBoldSmall.copyWith(color: MyColor.primaryColor),
+                                );
+                              }),
                             ],
                           ),
                         ),
                       );
                     }),
                   ],
-
                   if ((product.addons?.length ?? 0) > 0) ...[
                     const SizedBox(height: Dimensions.space16),
                     Text('Adicionales', style: boldDefault.copyWith(fontSize: 16)),

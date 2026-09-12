@@ -163,9 +163,7 @@ class _CourierEarningsScreenState extends State<CourierEarningsScreen> {
               ),
             ),
             child: Text(
-              isZeroPending
-                  ? '✅ AL DÍA (S/ 0.00 pendientes)'
-                  : '⏳ ACUMULANDO PENDIENTE POR COBRAR',
+              isZeroPending ? '✅ AL DÍA (S/ 0.00 pendientes)' : '⏳ ACUMULANDO PENDIENTE POR COBRAR',
               style: boldSmall.copyWith(
                 color: isZeroPending ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
                 fontSize: 11,
@@ -301,10 +299,8 @@ class _CourierEarningsScreenState extends State<CourierEarningsScreen> {
                   isPaid ? 'Pago del administrador' : 'Ajuste',
                   style: boldDefault.copyWith(fontSize: 13),
                 ),
-                if (methodLabel.isNotEmpty)
-                  Text('Vía $methodLabel', style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor)),
-                if (s.notes != null && s.notes!.isNotEmpty && s.notes != 'null')
-                  Text(s.notes!, style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor), maxLines: 1, overflow: TextOverflow.ellipsis),
+                if (methodLabel.isNotEmpty) Text('Vía $methodLabel', style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor)),
+                if (s.notes != null && s.notes!.isNotEmpty && s.notes != 'null') Text(s.notes!, style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor), maxLines: 1, overflow: TextOverflow.ellipsis),
                 Text(dateStr, style: regularSmall.copyWith(color: MyColor.neutral500, fontSize: 11)),
               ],
             ),
@@ -358,22 +354,24 @@ class _CourierEarningsScreenState extends State<CourierEarningsScreen> {
   }
 
   Widget _buildTierCard(CourierEarningsModel e) {
-    final tierName = e.tierName ?? 'Bronce';
-    final tierBadge = e.tierBadge ?? '🥉';
-    final percent = (e.effectivePercent ?? 20.0).toStringAsFixed(0);
-    final weeklyJobs = e.totalWeeklyJobs ?? 0;
+    final tierName = e.tierName ?? 'Inicial';
+    final tierBadge = e.tierBadge ?? '🛵';
+    final percent = (e.effectivePercent ?? e.baseCommissionPercent ?? 10.0).toStringAsFixed(0);
+    final completedJobs = e.totalCompletedJobs ?? e.totalWeeklyJobs ?? 0;
+    final isPreferred = tierName == 'Preferente';
+    final commissionLabel = isPreferred ? 'S/ ${(e.minimumCommission ?? 1).toStringAsFixed(2)} mínimo' : '$percent% por pedido';
     final nextNeeded = e.nextTierNeeded ?? 0;
     final nextName = e.nextTierName ?? 'Plata';
 
     Color cardColor;
-    if (tierName == 'Diamante') {
-      cardColor = const Color(0xFF0EA5E9);
-    } else if (tierName == 'Oro') {
-      cardColor = const Color(0xFFF59E0B);
+    if (tierName == 'Preferente') {
+      cardColor = const Color(0xFF10B981);
     } else if (tierName == 'Plata') {
       cardColor = const Color(0xFF64748B);
-    } else {
+    } else if (tierName == 'Bronce') {
       cardColor = const Color(0xFFD97706);
+    } else {
+      cardColor = const Color(0xFF3B82F6);
     }
 
     return GestureDetector(
@@ -412,7 +410,7 @@ class _CourierEarningsScreenState extends State<CourierEarningsScreen> {
                               ],
                             ),
                             Text(
-                              'Comisión actual: $percent% por pedido',
+                              'Comisión actual: $commissionLabel',
                               style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor, fontWeight: FontWeight.w600),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -430,7 +428,7 @@ class _CourierEarningsScreenState extends State<CourierEarningsScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    'Comisión: $percent%',
+                    isPreferred ? 'Preferente' : 'Comisión: $percent%',
                     style: boldDefault.copyWith(color: Colors.white, fontSize: 12),
                   ),
                 ),
@@ -444,7 +442,7 @@ class _CourierEarningsScreenState extends State<CourierEarningsScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    'Entregas esta semana: $weeklyJobs',
+                    'Entregas acumuladas: $completedJobs',
                     style: regularDefault.copyWith(color: MyColor.primaryTextColor, fontWeight: FontWeight.w600),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -462,6 +460,15 @@ class _CourierEarningsScreenState extends State<CourierEarningsScreen> {
                   ),
               ],
             ),
+            if ((e.offersReceived ?? 0) > 0) ...[
+              const SizedBox(height: 10),
+              Text(
+                'Respuesta últimos 30 días: ${(e.responseRate ?? 0).toStringAsFixed(0)}% '
+                '(${e.offersResponded ?? 0}/${e.offersReceived ?? 0})'
+                '${e.eligibleForReview == true ? '' : ' · Muestra insuficiente, sin evaluación'}',
+                style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor),
+              ),
+            ],
           ],
         ),
       ),
@@ -470,7 +477,9 @@ class _CourierEarningsScreenState extends State<CourierEarningsScreen> {
 
   void _showTierDetailsModal(BuildContext context, CourierEarningsModel e) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final currentTier = e.tierName ?? 'Bronce';
+    final currentTier = e.tierName ?? 'Inicial';
+    final base = e.baseCommissionPercent ?? 10;
+    final minimum = e.minimumCommission ?? 1;
 
     showModalBottomSheet(
       context: context,
@@ -513,7 +522,7 @@ class _CourierEarningsScreenState extends State<CourierEarningsScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Mientras más entregues de Lunes a Domingo, menor comisión pagas en cada pedido.',
+                'Tus entregas se acumulan y no vuelven a cero. Al llegar a 30 desbloqueas la comisión mínima estable.',
                 style: regularDefault.copyWith(
                   color: isDark ? Colors.grey[400] : MyColor.bodyMutedTextColor,
                   fontSize: 12,
@@ -521,10 +530,20 @@ class _CourierEarningsScreenState extends State<CourierEarningsScreen> {
               ),
               const SizedBox(height: 20),
               _buildTierModalItem(
+                tier: 'Inicial',
+                badge: '🛵',
+                range: '0 a 9 entregas acumuladas',
+                commission: '${base.toStringAsFixed(0)}% (Base)',
+                color: const Color(0xFF3B82F6),
+                isCurrent: currentTier == 'Inicial',
+                isDark: isDark,
+              ),
+              const SizedBox(height: 10),
+              _buildTierModalItem(
                 tier: 'Bronce',
                 badge: '🥉',
-                range: '0 a 5 pedidos semanales',
-                commission: '20% (Base)',
+                range: '10 a 19 entregas acumuladas',
+                commission: '${(base - 3).clamp(5, 100).toStringAsFixed(0)}%',
                 color: const Color(0xFFD97706),
                 isCurrent: currentTier == 'Bronce',
                 isDark: isDark,
@@ -533,30 +552,20 @@ class _CourierEarningsScreenState extends State<CourierEarningsScreen> {
               _buildTierModalItem(
                 tier: 'Plata',
                 badge: '🥈',
-                range: '6 a 15 pedidos semanales',
-                commission: '17% (Ahorras 3%)',
+                range: '20 a 29 entregas acumuladas',
+                commission: '${(base - 5).clamp(5, 100).toStringAsFixed(0)}%',
                 color: const Color(0xFF64748B),
                 isCurrent: currentTier == 'Plata',
                 isDark: isDark,
               ),
               const SizedBox(height: 10),
               _buildTierModalItem(
-                tier: 'Oro',
-                badge: '🥇',
-                range: '16 a 30 pedidos semanales',
-                commission: '15% (Ahorras 5%)',
-                color: const Color(0xFFF59E0B),
-                isCurrent: currentTier == 'Oro',
-                isDark: isDark,
-              ),
-              const SizedBox(height: 10),
-              _buildTierModalItem(
-                tier: 'Diamante',
-                badge: '💎',
-                range: 'Más de 30 pedidos semanales',
-                commission: '12% (Ahorras 8%)',
-                color: const Color(0xFF0EA5E9),
-                isCurrent: currentTier == 'Diamante',
+                tier: 'Preferente',
+                badge: '⭐',
+                range: '30 o más entregas acumuladas',
+                commission: 'Comisión mínima: S/ ${minimum.toStringAsFixed(2)}',
+                color: const Color(0xFF10B981),
+                isCurrent: currentTier == 'Preferente',
                 isDark: isDark,
               ),
               const SizedBox(height: 24),
@@ -593,9 +602,7 @@ class _CourierEarningsScreenState extends State<CourierEarningsScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isCurrent
-            ? color.withValues(alpha: 0.18)
-            : (isDark ? const Color(0xFF1E293B) : Colors.grey[100]),
+        color: isCurrent ? color.withValues(alpha: 0.18) : (isDark ? const Color(0xFF1E293B) : Colors.grey[100]),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isCurrent ? color : (isDark ? Colors.grey[800]! : Colors.grey[300]!),

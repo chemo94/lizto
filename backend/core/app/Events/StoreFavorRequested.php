@@ -18,7 +18,8 @@ class StoreFavorRequested implements ShouldBroadcast
     public function __construct($favor)
     {
         $this->favor   = $favor;
-        $this->message = 'Tienda ' . ($favor->seller?->name ?? '') . ' solicita repartidor: ' . $favor->description;
+        $origin = $favor->store_name ?: ($favor->seller?->name ?? 'Punto de recojo');
+        $this->message = $origin . ' solicita repartidor: ' . $favor->description;
     }
 
     public function broadcastOn()

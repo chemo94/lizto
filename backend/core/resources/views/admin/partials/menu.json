@@ -1,6 +1,13 @@
 {
     "main": [
         {
+            "title": "Seguimiento de flota",
+            "icon": "las la-map-marked-alt",
+            "route_name": "admin.driver.tracking",
+            "permission": ["view drivers"],
+            "keyword": ["mapa", "fleet", "seguimiento", "repartidores"]
+        },
+        {
             "keyword": [
                 "Panel de Control",
                 "Inicio",
@@ -1082,7 +1089,7 @@
     ],
     "settings": [
         {
-            "title": "Manage Settings",
+            "title": "Ajustes generales",
             "icon": "las la-cog",
             "menu_active": [
                 "admin.setting.general",
@@ -1114,7 +1121,7 @@
             ],
             "submenu": [
                 {
-                    "title": "General Setting",
+                    "title": "Configuración general",
                     "route_name": "admin.setting.general",
                     "menu_active": "admin.setting.general",
                     "permission": [
@@ -1140,7 +1147,7 @@
                     ]
                 },
                 {
-                    "title": "Ride Setting",
+                    "title": "Configuración de viajes",
                     "route_name": "admin.setting.ride",
                     "menu_active": "admin.setting.ride",
                     "permission": [
@@ -1186,7 +1193,7 @@
                     ]
                 },
                 {
-                    "title": "Google Maps Setting",
+                    "title": "Google Maps",
                     "route_name": "admin.setting.google.maps",
                     "menu_active": "admin.setting.google.maps",
                     "keyword": [
@@ -1201,7 +1208,7 @@
                     ]
                 },
                 {
-                    "title": "Pusher Setting",
+                    "title": "Conexión en tiempo real",
                     "icon": "las la-share-alt",
                     "route_name": "admin.setting.pusher.configuration",
                     "menu_active": "admin.setting.pusher.configuration",
@@ -1249,7 +1256,7 @@
                     ]
                 },
                 {
-                    "title": "CRON Job Setting",
+                    "title": "Tareas programadas",
                     "icon": "las la-clock",
                     "route_name": "admin.cron.index",
                     "menu_active": "admin.cron.*",

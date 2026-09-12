@@ -30,12 +30,19 @@
 
     // Sidebar Icon & Overlay js
     $('.navigation-bar').on('click', function () {
+        if (window.matchMedia('(min-width: 1200px)').matches) {
+            document.body.classList.toggle('lz-sidebar-collapsed');
+            return;
+        }
         $('.sidebar-menu').addClass('show-sidebar');
         $('.sidebar-overlay').addClass('show');
         $('body').addClass('scroll-hide ');
     });
 
     $('.sidebar-menu__close, .sidebar-overlay').on('click', function () {
+        if (window.matchMedia('(min-width: 1200px)').matches && $(this).hasClass('sidebar-menu__close')) {
+            document.body.classList.add('lz-sidebar-collapsed');
+        }
         $('.sidebar-menu').removeClass('show-sidebar');
         $('.sidebar-overlay').removeClass('show');
         $('.search-card').css('display', 'none')

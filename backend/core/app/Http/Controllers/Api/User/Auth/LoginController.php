@@ -7,6 +7,9 @@ use App\Http\Controllers\Controller;
 use App\Lib\SocialLogin;
 use App\Models\DeviceToken;
 use App\Models\UserLogin;
+use App\Models\User;
+use App\Services\FirebasePhoneAuthService;
+use Throwable;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -87,7 +90,9 @@ class LoginController extends Controller
     public function findUsername()
     {
         $login     = request()->input('username');
-        $fieldType = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+        $fieldType = filter_var($login, FILTER_VALIDATE_EMAIL)
+            ? 'email'
+            : (User::where('mobile', $login)->exists() ? 'mobile' : 'username');
         request()->merge([$fieldType => $login]);
         return $fieldType;
     }
@@ -194,7 +199,7 @@ class LoginController extends Controller
     public function socialLogin(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'provider' => 'required|in:google,apple',
+            'provider' => 'required|in:google,apple,phone',
             'token'    => 'required_without:code',
             'code'     => 'required_without:token',
         ]);
@@ -203,7 +208,29 @@ class LoginController extends Controller
             return apiResponse("validation_error", "error", $validator->errors()->all());
         }
 
+        if ($request->provider === 'phone') {
+            try {
+                $user = app(FirebasePhoneAuthService::class)->findAccount($request->token, User::class);
+            } catch (Throwable $exception) {
+                report($exception);
+                return apiResponse('firebase_token_invalid', 'error', ['No se pudo validar el teléfono con Firebase']);
+            }
+            if (!$user || $user->is_deleted == Status::YES) {
+                return apiResponse('phone_account_not_found', 'error', ['No existe una cuenta con este número celular']);
+            }
+            $token = $user->createToken('auth_token', ['user'])->plainTextToken;
+            $this->storePhoneDeviceToken($request, $user, 'passenger');
+            return apiResponse('login_success', 'success', ['Inicio de sesión exitoso'], ['user' => $user, 'access_token' => $token, 'token_type' => 'Bearer']);
+        }
+
         $socialLogin = new SocialLogin("user",$request->provider);
         return $socialLogin->login();
+    }
+
+    private function storePhoneDeviceToken(Request $request, User $user, string $appType): void
+    {
+        $deviceToken = $request->device_token ?? $request->fcm_token;
+        if (!$deviceToken) return;
+        DeviceToken::updateOrCreate(['token' => $deviceToken], ['user_id' => $user->id, 'driver_id' => null, 'seller_id' => null, 'is_app' => Status::YES, 'app_type' => $appType]);
     }
 }

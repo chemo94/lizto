@@ -10,7 +10,7 @@
     <link rel="shortcut icon" type="image/png" href="{{ siteFavicon() }}">
 
     <link
-        href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800;900&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap"
         rel="stylesheet">
 
     <script src="{{ asset('assets/admin/js/theme.js') }}"></script>
@@ -24,6 +24,7 @@
 
     <link rel="stylesheet" href="{{ asset('assets/admin/css/main.css') }}">
     @stack('style')
+    <link rel="stylesheet" href="{{ asset('assets/admin/css/lizto-admin.css') }}?v=2">
 </head>
 
 <body>
@@ -42,7 +43,7 @@
 
     <script src="{{ asset('assets/global/js/global.js') }}"></script>
     <script src="{{ asset('assets/admin/js/search.js') }}"></script>
-    <script src="{{ asset('assets/admin/js/main.js') }}"></script>
+    <script src="{{ asset('assets/admin/js/main.js') }}?v=2"></script>
     @stack('script')
 
     <script>

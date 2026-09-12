@@ -18,7 +18,10 @@
     $daysRemaining = null;
 
     if ($currentStore) {
-        $storeActivePackage = $currentStore->storePackages->filter(fn($sp) => $sp->isActive())->first(fn($sp) => $sp->package && in_array($sp->package->type, ['basic', 'featured', 'premium']));
+        $storeActivePackage = $currentStore->storePackages->filter(fn($sp) => $sp->isActive())
+            ->filter(fn($sp) => $sp->package && in_array($sp->package->type, ['basic', 'featured', 'premium']))
+            ->sortByDesc(fn($sp) => $sp->expires_at?->timestamp ?? PHP_INT_MAX)
+            ->first();
         if ($storeActivePackage && $storeActivePackage->expires_at) {
             $expiresAtDate = $storeActivePackage->expires_at instanceof \Carbon\Carbon ? $storeActivePackage->expires_at : \Carbon\Carbon::parse($storeActivePackage->expires_at);
             $daysRemaining = (int) now()->startOfDay()->diffInDays($expiresAtDate->startOfDay(), false);
@@ -1195,7 +1198,8 @@
     .s-side.collapsed .s-brand-info,
     .s-side.collapsed .s-nav-label,
     .s-side.collapsed .s-nav-text,
-    .s-side.collapsed .s-side-foot .s-foot-text { display: none; }
+    .s-side.collapsed .s-side-foot .s-foot-text { display: none !important; }
+    .s-side.collapsed .s-nav a { overflow: hidden; }
     .s-side.collapsed .s-brand { padding: 16px 12px; justify-content: center; }
     .s-side.collapsed .s-brand-logo { width: 38px; height: 38px; font-size: 18px; }
     .s-side.collapsed .s-nav a { padding: 10px 0; justify-content: center; gap: 0; border-left: none; }
@@ -1236,7 +1240,7 @@
         .s-side.collapsed .s-brand-info,
         .s-side.collapsed .s-nav-label,
         .s-side.collapsed .s-nav-text,
-        .s-side.collapsed .s-side-foot .s-foot-text { display: block; }
+        .s-side.collapsed .s-side-foot .s-foot-text { display: block !important; }
         .s-side.collapsed .s-nav a { padding: 9px 20px; justify-content: flex-start; gap: 10px; border-left: 3px solid transparent; }
         .s-side.collapsed .s-nav a .s-nav-icon { font-size: inherit; }
         .s-side.collapsed .s-brand { padding: 20px 20px 16px; justify-content: flex-start; }
@@ -1355,6 +1359,185 @@
         }
     }
     </style>
+    <style>
+    /* FoodFlow-inspired visual layer — Lizto Seller */
+    :root {
+        --s-primary: #f97316;
+        --s-accent: #f97316;
+        --s-accent-dark: #ea580c;
+        --s-accent-deeper: #c2410c;
+        --s-accent-light: #fff7ed;
+        --s-accent-glow: rgba(249,115,22,.16);
+        --s-bg: #f8fafc;
+        --s-surface-2: #f8fafc;
+        --s-border: #e8edf3;
+        --s-side: #ffffff;
+        --s-side-2: #ffffff;
+        --s-side-border: #e8edf3;
+        --s-side-text: #64748b;
+        --s-side-text-active: #ea580c;
+        --s-side-hover: #fff7ed;
+        --s-shadow-sm: 0 1px 3px rgba(15,23,42,.035), 0 5px 14px rgba(15,23,42,.035);
+        --s-shadow: 0 8px 24px rgba(15,23,42,.075);
+        --s-shadow-lg: 0 18px 50px rgba(15,23,42,.13);
+        --s-shadow-accent: 0 8px 20px rgba(249,115,22,.22);
+        --s-radius: 12px;
+        --s-radius-lg: 14px;
+        --s-sidebar-w: 232px;
+        --s-topbar-h: 68px;
+    }
+    body { font-family:'Inter',system-ui,sans-serif; background:#f8fafc; font-size:13px; }
+    .s-side { background:#fff; border-right:1px solid var(--s-border); box-shadow:2px 0 12px rgba(15,23,42,.025); }
+    .s-side::before { display:none; }
+    .s-brand { min-height:68px; padding:12px 16px; border-bottom:1px solid var(--s-border); }
+    .s-brand-logo-container { border-radius:11px !important; box-shadow:0 5px 14px rgba(249,115,22,.18); }
+    .s-brand-logo { background:linear-gradient(135deg,#fb923c,#f4512c); }
+    .s-brand-info h2 { color:#172033; font-size:14px; }
+    .s-brand-info span { color:#f97316 !important; font-weight:800; }
+    .s-side-scroll::-webkit-scrollbar-thumb { background:#dce3eb; }
+    .s-nav-section { padding-top:15px; }
+    .s-nav-label { padding:0 15px 7px; color:#a6b1c1; font-size:8px; letter-spacing:1.15px; }
+    .s-nav a { margin:2px 9px; padding:7px 9px; min-height:42px; border:0; border-radius:10px; color:#657184; font-size:11px; }
+    .s-nav a::before { content:''; position:absolute; left:-9px; top:7px; bottom:7px; width:3px; border-radius:0 4px 4px 0; background:transparent; }
+    .s-nav a .s-nav-icon { width:29px; height:29px; background:#f3f6fa; color:#94a3b8; }
+    .s-nav a:hover { color:#ea580c; background:#fff9f5; border:0; }
+    .s-nav a:hover .s-nav-icon { color:#f97316; background:#ffedd5; }
+    .s-nav a.active { color:#ea580c; background:#fff3ea; border:0; font-weight:700; }
+    .s-nav a.active::before { background:#f97316; }
+    .s-nav a.active .s-nav-icon { color:#f97316; background:#ffedd5; }
+    .s-side-foot { border-color:var(--s-border); background:#fff; padding:10px; }
+    .s-side-foot a { color:#718096; }
+    .s-side-foot a:hover { color:#ea580c; background:#fff3ea; }
+    .s-topbar { padding:0 22px; background:rgba(255,255,255,.96); box-shadow:0 2px 10px rgba(15,23,42,.025); }
+    .s-hamburger { width:34px; height:34px; background:#fff; }
+    .s-topbar-title { display:none; }
+    .s-topbar-time { border:0; background:transparent; padding:6px; }
+    .s-content { padding:22px; }
+    .s-card { padding:18px; border-radius:14px; box-shadow:var(--s-shadow-sm); }
+    .s-card:hover { box-shadow:var(--s-shadow-sm); }
+    .s-card-title { font-size:13px; margin-bottom:16px; }
+    .seller-express-banner { display:none !important; }
+    .s-global-search { width:min(420px,38vw); height:38px; display:flex; align-items:center; gap:9px; padding:0 12px; background:#f8fafc; border:1px solid #e5eaf0; border-radius:10px; color:#94a3b8; }
+    .s-global-search input { width:100%; border:0; outline:0; background:transparent; color:#334155; font:500 12px 'Inter',sans-serif; }
+    .s-global-search kbd { border:1px solid #dbe2ea; background:#fff; color:#94a3b8; border-radius:5px; padding:2px 6px; font-size:9px; white-space:nowrap; }
+    .s-profile-chip { display:flex; align-items:center; gap:9px; padding-left:12px; margin-left:2px; border-left:1px solid var(--s-border); }
+    .s-profile-avatar { width:34px; height:34px; border-radius:10px; overflow:hidden; background:#fff3ea; display:grid; place-items:center; color:#f97316; font-size:18px; }
+    .s-profile-avatar img { width:100%; height:100%; object-fit:cover; }
+    .s-profile-copy { line-height:1.2; min-width:82px; }
+    .s-profile-copy b { display:block; color:#273244; font-size:11px; }
+    .s-profile-copy small { color:#94a3b8; font-size:9px; }
+    .module-hero { min-height:122px; margin-bottom:16px; padding:21px 23px; border-radius:14px; color:#fff; display:flex; align-items:center; justify-content:space-between; gap:18px; overflow:hidden; position:relative; box-shadow:var(--s-shadow-sm); }
+    .module-hero.inventory { background:linear-gradient(100deg,#164e63,#16849a 55%,#6ac0c3); }
+    .module-hero.warning { background:linear-gradient(100deg,#7c2d12,#c45c14 55%,#e9a03b); }
+    .module-hero.purchases { background:linear-gradient(100deg,#174b37,#25855f 55%,#67b990); }
+    .module-hero.suppliers { background:linear-gradient(100deg,#263b75,#4669aa 55%,#7ea0cf); }
+    .module-hero.logistics { background:linear-gradient(100deg,#27365f,#405d94 52%,#6e91bc); }
+    .module-hero.receiving { background:linear-gradient(100deg,#155e75,#2695a6 55%,#71c5c6); }
+    .module-hero.transfers { background:linear-gradient(100deg,#49347b,#7152ad 55%,#a085cf); }
+    .module-hero.cash { background:linear-gradient(100deg,#713f12,#b46d18 54%,#e2a33f); }
+    .module-hero.billing { background:linear-gradient(100deg,#174b37,#238060 54%,#61b38b); }
+    .module-hero.expenses { background:linear-gradient(100deg,#7f1d1d,#bd3c35 54%,#df7567); }
+    .module-hero.banking { background:linear-gradient(100deg,#1e3a8a,#3668bb 54%,#7da4d8); }
+    .module-hero.reports { background:linear-gradient(100deg,#3730a3,#5b54c8 54%,#9188e0); }
+    .module-hero.analytics { background:linear-gradient(100deg,#4c1d95,#7c3fc1 54%,#b27adc); }
+    .module-hero.tax { background:linear-gradient(100deg,#075985,#1483ad 54%,#69b9cf); }
+    .module-hero.hr { background:linear-gradient(100deg,#3f2b78,#6850aa 54%,#9b83cf); }
+    .module-hero.attendance { background:linear-gradient(100deg,#155e75,#258ea0 54%,#6cc1c3); }
+    .module-hero.payroll { background:linear-gradient(100deg,#174b37,#27805f 54%,#65b48b); }
+    .module-hero.commissions { background:linear-gradient(100deg,#7c2d12,#c25c17 54%,#ed9a35); }
+    .module-hero .module-crumb { font-size:9px; color:rgba(255,255,255,.68); margin-bottom:7px; }
+    .module-hero h2 { margin:0 0 4px; font:800 22px 'Plus Jakarta Sans','Inter',sans-serif; letter-spacing:-.45px; }
+    .module-hero p { margin:0; font-size:10px; color:rgba(255,255,255,.72); }
+    .module-hero-stats { display:flex; gap:8px; }
+    .module-hero-stats>div { min-width:84px; padding:10px 12px; text-align:center; border:1px solid rgba(255,255,255,.2); border-radius:10px; background:rgba(255,255,255,.1); backdrop-filter:blur(8px); }
+    .module-hero-stats b { display:block; font-size:17px; line-height:1.1; }
+    .module-hero-stats small { color:rgba(255,255,255,.72); font-size:8px; }
+    .seller-work-card { border-radius:14px!important; box-shadow:var(--s-shadow-sm)!important; }
+    @media (max-width:767px) {
+        .s-global-search { display:none; }
+        .s-profile-copy, .s-topbar-time { display:none; }
+        .s-profile-chip { padding-left:8px; }
+        .s-content { padding:14px; }
+        .module-hero { align-items:flex-start; flex-direction:column; }
+        .module-hero-stats { width:100%; overflow:auto; }
+        .module-hero-stats>div { flex:1; }
+        .logistics-workspace { grid-template-columns:1fr!important; }
+        .banking-workspace { grid-template-columns:1fr!important; }
+        .hr-workspace { grid-template-columns:1fr!important; }
+    }
+
+    /* Responsive foundation for data-heavy Seller modules. */
+    .s-content,
+    .s-content > *,
+    .s-content .s-card,
+    .seller-responsive-page .hr-workspace > *,
+    .seller-responsive-page .s-grid-2 > * { min-width:0; max-width:100%; }
+    .s-content [style*="overflow-x: auto"],
+    .s-content .s-table-wrapper {
+        width:100%; max-width:100%; -webkit-overflow-scrolling:touch;
+        overscroll-behavior-x:contain;
+    }
+    @media (max-width:767px) {
+        .s-content { width:100%; max-width:100%!important; padding:14px!important; overflow-x:clip; }
+        .s-content .s-card { padding:14px!important; }
+        .s-content .s-grid-2,
+        .s-content .hr-workspace,
+        .s-content [style*="grid-template-columns: 360px 1fr"],
+        .s-content [style*="grid-template-columns: 1fr 1.8fr"],
+        .s-content [style*="grid-template-columns: 1fr 1.2fr"],
+        .s-content [style*="grid-template-columns: 1fr 1.3fr"],
+        .s-content [style*="grid-template-columns: 1fr 1.5fr"],
+        .s-content [style*="grid-template-columns: 1.2fr 0.8fr"],
+        .s-content [style*="grid-template-columns: 1.2fr 1fr"],
+        .s-content [style*="grid-template-columns: 1.3fr 1fr"],
+        .s-content [style*="grid-template-columns: 1fr 2fr"],
+        .s-content [style*="grid-template-columns: 330px 1fr"],
+        .s-content [style*="grid-template-columns: 340px 1fr"],
+        .s-content [style*="grid-template-columns:minmax(0,2"],
+        .s-content [style*="grid-template-columns:minmax(280px"],
+        .s-content [style*="grid-template-columns: minmax(280px"] { grid-template-columns:minmax(0,1fr)!important; }
+        .s-content [style*="grid-template-columns: repeat(3, 1fr)"] { grid-template-columns:minmax(0,1fr)!important; }
+        .s-content [style*="grid-template-columns: repeat(auto-fit, minmax(340px, 1fr))"] { grid-template-columns:minmax(0,1fr)!important; }
+        .s-content [style*="grid-template-columns: 1fr 1fr 1fr auto"],
+        .s-content [style*="grid-template-columns: 1fr 1fr 1fr"] { grid-template-columns:minmax(0,1fr)!important; }
+        .s-content [style*="overflow-x: auto"] > table,
+        .s-content .s-table-wrapper > table { min-width:680px; }
+        .s-content table:not(.s-table) { display:block; width:100%; max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain; }
+        .s-content [style*="justify-content: space-between"] { row-gap:10px; }
+        .s-content .module-hero-stats > div { flex:0 0 auto; }
+        .s-content .module-hero > div { max-width:100%; }
+        .s-content .module-hero > div > div[style*="display: flex"] { flex-wrap:wrap; }
+        .s-content [style*="justify-content: space-between"][style*="display: flex"] { flex-wrap:wrap; }
+
+        .seller-responsive-modal { padding:12px; overflow-y:auto; }
+        .seller-responsive-modal > .s-card { width:100%!important; max-width:100%!important; padding:16px!important; margin:auto; max-height:calc(100dvh - 24px); overflow-y:auto; }
+        .seller-responsive-modal [style*="grid-template-columns: 1fr 1fr"],
+        .seller-responsive-modal [style*="grid-template-columns: 1fr 1fr 1fr"] { grid-template-columns:minmax(0,1fr)!important; }
+        .seller-responsive-modal [style*="display: flex"][style*="gap:"] { flex-wrap:wrap; }
+        .s-main [style*="position: fixed"][style*="align-items: center"][style*="justify-content: center"] > div {
+            width:calc(100vw - 24px)!important; max-width:calc(100vw - 24px)!important;
+            max-height:calc(100dvh - 24px); overflow-y:auto;
+        }
+
+        .staff-report-topbar-filter { gap:3px!important; min-width:0; }
+        .staff-report-topbar-filter > div { width:102px; padding:2px 5px!important; min-width:0; }
+        .staff-report-topbar-filter > div > span { display:none; }
+        .staff-report-topbar-filter input[type="date"] { width:90px; min-width:0; font-size:10px!important; }
+        .staff-report-topbar-filter button { width:38px; min-width:38px!important; padding:0!important; justify-content:center; font-size:0!important; }
+        .staff-report-topbar-filter button i { font-size:15px; }
+        .s-topbar-right:has(.staff-report-topbar-filter) { gap:4px; min-width:0; }
+        .s-topbar-right:has(.staff-report-topbar-filter) .s-profile-chip { display:none; }
+    }
+    @media (max-width:480px) {
+        .s-content [style*="grid-template-columns: 1fr 1fr"] { grid-template-columns:minmax(0,1fr)!important; }
+        .s-content [style*="minmax(300px"],
+        .s-content [style*="minmax(320px"],
+        .s-content [style*="minmax(340px"],
+        .s-content [style*="minmax(350px"],
+        .s-content [style*="minmax(360px"] { grid-template-columns:minmax(0,1fr)!important; }
+        .s-content [style*="display: flex"][style*="align-items: flex-end"] { flex-wrap:wrap!important; }
+    }
+    </style>
     @stack('style')
 </head>
 <body>
@@ -1415,6 +1598,14 @@
             }
         @endphp
         <div class="s-side-scroll">
+            @if($store?->isDeliveryOnlyMode())
+            <div class="s-nav-section s-nav">
+                <span class="s-nav-label">Envíos</span>
+                <a href="{{ route('seller.delivery.request') }}" data-tip="Solicitar Envío" class="{{ request()->routeIs('seller.delivery.request*') ? 'active' : '' }}">
+                    <span class="s-nav-icon"><i class="las la-motorcycle"></i></span> <span class="s-nav-text">Solicitar Envío</span>
+                </a>
+            </div>
+            @else
             <!-- PRINCIPAL -->
             @if(!$staffUser || $staffUser->hasPermission('pos_orders') || $staffUser->hasPermission('kitchen') || $staffUser->hasPermission('billing'))
             <div class="s-nav-section s-nav">
@@ -1428,7 +1619,7 @@
                 </a>
                 @endif
                 @if(!$staffUser || $staffUser->hasPermission('pos_orders'))
-                <a href="{{ route('seller.pos') }}" data-tip="Punto de Venta" class="{{ request()->is('seller/pos') && !request()->is('seller/pos/*') ? 'active' : '' }}">
+                <a href="{{ route('seller.pos') }}" data-tip="Punto de Venta" class="{{ request()->routeIs('seller.pos', 'seller.pos.workspace') ? 'active' : '' }}">
                     <span class="s-nav-icon"><i class="las la-cash-register"></i></span> <span class="s-nav-text">Punto de Venta</span>
                 </a>
                 @endif
@@ -1645,10 +1836,14 @@
                 @endif
             </div>
             @endif
+            @endif
         </div>
 
         <!-- FOOTER -->
         <div class="s-side-foot">
+            <a href="{{ route('seller.profile') }}" class="{{ request()->routeIs('seller.profile*') ? 'active' : '' }}">
+                <i class="las la-user-circle"></i> <span class="s-nav-text">Mi perfil</span>
+            </a>
             @if(!$isKitchenOnly && !$isAccountingStaff)
             <a href="{{ route('seller.pricing') }}" class="{{ request()->routeIs('seller.pricing') ? 'active' : '' }}">
                 <i class="las la-crown"></i> <span class="s-nav-text">Planes</span>
@@ -1663,7 +1858,7 @@
     <!-- MAIN -->
     <main class="s-main">
         <!-- DELIVERY REQUEST FLOATING BANNER -->
-        <div style="background: linear-gradient(135deg, #1e293b, #0f172a); color: #fff; padding: 12px 24px; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1.5px solid var(--s-border); z-index: 999; position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.05); flex-wrap: wrap;">
+        <div class="seller-express-banner" style="background: linear-gradient(135deg, #1e293b, #0f172a); color: #fff; padding: 12px 24px; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1.5px solid var(--s-border); z-index: 999; position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.05); flex-wrap: wrap;">
             <div style="display: flex; align-items: center; gap: 10px;">
                 <span style="background: rgba(34,197,94,0.15); color: #22c55e; width: 32px; height: 32px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; box-shadow: 0 2px 8px rgba(34,197,94,0.2);">
                     <i class="las la-shipping-fast"></i>
@@ -1749,6 +1944,11 @@
                 <button class="s-hamburger" onclick="toggleSidebar()" aria-label="Menú">
                     <i class="las la-bars"></i>
                 </button>
+                <label class="s-global-search" aria-label="Buscar en el panel">
+                    <i class="las la-search" style="font-size:17px"></i>
+                    <input type="search" id="sellerGlobalSearch" placeholder="Buscar pedidos, productos, clientes..." autocomplete="off">
+                    <kbd>⌘K</kbd>
+                </label>
                 @hasSection('page-title')
                     <h1 class="s-topbar-title">@yield('page-title')</h1>
                 @else
@@ -1771,6 +1971,20 @@
                     <i class="las la-question-circle" style="font-size:15px;color:var(--s-accent-dark);"></i> Ayuda
                 </button>
                 @yield('topbar-actions')
+                <a class="s-profile-chip" href="{{ route('seller.profile') }}" style="text-decoration:none">
+                    <div class="s-profile-avatar">
+                        @if($store && $store->image)
+                            <img src="{{ getImage('assets/images/store/' . $store->image) }}" alt="{{ $store->name }}">
+                        @else
+                            <i class="las la-store"></i>
+                        @endif
+                    </div>
+                    <div class="s-profile-copy">
+                        <b>{{ Str::limit($store->name ?? 'Mi Negocio', 18) }}</b>
+                        <small>{{ $staffUser?->name ?? 'Administrador' }}</small>
+                    </div>
+                    <i class="las la-angle-down" style="font-size:10px;color:#94a3b8"></i>
+                </a>
             </div>
         </div>
 
@@ -2081,6 +2295,7 @@ document.addEventListener('keydown', function(e) {
 @stack('script')
 @include('seller.partials.realtime_notifications')
 @include('seller.partials.firebase_notifications')
+@include('seller.partials.invoice_preview_sheet')
 @include('partials.jsoft_ai')
 </body>
 </html>

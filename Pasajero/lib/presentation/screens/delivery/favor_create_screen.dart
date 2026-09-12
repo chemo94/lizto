@@ -13,7 +13,6 @@ import 'package:liztogo/data/services/api_client.dart';
 import 'package:liztogo/data/model/delivery/favor_models.dart';
 import 'package:liztogo/presentation/components/buttons/rounded_button.dart';
 import 'package:liztogo/presentation/screens/delivery/favor_tracking_screen.dart';
-import 'package:liztogo/presentation/screens/delivery/shopping_list_screen.dart';
 import 'package:liztogo/environment.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
@@ -30,6 +29,7 @@ class _FavorCreateScreenState extends State<FavorCreateScreen> {
   final _descCtrl = TextEditingController();
   final _storeNameCtrl = TextEditingController();
   final _storeAddressCtrl = TextEditingController();
+  final _amountCtrl = TextEditingController();
   final _pickupCtrl = TextEditingController();
   final _deliveryCtrl = TextEditingController();
   final _recipientNameCtrl = TextEditingController();
@@ -275,6 +275,7 @@ class _FavorCreateScreenState extends State<FavorCreateScreen> {
     _descCtrl.dispose();
     _storeNameCtrl.dispose();
     _storeAddressCtrl.dispose();
+    _amountCtrl.dispose();
     _pickupCtrl.dispose();
     _deliveryCtrl.dispose();
     _recipientNameCtrl.dispose();
@@ -298,13 +299,9 @@ class _FavorCreateScreenState extends State<FavorCreateScreen> {
               child: ListView(
                 padding: EdgeInsets.fromLTRB(Dimensions.space16, Dimensions.space16, Dimensions.space16, Dimensions.space40),
                 children: [
-                  if (isBuyType) ...[
-                    _buildBuyProgress(),
-                    SizedBox(height: Dimensions.space16),
-                  ],
                   _buildSectionCard(
                     icon: isBuyType ? Icons.shopping_bag_rounded : Icons.inventory_2_rounded,
-                    title: isBuyType ? '1. Arma tu compra' : '¿Qué envías?',
+                    title: isBuyType ? '¿Qué necesitas comprar?' : '¿Qué envías?',
                     children: [
                       TextFormField(
                         controller: _descCtrl,
@@ -375,7 +372,24 @@ class _FavorCreateScreenState extends State<FavorCreateScreen> {
                           ],
                         ),
                       ],
-                      if (isBuyType) ...[_buildBuyDetails()],
+                      if (isBuyType) ...[
+                        SizedBox(height: Dimensions.space14),
+                        TextFormField(
+                          controller: _storeNameCtrl,
+                          decoration: _inputDeco('Nombre de la tienda', hint: 'Ej: TAMBO, Tienda Don José', icon: Icons.store_outlined),
+                        ),
+                        SizedBox(height: Dimensions.space14),
+                        TextFormField(
+                          controller: _storeAddressCtrl,
+                          decoration: _inputDeco('Dirección de la tienda', hint: 'Ej: Av. Larco 123, Miraflores', icon: Icons.location_on_outlined),
+                        ),
+                        SizedBox(height: Dimensions.space14),
+                        TextFormField(
+                          controller: _amountCtrl,
+                          decoration: _inputDeco('Monto estimado', hint: '35.00', icon: Icons.attach_money_rounded, prefix: 'S/'),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        ),
+                      ],
                     ],
                   ),
                   SizedBox(height: Dimensions.space16),
@@ -383,7 +397,7 @@ class _FavorCreateScreenState extends State<FavorCreateScreen> {
                   SizedBox(height: Dimensions.space16),
                   _buildSectionCard(
                     icon: Icons.person_outline_rounded,
-                    title: isBuyType ? '3. Datos de entrega' : '¿Quién recibe?',
+                    title: '¿Quién recibe?',
                     children: [
                       Row(
                         children: [
@@ -408,10 +422,10 @@ class _FavorCreateScreenState extends State<FavorCreateScreen> {
                     ],
                   ),
                   SizedBox(height: Dimensions.space20),
-                  _buildFeeCard(),
+                  if (!isBuyType) _buildFeeCard(),
                   SizedBox(height: Dimensions.space20),
                   RoundedButton(
-                    text: isBuyType ? 'Continuar con mi compra' : (_isExpress ? 'Enviar express' : 'Solicitar servicio'),
+                    text: _isExpress ? 'Enviar express' : 'Solicitar servicio',
                     isLoading: c.sending,
                     press: _submit,
                     isOutlined: false,
@@ -423,51 +437,6 @@ class _FavorCreateScreenState extends State<FavorCreateScreen> {
         ],
       ),
     );
-  }
-
-  Widget _buildBuyProgress() {
-    return Container(
-      padding: EdgeInsets.all(Dimensions.space16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [MyColor.primaryColor, MyColor.primaryColor.withValues(alpha: .78)]),
-        borderRadius: BorderRadius.circular(Dimensions.largeRadius),
-      ),
-      child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Compra fácil, precio claro', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
-        SizedBox(height: 5),
-        Text('Indica qué comprar, ubica la tienda y revisa el total estimado antes de solicitar.', style: TextStyle(color: Color(0xDDFFFFFF), height: 1.3)),
-        SizedBox(height: 16),
-        Row(children: [
-          _BuyStep(number: '1', label: 'Compra'),
-          _BuyStepLine(),
-          _BuyStep(number: '2', label: 'Ruta'),
-          _BuyStepLine(),
-          _BuyStep(number: '3', label: 'Entrega'),
-        ]),
-      ]),
-    );
-  }
-
-  Widget _buildBuyDetails() {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SizedBox(height: Dimensions.space14),
-      TextFormField(
-        controller: _storeNameCtrl,
-        decoration: _inputDeco('Tienda o comercio', hint: 'Ej: Tambo, Plaza Vea o bodega', icon: Icons.storefront_outlined),
-        validator: (v) => (v == null || v.trim().isEmpty) ? 'Indica dónde comprar' : null,
-      ),
-      SizedBox(height: Dimensions.space14),
-      SizedBox(height: Dimensions.space12),
-      Container(
-        padding: EdgeInsets.all(Dimensions.space12),
-        decoration: BoxDecoration(color: MyColor.primaryColor.withValues(alpha: .07), borderRadius: BorderRadius.circular(Dimensions.defaultRadius)),
-        child: Row(children: [
-          Icon(Icons.auto_graph_rounded, color: MyColor.primaryColor),
-          SizedBox(width: Dimensions.space10),
-          Expanded(child: Text('No necesitas saber los precios ahora. Coordina opciones, fotos y precios reales por chat con el repartidor.', style: regularSmall.copyWith(color: MyColor.bodyTextColor, height: 1.3))),
-        ]),
-      ),
-    ]);
   }
 
   Widget _buildHeader() {
@@ -612,7 +581,7 @@ class _FavorCreateScreenState extends State<FavorCreateScreen> {
                 child: Icon(Icons.alt_route_rounded, color: MyColor.primaryColor, size: 20),
               ),
               SizedBox(width: Dimensions.space10),
-              Text(isBuyType ? '2. Ruta de tu compra' : 'Ruta de entrega', style: boldLarge.copyWith(fontSize: Dimensions.fontLarge)),
+              Text('Ruta de entrega', style: boldLarge.copyWith(fontSize: Dimensions.fontLarge)),
             ],
           ),
           SizedBox(height: Dimensions.space16),
@@ -623,8 +592,8 @@ class _FavorCreateScreenState extends State<FavorCreateScreen> {
                   _buildAddressField(
                     controller: _pickupCtrl,
                     focusNode: _pickupFocus,
-                    label: isBuyType ? 'Ubicación de la tienda' : 'Punto A - Recogida',
-                    hint: isBuyType ? 'Busca la dirección del comercio' : 'Jr. San Martín 123, oficina 302',
+                    label: 'Punto A - Recogida',
+                    hint: 'Jr. San Martín 123, oficina 302',
                     isLoading: _gettingPickupLocation,
                     onGetLocation: () => _useCurrentLocation(true),
                     predictions: _pickupPredictions,
@@ -652,7 +621,7 @@ class _FavorCreateScreenState extends State<FavorCreateScreen> {
                   _buildAddressField(
                     controller: _deliveryCtrl,
                     focusNode: _deliveryFocus,
-                    label: isBuyType ? '¿Dónde entregamos tu compra?' : 'Punto B - Entrega',
+                    label: 'Punto B - Entrega',
                     hint: 'Av. Pardo 456, dpto 5',
                     isLoading: _gettingDeliveryLocation,
                     onGetLocation: () => _useCurrentLocation(false),
@@ -771,12 +740,11 @@ class _FavorCreateScreenState extends State<FavorCreateScreen> {
             children: [
               Icon(Icons.receipt_long_rounded, color: MyColor.primaryColor, size: 20),
               SizedBox(width: Dimensions.space8),
-              Text(isBuyType ? 'Estimado en tiempo real' : 'Tarifa estimada', style: boldLarge.copyWith(fontSize: Dimensions.fontLarge)),
+              Text('Tarifa estimada', style: boldLarge.copyWith(fontSize: Dimensions.fontLarge)),
             ],
           ),
           SizedBox(height: Dimensions.space12),
           if (_estimatedFee != null && _feeBreakdown != null) ...[
-            if (isBuyType && _feeBreakdown!['estimated_amount'] != null) _buildFeeRow('Productos', 'S/ ${_feeBreakdown!['estimated_amount']}'),
             if (_feeBreakdown!['base_fare'] != null) _buildFeeRow('Tarifa base', 'S/ ${_feeBreakdown!['base_fare']}'),
             if (_feeBreakdown!['distance_fee'] != null && (_feeBreakdown!['distance_fee'] as num) > 0) _buildFeeRow('Distancia extra', 'S/ ${_feeBreakdown!['distance_fee']}'),
             if (_feeBreakdown!['time_fee'] != null && (_feeBreakdown!['time_fee'] as num) > 0) _buildFeeRow('Tiempo estimado', 'S/ ${_feeBreakdown!['time_fee']}'),
@@ -788,7 +756,7 @@ class _FavorCreateScreenState extends State<FavorCreateScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(isBuyType ? 'Costo estimado del servicio' : 'Costo total', style: boldDefault.copyWith(fontSize: Dimensions.fontLarge)),
+                Text('Costo total', style: boldDefault.copyWith(fontSize: Dimensions.fontLarge)),
                 Text(
                   'S/ ${_estimatedFee!.toStringAsFixed(2)}',
                   style: boldExtraLarge.copyWith(color: MyColor.primaryColor, fontSize: 20),
@@ -876,7 +844,8 @@ class _FavorCreateScreenState extends State<FavorCreateScreen> {
       type: widget.favorType,
       description: _descCtrl.text.trim(),
       storeName: _storeNameCtrl.text.trim(),
-      storeAddress: isBuyType ? _pickupCtrl.text.trim() : _storeAddressCtrl.text.trim(),
+      storeAddress: _storeAddressCtrl.text.trim(),
+      estimatedAmount: double.tryParse(_amountCtrl.text.trim()),
       pickupAddress: _pickupCtrl.text.trim(),
       pickupLat: _pickupLat,
       pickupLng: _pickupLng,
@@ -888,15 +857,7 @@ class _FavorCreateScreenState extends State<FavorCreateScreen> {
     )
         .then((ok) {
       if (ok && mounted) {
-        if (isBuyType) {
-          // For buy type, navigate to shopping list to build the item list
-          Get.off(() => ShoppingListScreen(
-                favorId: c.selectedFavor?.id ?? 0,
-                storeName: _storeNameCtrl.text.isNotEmpty ? _storeNameCtrl.text : 'Tienda',
-              ));
-        } else {
-          Get.off(() => FavorTrackingScreen(favorId: c.selectedFavor?.id ?? 0));
-        }
+        Get.off(() => FavorTrackingScreen(favorId: c.selectedFavor?.id ?? 0));
       } else if (mounted) {
         Get.snackbar('Error', 'No se pudo crear la solicitud', backgroundColor: MyColor.redCancelTextColor, colorText: MyColor.colorWhite);
       }
@@ -908,35 +869,4 @@ class _PlacePrediction {
   final String description;
   final String placeId;
   _PlacePrediction({required this.description, required this.placeId});
-}
-
-class _BuyStep extends StatelessWidget {
-  final String number;
-  final String label;
-  const _BuyStep({required this.number, required this.label});
-
-  @override
-  Widget build(BuildContext context) => Column(children: [
-        Container(
-          width: 27,
-          height: 27,
-          alignment: Alignment.center,
-          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-          child: Text(number, style: const TextStyle(color: MyColor.primaryColor, fontWeight: FontWeight.w800)),
-        ),
-        const SizedBox(height: 5),
-        Text(label, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
-      ]);
-}
-
-class _BuyStepLine extends StatelessWidget {
-  const _BuyStepLine();
-
-  @override
-  Widget build(BuildContext context) => const Expanded(
-        child: Padding(
-          padding: EdgeInsets.only(bottom: 18),
-          child: Divider(color: Color(0x99FFFFFF), thickness: 1),
-        ),
-      );
 }

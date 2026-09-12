@@ -11,19 +11,27 @@
 @endsection
 
 @section('seller-content')
+<style>
+.catalog-head{min-height:148px;margin-bottom:16px;padding:24px 26px;border-radius:14px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:20px;background:linear-gradient(90deg,rgba(112,45,10,.92),rgba(161,71,19,.72),rgba(108,48,13,.42)),url('{{ asset('assets/images/banner-cover.png') }}') center/cover no-repeat}.catalog-head .crumb{font-size:9px;color:rgba(255,255,255,.75);margin-bottom:8px}.catalog-head h2{font:800 24px 'Plus Jakarta Sans','Inter',sans-serif;margin:0 0 4px;letter-spacing:-.5px}.catalog-head p{font-size:10px;color:rgba(255,255,255,.78);margin:0}.catalog-head-actions{display:flex;gap:8px;flex-wrap:wrap}.catalog-head-actions .s-btn{height:36px;border-radius:9px;background:rgba(255,255,255,.13);color:#fff;border:1px solid rgba(255,255,255,.28);backdrop-filter:blur(8px)}.catalog-head-actions .primary{background:#fff;color:#a64c15;border-color:#fff}.catalog-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}.catalog-kpi{min-height:82px;background:#fff;border:1px solid var(--s-border);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:var(--s-shadow-sm)}.catalog-kpi i{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;color:#fff;font-size:18px;box-shadow:0 6px 14px rgba(15,23,42,.1)}.catalog-kpi b{display:block;font-size:19px;color:#172033}.catalog-kpi small{display:block;font-size:9px;color:#94a3b8}.catalog-filter-row{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.catalog-pills{display:flex;gap:7px;overflow:auto;padding-bottom:2px}.catalog-pill{height:34px;padding:0 13px;border:1px solid var(--s-border);border-radius:9px;background:#fff;color:#64748b;font-size:10px;font-weight:700;white-space:nowrap;cursor:pointer}.catalog-pill.active{background:#f97316;color:#fff;border-color:#f97316;box-shadow:0 5px 12px rgba(249,115,22,.2)}.catalog-toolbar{display:flex;align-items:center;gap:8px;margin:0}.catalog-search{position:relative}.catalog-search i{position:absolute;left:13px;top:11px;color:#94a3b8}.catalog-search input{width:220px;height:36px;padding:0 12px 0 37px;border:1px solid var(--s-border);border-radius:10px;background:#fff;outline:0;font-size:10px}.catalog-toolbar select{height:36px;border:1px solid var(--s-border);border-radius:10px;padding:0 10px;background:#fff;color:#64748b;font-size:10px}.catalog-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.catalog-product-card{min-width:0;border:1px solid var(--s-border);border-radius:14px;background:#fff;overflow:hidden;box-shadow:0 3px 10px rgba(15,23,42,.045);transition:.2s}.catalog-product-card:hover{border-color:#fed7aa;transform:translateY(-2px);box-shadow:0 9px 20px rgba(15,23,42,.08)}.catalog-product-image{height:154px;position:relative;background:#edf1f5;overflow:hidden}.catalog-product-image img{width:100%;height:100%;object-fit:cover}.catalog-product-image:after{content:'';position:absolute;inset:auto 0 0;height:42%;background:linear-gradient(transparent,rgba(0,0,0,.55))}.catalog-product-price{position:absolute;right:12px;bottom:10px;z-index:2;color:#fff;font-size:15px;font-weight:800}.catalog-product-status{position:absolute;left:10px;top:10px;z-index:2;padding:4px 8px;border-radius:7px;color:#fff;background:#10b981;font-size:8px;font-weight:800}.catalog-product-status.off{background:#ef4444}.catalog-product-body{padding:13px}.catalog-product-name{font-size:12px;font-weight:800;color:#273244;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.catalog-product-desc{height:32px;margin:5px 0 8px;color:#94a3b8;font-size:9px;line-height:1.55;overflow:hidden}.catalog-product-meta{display:flex;justify-content:space-between;align-items:center;gap:8px}.catalog-product-actions{display:flex;align-items:center;gap:3px}.catalog-product-actions form{margin:0}.catalog-product-actions .s-btn{width:27px;height:27px;padding:0;justify-content:center}.catalog-category-tag{padding:3px 7px;border-radius:7px;background:#fff7ed;color:#ea580c;font-size:8px;font-weight:700}@media(max-width:1199px){.catalog-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:900px){.catalog-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.catalog-kpis{grid-template-columns:repeat(2,1fr)}.catalog-filter-row{align-items:stretch;flex-direction:column}.catalog-toolbar,.catalog-search,.catalog-search input{width:100%}}@media(max-width:600px){.catalog-head{align-items:flex-start;flex-direction:column}.catalog-head-actions{width:100%}.catalog-grid{grid-template-columns:1fr}.catalog-kpis{grid-template-columns:1fr}}
+.catalog-pill{display:inline-flex;align-items:center;text-decoration:none}.catalog-pill:hover{color:#ea580c;border-color:#fed7aa}.catalog-pill.active:hover{color:#fff}
+@media(max-width:900px){.catalog-toolbar{flex-wrap:wrap}.catalog-search{flex:1 1 220px}.catalog-toolbar select{flex:1 1 140px}}
+@media(max-width:600px){.catalog-toolbar .s-btn{flex:0 0 36px}.catalog-search{flex-basis:100%}}
+</style>
 <div class="s-content">
-@php
-$allProducts = \App\Models\Product::where('store_id', $store->id)->with('category','variations','addons', 'invProductItems.item')->orderBy('store_category_id')->orderBy('sort_order')->get();
-$cats = \App\Models\StoreCategory::where('store_id', $store->id)->orderBy('sort_order')->get();
-// Map general categories to SUNAT code prefixes for default ordering
-$categorySunatMap = [
-    'Restaurantes'   => ['5025','5018','5020','5019','5021','5022','5023','5015'],
-    'Licorerías'     => ['501516','501515','301215'],
-    'Super/Mini Markets' => ['5018','5019','5020','5021','5022','5023','5015','2511','2517','3013'],
-    'Farmacia'       => ['5026','9310'],
-    'Mascotas'       => ['5026','9310'],
-];
-@endphp
+<section class="catalog-head">
+    <div><div class="crumb"><i class="las la-home"></i> Seller &nbsp;/&nbsp; Restaurante &nbsp;/&nbsp; Menú</div><h2><i class="las la-clipboard-list"></i> Gestión del menú</h2><p>Administra productos, categorías y precios de <b>{{ $store->name }}</b>.</p></div>
+    <div class="catalog-head-actions"><a class="s-btn" href="{{ route('seller.products.export.stock', request()->query()) }}" title="Exportar inventario y stock a Excel"><i class="las la-file-excel"></i> Exportar Stock</a><button class="s-btn primary" onclick="openProdModal()"><i class="las la-plus"></i> Añadir producto</button><a class="s-btn" href="{{ route('seller.categories') }}"><i class="las la-folder-plus"></i> Nueva categoría</a></div>
+</section>
+<div class="catalog-kpis">
+    <div class="catalog-kpi"><i class="las la-clipboard-list" style="background:linear-gradient(135deg,#fbbf24,#f59e0b)"></i><div><b>{{ $totalProducts }}</b><small>Total productos</small></div></div>
+    <div class="catalog-kpi"><i class="las la-check-circle" style="background:linear-gradient(135deg,#34d399,#10b981)"></i><div><b style="color:#10b981">{{ $activeProducts }}</b><small>Disponibles</small></div></div>
+    <div class="catalog-kpi"><i class="las la-times-circle" style="background:linear-gradient(135deg,#fb7185,#ef4444)"></i><div><b style="color:#ef4444">{{ $inactiveProducts }}</b><small>Agotados / inactivos</small></div></div>
+    <div class="catalog-kpi"><i class="las la-layer-group" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)"></i><div><b>{{ $cats->count() }}</b><small>Categorías</small></div></div>
+</div>
+<div class="catalog-filter-row">
+    <div class="catalog-pills"><a href="{{ route('seller.products', array_filter(['search'=>request('search'),'status'=>request('status'),'tax_type'=>request('tax_type')])) }}" class="catalog-pill {{ request('category') ? '' : 'active' }}">Todos ({{ $totalProducts }})</a>@foreach($cats as $cat)<a href="{{ route('seller.products', array_filter(['category'=>$cat->id,'search'=>request('search'),'status'=>request('status'),'tax_type'=>request('tax_type')])) }}" class="catalog-pill {{ (string)request('category') === (string)$cat->id ? 'active' : '' }}">{{ $cat->name }} ({{ $categoryCounts[$cat->id] ?? 0 }})</a>@endforeach</div>
+    <form class="catalog-toolbar" method="GET" action="{{ route('seller.products') }}">@if(request('category'))<input type="hidden" name="category" value="{{ request('category') }}">@endif<label class="catalog-search"><i class="las la-search"></i><input name="search" value="{{ request('search') }}" type="search" placeholder="Buscar productos..."></label><select name="status" aria-label="Filtrar por estado" onchange="this.form.submit()"><option value="">Todos los estados</option><option value="active" @selected(request('status')==='active')>Disponibles</option><option value="inactive" @selected(request('status')==='inactive')>Inactivos</option></select><select name="tax_type" aria-label="Filtrar por IGV" onchange="this.form.submit()"><option value="">Todas las opciones de IGV</option>@foreach($taxTypes as $value => $label)<option value="{{ $value }}" @selected(request('tax_type') === $value)>{{ $label }}</option>@endforeach</select><button class="s-btn s-btn-primary s-btn-sm" type="submit" aria-label="Aplicar filtros"><i class="las la-search"></i></button></form>
+</div>
 
 @if($cats->isEmpty())
 <div class="s-card">
@@ -34,47 +42,18 @@ $categorySunatMap = [
 </div>
 @endif
 
-@foreach($cats as $cat)
-@php $catProds = $allProducts->where('store_category_id', $cat->id); @endphp
-<div class="s-card" style="margin-bottom:16px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <h3 class="s-card-title" style="margin:0">
-            <span style="width:8px;height:8px;border-radius:50%;background:var(--s-accent);display:inline-block"></span>
-            {{ $cat->name }}
-            <span style="font-size:12px;color:var(--s-text-3);font-weight:500">({{ $catProds->count() }} productos)</span>
-        </h3>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px">
-        @forelse($catProds as $p)
-        <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1.5px solid {{ $p->status ? 'var(--s-border)' : 'var(--s-danger-bg)' }};border-radius:14px;transition:all .2s;background:{{ $p->status ? 'var(--s-surface)' : 'var(--s-danger-bg)' }};{{ $p->status ? '' : 'opacity:.7' }}" onmouseenter="this.style.boxShadow='var(--s-shadow)'" onmouseleave="this.style.boxShadow='none'">
-            <div style="width:58px;height:58px;border-radius:12px;background:var(--s-surface-2);border:1px solid var(--s-border);display:grid;place-items:center;overflow:hidden;flex-shrink:0">
+<div class="catalog-grid">
+        @forelse($allProducts as $p)
+        <article class="catalog-product-card" data-category="{{ $p->store_category_id }}" data-status="{{ $p->status ? 'active' : 'inactive' }}" style="{{ $p->status ? '' : 'opacity:.68' }}">
+            <div class="catalog-product-image">
                 @if($p->image)
-                    <img src="{{ asset('storage/'.$p->image) }}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+                    <img src="{{ asset('storage/'.$p->image) }}" loading="lazy" alt="{{ $p->name }}">
                 @else
-                    <i class="las la-hamburger" style="font-size:26px;color:var(--s-text-3)"></i>
+                    <div style="width:100%;height:100%;display:grid;place-items:center;background:linear-gradient(135deg,#fff7ed,#fed7aa)"><i class="las la-hamburger" style="font-size:48px;color:#f97316"></i></div>
                 @endif
+                <span class="catalog-product-status {{ $p->status ? '' : 'off' }}">{{ $p->status ? 'Disponible' : 'Agotado' }}</span><span class="catalog-product-price">S/ {{ number_format($p->price,2) }}</span>
             </div>
-            <div style="flex:1;min-width:0">
-                <b style="font-size:13.5px;color:var(--s-text);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ $p->name }}</b>
-                <div style="display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap">
-                    <span style="font-size:13px;font-weight:800;color:var(--s-accent-dark)">S/ {{ number_format($p->price,2) }}</span>
-                    @if($p->discount_price)
-                    <span style="font-size:11px;color:var(--s-danger);text-decoration:line-through">S/ {{ number_format($p->discount_price,2) }}</span>
-                    @endif
-                </div>
-                <div style="display:flex;gap:4px;margin-top:5px;flex-wrap:wrap">
-                    @if(!$p->status)
-                    <span class="s-badge s-badge-red" style="font-size:9px;padding:2px 7px">Inactivo</span>
-                    @endif
-                    @if($p->variations->count())
-                    <span class="s-badge s-badge-green" style="font-size:9px;padding:2px 7px">{{ $p->variations->count() }} var.</span>
-                    @endif
-                    @if($p->addons->count())
-                    <span class="s-badge s-badge-purple" style="font-size:9px;padding:2px 7px">{{ $p->addons->count() }} extras</span>
-                    @endif
-                </div>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:4px">
+            <div class="catalog-product-body"><div class="catalog-product-name">{{ $p->name }}</div><div class="catalog-product-desc">{{ $p->description ?: 'Sin descripción. Añade detalles para presentar mejor este producto.' }}</div><div class="catalog-product-meta"><span class="catalog-category-tag">{{ $p->category?->name ?? 'Sin categoría' }}</span><div class="catalog-product-actions">
                 @php $invItem = $p->invProductItems->first()?->item; @endphp
                 <button class="s-btn s-btn-ghost s-btn-xs" onclick="editProduct({{ $p->id }},'{{ addslashes($p->name) }}',{{ $p->price }},{{ $p->discount_price??0 }},'{{ addslashes($p->description) }}',{{ $p->store_category_id }},{{ $p->sort_order }},{{ $p->status }},'{{ $p->stock_type??'packaged' }}','{{ $p->barcode }}',{{ $p->variations->toJson() }},{{ $p->addons->toJson() }},'{{ $p->tax_type ?? 'gravado' }}','{{ $p->sunat_code }}', '{{ $invItem?->unit ?? 'NIU' }}', {{ $invItem?->cost ?? 0 }}, {{ $invItem?->stock ?? 0 }}, {{ $invItem?->min_stock ?? 5 }})" title="Editar">
                     <i class="las la-edit"></i>
@@ -90,17 +69,18 @@ $categorySunatMap = [
                         <i class="las la-trash"></i>
                     </button>
                 </form>
-            </div>
-        </div>
+            </div></div></div>
+        </article>
         @empty
         <div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--s-text-3);font-size:13px">
             <i class="las la-box" style="font-size:28px;display:block;margin-bottom:6px;color:var(--s-border)"></i>
             Sin productos en esta categoría
         </div>
         @endforelse
-    </div>
 </div>
-@endforeach
+@if($allProducts->hasPages())
+<div style="margin-top:18px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><small style="color:#94a3b8">Mostrando {{ $allProducts->firstItem() }}–{{ $allProducts->lastItem() }} de {{ $allProducts->total() }} productos</small><div>{{ $allProducts->links() }}</div></div>
+@endif
 </div>
 
 <!-- PRODUCT MODAL -->
@@ -459,21 +439,23 @@ $categorySunatMap = [
 
                     <hr class="s-divider">
                     <div>
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-                            <label class="s-input-label" style="font-size:12px">Variaciones <span style="color:var(--s-text-3)">(talla, sabor, etc.)</span></label>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                            <label class="s-input-label" style="font-size:12px">Variaciones <span style="color:var(--s-text-3)">(opción única: tamaño, sabor, etc.)</span></label>
                             <button type="button" class="s-btn s-btn-outline s-btn-xs" onclick="addVarRow()">
                                 <i class="las la-plus"></i> Agregar
                             </button>
                         </div>
+                        <p style="font-size:11px;color:var(--s-text-3);margin:0 0 8px">Coloca el <b>precio final total</b> con esta variación (ej: Crocantes 20, BBQ 25). Si cuesta igual que el plato base, ingresa el mismo precio.</p>
                         <div id="var-list" style="display:flex;flex-direction:column;gap:6px"></div>
                     </div>
-                    <div>
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-                            <label class="s-input-label" style="font-size:12px">Extras / Add-ons</label>
+                    <div style="margin-top:10px">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                            <label class="s-input-label" style="font-size:12px">Extras / Add-ons <span style="color:var(--s-text-3)">(opcionales acumulables)</span></label>
                             <button type="button" class="s-btn s-btn-outline s-btn-xs" onclick="addAddonRow()">
                                 <i class="las la-plus"></i> Agregar
                             </button>
                         </div>
+                        <p style="font-size:11px;color:var(--s-text-3);margin:0 0 8px">Coloca el <b>monto adicional</b> que se sumará al plato (ej: +5.00 por papas extras, +2.00 por crema).</p>
                         <div id="addon-list" style="display:flex;flex-direction:column;gap:6px"></div>
                     </div>
                     <button type="submit" class="s-btn s-btn-primary" style="justify-content:center;margin-top:4px">
@@ -535,6 +517,29 @@ $categorySunatMap = [
 
 @push('script')
 <script>
+function filterCatalogProducts() {
+    var query = (document.getElementById('catalogSearch')?.value || '').trim().toLowerCase();
+    var status = document.getElementById('catalogStatus')?.value || 'all';
+    var category = document.querySelector('.catalog-pill.active')?.dataset.category || 'all';
+    document.querySelectorAll('.catalog-product-card').forEach(function(card) {
+        var matches = (!query || card.textContent.toLowerCase().includes(query))
+            && (status === 'all' || card.dataset.status === status)
+            && (category === 'all' || card.dataset.category === category);
+        card.style.display = matches ? 'block' : 'none';
+    });
+}
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('catalogSearch')?.addEventListener('input', filterCatalogProducts);
+    document.getElementById('catalogStatus')?.addEventListener('change', filterCatalogProducts);
+    document.querySelectorAll('.catalog-pill').forEach(function(pill) {
+        pill.addEventListener('click', function() {
+            document.querySelectorAll('.catalog-pill').forEach(function(item) { item.classList.remove('active'); });
+            this.classList.add('active');
+            filterCatalogProducts();
+        });
+    });
+});
+
 function openProdModal() {
     document.getElementById('prod-modal-title').textContent = 'Nuevo Producto';
     document.getElementById('prod-form').action = '{{ route("seller.products.store") }}';
@@ -619,10 +624,10 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function varRow(i, name, price) {
-    return '<div style="display:flex;gap:6px;align-items:center"><input class="s-input" name="variations['+i+'][name]" value="'+(name||'')+'" placeholder="Nombre variación" style="flex:1"><input class="s-input" name="variations['+i+'][price]" type="number" step="0.01" value="'+(price||'')+'" placeholder="Precio" style="width:90px"><button type="button" onclick="this.parentElement.remove()" class="s-btn s-btn-ghost s-btn-xs" style="color:var(--s-danger)">✕</button></div>';
+    return '<div style="display:flex;gap:6px;align-items:center"><input class="s-input" name="variations['+i+'][name]" value="'+(name||'')+'" placeholder="Nombre variación (ej: Crocantes)" style="flex:1"><input class="s-input" name="variations['+i+'][price]" type="number" step="0.01" value="'+(price||'')+'" placeholder="Precio total S/" title="Precio final del plato con esta variación" style="width:115px"><button type="button" onclick="this.parentElement.remove()" class="s-btn s-btn-ghost s-btn-xs" style="color:var(--s-danger)">✕</button></div>';
 }
 function addonRow(i, name, price) {
-    return '<div style="display:flex;gap:6px;align-items:center"><input class="s-input" name="addons['+i+'][name]" value="'+(name||'')+'" placeholder="Nombre extra" style="flex:1"><input class="s-input" name="addons['+i+'][price]" type="number" step="0.01" value="'+(price||'')+'" placeholder="Precio" style="width:90px"><button type="button" onclick="this.parentElement.remove()" class="s-btn s-btn-ghost s-btn-xs" style="color:var(--s-danger)">✕</button></div>';
+    return '<div style="display:flex;gap:6px;align-items:center"><input class="s-input" name="addons['+i+'][name]" value="'+(name||'')+'" placeholder="Nombre extra (ej: Papas extra)" style="flex:1"><input class="s-input" name="addons['+i+'][price]" type="number" step="0.01" value="'+(price||'')+'" placeholder="+ Adicional S/" title="Monto extra a sumar" style="width:115px"><button type="button" onclick="this.parentElement.remove()" class="s-btn s-btn-ghost s-btn-xs" style="color:var(--s-danger)">✕</button></div>';
 }
 
 function addVarRow() {

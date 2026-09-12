@@ -15,6 +15,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        if (!class_exists(\Predis\Client::class) && file_exists(base_path('vendor/predis/predis/autoload.php'))) {
+            require_once base_path('vendor/predis/predis/autoload.php');
+        }
+
         Builder::mixin(new Searchable);
         Builder::macro("firstOrFailWithApi", function ($modelName) {
             $data = $this->first();

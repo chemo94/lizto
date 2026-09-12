@@ -18,21 +18,29 @@ class DeliveryRepo {
   /// Loads the full home page for a specific service/category:
   /// subcategories + premium sections (offers, top, best rated, most ordered)
   /// all scoped to that category.
-  Future<ResponseModel> getCategoryHome(int categoryId, {double? lat, double? lng}) async {
+  Future<ResponseModel> getCategoryHome(int categoryId, {double? lat, double? lng, bool top = false, bool fast = false, bool highRating = false, String sort = 'relevance'}) async {
     String url = '${UrlContainer.baseUrl}delivery/categories/$categoryId/home';
     final params = <String>[];
     if (lat != null && lng != null) {
       params.add('lat=$lat');
       params.add('lng=$lng');
     }
+    if (top) params.add('top=1');
+    if (fast) params.add('fast=1');
+    if (highRating) params.add('high_rating=1');
+    if (sort != 'relevance') params.add('sort=$sort');
     if (params.isNotEmpty) url += '?${params.join('&')}';
     return await apiClient.request(url, Method.getMethod, null, passHeader: true);
   }
 
   /// Search stores within a specific service/category.
-  Future<ResponseModel> searchCategoryStores(int categoryId, String query, {double? lat, double? lng, int perPage = 20}) async {
+  Future<ResponseModel> searchCategoryStores(int categoryId, String query, {double? lat, double? lng, int perPage = 20, bool top = false, bool fast = false, bool highRating = false, String sort = 'relevance'}) async {
     String url = '${UrlContainer.baseUrl}delivery/categories/$categoryId/stores?q=${Uri.encodeComponent(query)}&per_page=$perPage';
     if (lat != null && lng != null) url += '&lat=$lat&lng=$lng';
+    if (top) url += '&top=1';
+    if (fast) url += '&fast=1';
+    if (highRating) url += '&high_rating=1';
+    if (sort != 'relevance') url += '&sort=$sort';
     return await apiClient.request(url, Method.getMethod, null, passHeader: true);
   }
 
@@ -133,15 +141,19 @@ class DeliveryRepo {
     required String? docNumber,
   }) async {
     String url = '${UrlContainer.baseUrl}delivery/orders/$orderId/mp-process';
-    return await apiClient.request(url, Method.postMethod, {
-      'card_token': cardToken,
-      'installments': installments,
-      'payment_method_id': paymentMethodId,
-      'issuer_id': issuerId,
-      'payer_email': payerEmail,
-      'payer_doc_type': docType,
-      'payer_doc_num': docNumber,
-    }, passHeader: true);
+    return await apiClient.request(
+        url,
+        Method.postMethod,
+        {
+          'card_token': cardToken,
+          'installments': installments,
+          'payment_method_id': paymentMethodId,
+          'issuer_id': issuerId,
+          'payer_email': payerEmail,
+          'payer_doc_type': docType,
+          'payer_doc_num': docNumber,
+        },
+        passHeader: true);
   }
 
   Future<ResponseModel> deletePendingOrder(int orderId) async {
@@ -176,11 +188,15 @@ class DeliveryRepo {
 
   Future<ResponseModel> reportOrderProblem(int orderId, String subject, String description) async {
     String url = '${UrlContainer.baseUrl}delivery/orders/$orderId/report';
-    return await apiClient.request(url, Method.postMethod, {
-      'order_id': orderId,
-      'subject': subject,
-      'description': description,
-    }, passHeader: true);
+    return await apiClient.request(
+        url,
+        Method.postMethod,
+        {
+          'order_id': orderId,
+          'subject': subject,
+          'description': description,
+        },
+        passHeader: true);
   }
 
   Future<ResponseModel> reviewDelivery(int orderId, {double rating = 5, String review = ''}) async {

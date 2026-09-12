@@ -21,49 +21,42 @@ class SocialAuthController extends GetxController {
       isGoogleSignInLoading = true;
       update();
       const List<String> scopes = <String>['email', 'profile'];
-
-      await googleSignIn.initialize();
-      final googleUser = await googleSignIn.authenticate(scopeHint: scopes);
-
-      final googleAuth = await googleUser.authentication;
-      if (googleAuth.idToken == null) {
-        isGoogleSignInLoading = false;
-        update();
-        CustomSnackBar.error(errorList: ['No se pudo autenticar con Google. Verifica tu conexion.']);
-        return;
-      }
-
-      String? accessToken;
       try {
-        final auth = await googleUser.authorizationClient.authorizationForScopes(scopes);
-        accessToken = auth?.accessToken;
-        printX('authorizationForScopes accessToken: $accessToken');
-      } catch (_) {
-        printX('authorizationForScopes failed');
+        await googleSignIn.signOut();
+      } catch (_) {}
+      await googleSignIn.initialize();
+      var googleUser = await googleSignIn.authenticate();
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+
+      GoogleSignInClientAuthorization? authorization;
+      try {
+        authorization = await googleUser.authorizationClient.authorizationForScopes(scopes);
+        authorization ??= await googleUser.authorizationClient.authorizeScopes(scopes);
+      } catch (authErr) {
+        printX("authorization error: $authErr");
       }
 
-      if (accessToken == null || accessToken.isEmpty) {
-        isGoogleSignInLoading = false;
-        update();
-        CustomSnackBar.error(errorList: ['No se pudo obtener el token de Google. Intenta de nuevo.']);
+      final String token = (authorization?.accessToken != null && authorization!.accessToken!.isNotEmpty)
+          ? authorization.accessToken!
+          : (googleAuth.idToken ?? '');
+
+      if (token.isEmpty) {
+        CustomSnackBar.error(errorList: [MyStrings.loginFailedTryAgain.tr]);
         return;
       }
+
+      printX("Google token obtained: ${token.substring(0, token.length > 10 ? 10 : token.length)}...");
 
       await socialLoginUser(
         provider: 'google',
-        accessToken: accessToken,
+        accessToken: token,
       );
     } catch (e) {
-      final err = e.toString();
-      printX('Google sign-in error: $err');
+      printX(e.toString());
+      // CustomSnackBar.error(errorList: [e.toString()]);
+    } finally {
       isGoogleSignInLoading = false;
       update();
-      if (err.contains('reauth') || err.contains('canceled')) {
-        CustomSnackBar.error(errorList: ['Sesion de Google expirada. Ve a Ajustes > Cuentas > Google y vuelve a iniciar sesion.']);
-      } else {
-        CustomSnackBar.error(errorList: ['$e']);
-      }
-      return;
     }
   }
 

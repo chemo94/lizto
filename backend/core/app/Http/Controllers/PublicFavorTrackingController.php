@@ -24,8 +24,8 @@ class PublicFavorTrackingController extends Controller
             'courier' => $courier ? [
                 'name' => $courier->fullname,
                 'phone' => $courier->mobileNumber,
-                'latitude' => $courier->current_lat ?? $courier->latitude,
-                'longitude' => $courier->current_lot ?? $courier->longitude,
+                'latitude' => $courier->current_lat,
+                'longitude' => $courier->current_lot,
                 'updated_at' => optional($courier->updated_at)->toIso8601String(),
             ] : null,
             'pickup' => ['lat' => (float) $favor->pickup_lat, 'lng' => (float) $favor->pickup_lng, 'address' => $favor->pickup_address],

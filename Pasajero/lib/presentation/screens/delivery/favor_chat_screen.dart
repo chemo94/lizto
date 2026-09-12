@@ -138,9 +138,9 @@ class _FavorChatScreenState extends State<FavorChatScreen> {
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(children: [
-                        _quickAction('¿Cuál es el precio?', Icons.sell_outlined),
-                        _quickAction('Envía una foto', Icons.photo_camera_outlined),
-                        _quickAction('Apruebo el cambio', Icons.check_circle_outline),
+                        _quickAction('Precio encontrado: S/ ', Icons.sell_outlined),
+                        _quickAction('Te envío una foto', Icons.photo_camera_outlined),
+                        _quickAction('¿Apruebas este cambio?', Icons.help_outline_rounded),
                       ]),
                     ),
                   ),

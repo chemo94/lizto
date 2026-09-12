@@ -7,6 +7,9 @@ use App\Http\Controllers\Controller;
 use App\Lib\SocialLogin;
 use App\Models\DeviceToken;
 use App\Models\UserLogin;
+use App\Models\Driver;
+use App\Services\FirebasePhoneAuthService;
+use Throwable;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -98,7 +101,9 @@ class LoginController extends Controller
     public function findusername()
     {
         $login     = request()->input('username');
-        $fieldType = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+        $fieldType = filter_var($login, FILTER_VALIDATE_EMAIL)
+            ? 'email'
+            : (Driver::where('mobile', $login)->exists() ? 'mobile' : 'username');
         request()->merge([$fieldType => $login]);
         return $fieldType;
     }
@@ -164,13 +169,29 @@ class LoginController extends Controller
     public function socialLogin(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'provider'     => 'required|in:google,apple',
+            'provider'     => 'required|in:google,apple,phone',
             'token'        => 'required',
             'service_type' => 'nullable|in:ride,rider,delivery,both',
         ]);
 
         if ($validator->fails()) {
             return apiResponse("validation_error", "error", $validator->errors()->all());
+        }
+
+        if ($request->provider === 'phone') {
+            try {
+                $driver = app(FirebasePhoneAuthService::class)->findAccount($request->token, Driver::class);
+            } catch (Throwable $exception) {
+                report($exception);
+                return apiResponse('firebase_token_invalid', 'error', ['No se pudo validar el teléfono con Firebase']);
+            }
+            if (!$driver || $driver->is_deleted == Status::YES) {
+                return apiResponse('phone_account_not_found', 'error', ['No existe una cuenta con este número celular']);
+            }
+            $token = $driver->createToken('driver_token', ['driver'])->plainTextToken;
+            $deviceToken = $request->device_token ?? $request->fcm_token;
+            if ($deviceToken) DeviceToken::updateOrCreate(['token' => $deviceToken], ['driver_id' => $driver->id, 'user_id' => null, 'seller_id' => null, 'is_app' => Status::YES, 'app_type' => 'driver']);
+            return apiResponse('login_success', 'success', ['Inicio de sesión exitoso'], ['driver' => $driver, 'access_token' => $token, 'token_type' => 'Bearer']);
         }
 
         $socialLogin = new SocialLogin('driver', $request->provider);

@@ -230,7 +230,7 @@ class HomeController extends GetxController {
   }
 
   RideFareModel rideFare = RideFareModel();
-  Future<void> getRideFare() async {
+  Future<void> getRideFare({bool defaultToCheapest = false}) async {
     try {
       isPriceLocked = true;
       update();
@@ -258,9 +258,15 @@ class HomeController extends GetxController {
           rideFare = model.data ?? RideFareModel();
           appServicesList = model.data?.services ?? [];
           isPriceLocked = false;
-          if (selectedService.id != "-99") {
+          if (appServicesList.isNotEmpty) {
             try {
-              selectService(appServicesList.firstWhere((v) => v.id == selectedService.id));
+              AppService serviceToSelect;
+              if (!defaultToCheapest && selectedService.id != "-99" && appServicesList.any((v) => v.id == selectedService.id)) {
+                serviceToSelect = appServicesList.firstWhere((v) => v.id == selectedService.id);
+              } else {
+                serviceToSelect = findCheapestService(appServicesList);
+              }
+              await selectService(serviceToSelect, shouldLoadFare: false);
             } catch (e) {
               printE(e);
             }
@@ -336,8 +342,8 @@ class HomeController extends GetxController {
     }
     update();
 
-    if (selectedLocations.length >= 2 && selectedService.id != "-99" && getFareData == true) {
-      getRideFare();
+    if (selectedLocations.length >= 2 && getFareData == true) {
+      getRideFare(defaultToCheapest: true);
     }
   }
 
@@ -384,22 +390,27 @@ class HomeController extends GetxController {
   bool isPriceLocked = false;
   Future<void> selectService(AppService service, {bool shouldLoadFare = false}) async {
     try {
-      update();
       if (selectedLocations.length > 1) {
         selectedService = service;
-        update();
         if (shouldLoadFare) {
           await getRideFare();
         } else {
-          double baseAmount = StringConverter.formatDouble(service.recommendAmount.toString());
+          double baseAmount = StringConverter.formatDouble(service.recommendAmount?.toString() ?? '');
+          if (baseAmount <= 0) {
+            baseAmount = StringConverter.formatDouble(service.cityRecommendFare?.toString() ?? '');
+          }
+          if (baseAmount <= 0) {
+            baseAmount = StringConverter.formatDouble(service.minAmount?.toString() ?? '');
+          }
           if (selectedPaymentMethod.name?.toLowerCase() == 'mercadopago' || selectedPaymentMethod.name?.toLowerCase() == 'mercado pago') {
             // Add 5% commission charge rounded to 2 decimals
             mainAmount = double.parse((baseAmount * 1.05).toStringAsFixed(2));
           } else {
             mainAmount = baseAmount;
           }
-          amountController.text = mainAmount.toStringAsFixed(2);
+          amountController.text = mainAmount > 0 ? mainAmount.toStringAsFixed(2) : '';
         }
+        update();
       } else {
         CustomSnackBar.error(
           errorList: [MyStrings.pleaseSelectPickupAndDestination],
@@ -408,6 +419,27 @@ class HomeController extends GetxController {
     } catch (e) {
       printE(e);
     }
+  }
+
+  AppService findCheapestService(List<AppService> services) {
+    if (services.isEmpty) return AppService(id: '-99');
+    return services.reduce((cheapest, current) {
+      final cheapestPrice = _extractServicePrice(cheapest);
+      final currentPrice = _extractServicePrice(current);
+      return currentPrice < cheapestPrice ? current : cheapest;
+    });
+  }
+
+  double _extractServicePrice(AppService service) {
+    final rec = StringConverter.formatDouble(service.recommendAmount?.toString() ?? '');
+    if (rec > 0) return rec;
+    final cityRec = StringConverter.formatDouble(service.cityRecommendFare?.toString() ?? '');
+    if (cityRec > 0) return cityRec;
+    final min = StringConverter.formatDouble(service.minAmount?.toString() ?? '');
+    if (min > 0) return min;
+    final cityMin = StringConverter.formatDouble(service.cityMinFare?.toString() ?? '');
+    if (cityMin > 0) return cityMin;
+    return double.infinity;
   }
 
   // ride alert methods

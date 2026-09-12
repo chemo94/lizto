@@ -21,29 +21,43 @@ class SocialAuthController extends GetxController {
       isGoogleSignInLoading = true;
       update();
       const List<String> scopes = <String>['email', 'profile'];
-      googleSignIn.signOut();
+      try {
+        await googleSignIn.signOut();
+      } catch (_) {}
       await googleSignIn.initialize();
       var googleUser = await googleSignIn.authenticate();
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
-      if (googleAuth.idToken == null) {
-        isGoogleSignInLoading = false;
-        update();
+
+      GoogleSignInClientAuthorization? authorization;
+      try {
+        authorization = await googleUser.authorizationClient.authorizationForScopes(scopes);
+        authorization ??= await googleUser.authorizationClient.authorizeScopes(scopes);
+      } catch (authErr) {
+        printX("authorization error: $authErr");
+      }
+
+      final String token = (authorization?.accessToken != null && authorization!.accessToken!.isNotEmpty)
+          ? authorization.accessToken!
+          : (googleAuth.idToken ?? '');
+
+      if (token.isEmpty) {
+        CustomSnackBar.error(errorList: [MyStrings.loginFailedTryAgain.tr]);
         return;
       }
-      final GoogleSignInClientAuthorization? authorization = await googleUser.authorizationClient.authorizationForScopes(scopes);
-      printX(authorization?.accessToken);
+
+      printX("Google token obtained: ${token.substring(0, token.length > 10 ? 10 : token.length)}...");
 
       await socialLoginUser(
         provider: 'google',
-        accessToken: authorization?.accessToken ?? '',
+        accessToken: token,
       );
     } catch (e) {
       printX(e.toString());
       // CustomSnackBar.error(errorList: [e.toString()]);
+    } finally {
+      isGoogleSignInLoading = false;
+      update();
     }
-
-    isGoogleSignInLoading = false;
-    update();
   }
 
   bool isAppleSignInLoading = false;

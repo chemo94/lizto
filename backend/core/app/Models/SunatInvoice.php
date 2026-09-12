@@ -1,7 +1,7 @@
 <?php namespace App\Models; use Illuminate\Database\Eloquent\Model;
 class SunatInvoice extends Model {
     protected $guarded = ['id']; protected $table = 'sunat_invoices';
-    protected $casts = ['correlativo'=>'integer','retries'=>'integer','total_gravada'=>'double','total_exonerada'=>'double','total_inafecta'=>'double','total_igv'=>'double','total'=>'double','fecha_emision'=>'datetime'];
+    protected $casts = ['correlativo'=>'integer','retries'=>'integer','total_gravada'=>'double','total_exonerada'=>'double','total_inafecta'=>'double','total_igv'=>'double','total'=>'double','fecha_emision'=>'datetime','note_adjustments'=>'array','note_processing_at'=>'datetime','cancellation_applied_at'=>'datetime'];
 
     public function isConsumptionSummary(): bool { return $this->detail_mode === 'consumption'; }
 

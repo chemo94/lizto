@@ -57,17 +57,15 @@ class _WalletScreenState extends State<WalletScreen> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [MyColor.primaryColor, MyColor.primaryColor.withValues(alpha: 0.7)],
-                    begin: Alignment.topLeft, end: Alignment.bottomRight,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(Dimensions.largeRadius),
                 ),
                 child: Column(children: [
                   Text('Saldo disponible', style: regularDefault.copyWith(color: MyColor.colorWhite.withValues(alpha: 0.8))),
                   SizedBox(height: Dimensions.space8),
-                  c.loadingBalance
-                      ? CircularProgressIndicator(color: MyColor.colorWhite)
-                      : Text('S/ ${c.wallet?.availableBalance?.toStringAsFixed(2) ?? "0.00"}',
-                          style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: MyColor.colorWhite)),
+                  c.loadingBalance ? CircularProgressIndicator(color: MyColor.colorWhite) : Text('S/ ${c.wallet?.availableBalance?.toStringAsFixed(2) ?? "0.00"}', style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: MyColor.colorWhite)),
                   SizedBox(height: Dimensions.space16),
                   Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
                     _balanceStat('Total', 'S/ ${c.wallet?.balance?.toStringAsFixed(2) ?? "0.00"}'),
@@ -104,15 +102,13 @@ class _WalletScreenState extends State<WalletScreen> {
                     press: () async {
                       double? amt = double.tryParse(_amountCtrl.text.trim());
                       if (amt == null || amt <= 0) {
-                        Get.snackbar('Error', 'Ingresa un monto válido',
-                            backgroundColor: MyColor.redCancelTextColor, colorText: MyColor.colorWhite);
+                        Get.snackbar('Error', 'Ingresa un monto válido', backgroundColor: MyColor.redCancelTextColor, colorText: MyColor.colorWhite);
                         return;
                       }
                       bool ok = await c.addFunds(amt);
                       if (ok) {
                         _amountCtrl.clear();
-                        Get.snackbar('Recarga exitosa', 'Fondos agregados correctamente',
-                            backgroundColor: const Color(0xFF10B981), colorText: MyColor.colorWhite);
+                        Get.snackbar('Recarga exitosa', 'Fondos agregados correctamente', backgroundColor: const Color(0xFF10B981), colorText: MyColor.colorWhite);
                       }
                     },
                     isOutlined: false,
@@ -146,7 +142,8 @@ class _WalletScreenState extends State<WalletScreen> {
                       ),
                       child: Row(children: [
                         Container(
-                          width: 40, height: 40,
+                          width: 40,
+                          height: 40,
                           decoration: BoxDecoration(
                             color: (tx.isCredit ? const Color(0xFF10B981) : MyColor.redCancelTextColor).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(Dimensions.defaultRadius),
@@ -192,6 +189,10 @@ class _WalletScreenState extends State<WalletScreen> {
 
   String _formatDate(String? dt) {
     if (dt == null) return '';
-    try { return dt.substring(0, 10); } catch (_) { return ''; }
+    try {
+      return dt.substring(0, 10);
+    } catch (_) {
+      return '';
+    }
   }
 }

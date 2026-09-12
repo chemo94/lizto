@@ -18,7 +18,9 @@ class SellerRepo {
       "dev-token": Environment.devToken,
     };
     _dio.options.followRedirects = false;
-    _dio.options.validateStatus = (status) => status! < 500;
+    // Dio must return every HTTP response so the API error body is not lost.
+    // Transport failures still arrive through DioException.
+    _dio.options.validateStatus = (status) => status != null && status < 600;
   }
 
   String? get token => _prefs.getString(SharedPreferenceHelper.sellerTokenKey);
@@ -55,11 +57,35 @@ class SellerRepo {
         }
         return ResponseModel(false, response.data['message']?.toString() ?? '', response.statusCode!, response.data);
       }
-      return ResponseModel(false, 'Error del servidor', response.statusCode!, response.data);
+      final apiMessage = _responseMessage(response.data);
+      return ResponseModel(false, apiMessage ?? 'Error del servidor', response.statusCode ?? 500, response.data);
+    } on dioX.DioException catch (e) {
+      printX('seller error: $e');
+      final response = e.response;
+      if (response != null) {
+        printX('seller error body: ${response.data}');
+        return ResponseModel(
+          false,
+          _responseMessage(response.data) ?? 'Error del servidor',
+          response.statusCode ?? 500,
+          response.data,
+        );
+      }
+      return ResponseModel(false, 'No se pudo conectar con el servidor', 500, null);
     } catch (e) {
       printX('seller error: $e');
-      return ResponseModel(false, 'Error de conexión', 500, null);
+      return ResponseModel(false, 'Ocurrió un error inesperado', 500, null);
     }
+  }
+
+  String? _responseMessage(dynamic body) {
+    if (body is! Map) return null;
+    final message = body['message'];
+    if (message is List && message.isNotEmpty) {
+      return message.map((item) => item.toString()).join('\n');
+    }
+    final text = message?.toString().trim();
+    return text == null || text.isEmpty ? null : text;
   }
 
   Future<ResponseModel> login(String email, String password) async {
@@ -249,6 +275,10 @@ class SellerRepo {
 
   Future<ResponseModel> storeFavorDetail(int favorId) async {
     return await _request('${UrlContainer.baseUrl}seller/favors/$favorId', Method.getMethod, null, auth: true);
+  }
+
+  Future<ResponseModel> storeFavors({int page = 1}) async {
+    return await _request('${UrlContainer.baseUrl}seller/favors?page=$page', Method.getMethod, null, auth: true);
   }
 
   Future<ResponseModel> retryStoreFavorSearch(int favorId) async {

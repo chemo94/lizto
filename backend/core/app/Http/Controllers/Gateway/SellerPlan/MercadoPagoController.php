@@ -4,8 +4,9 @@ namespace App\Http\Controllers\Gateway\SellerPlan;
 
 use App\Http\Controllers\Controller;
 use App\Models\Gateway;
-use App\Models\StorePackage;
 use App\Models\StorePackagePayment;
+use App\Models\Store;
+use App\Services\StoreSubscriptionService;
 use Illuminate\Http\Request;
 
 class MercadoPagoController extends Controller
@@ -53,42 +54,19 @@ class MercadoPagoController extends Controller
             return response('Payment not approved', 400);
         }
 
-        if ($payment->status === 'paid') {
+        // A previous synchronous response may have marked the payment paid
+        // before subscription activation completed. Only treat it as fully
+        // processed when it is already linked to the resulting subscription.
+        if ($payment->status === 'paid' && $payment->store_package_id) {
             return response('OK', 200);
         }
 
         $package = $payment->package;
-        $existingActive = StorePackage::where('store_id', $payment->store_id)
-            ->where('status', 'active')
-            ->where('expires_at', '>', now())
-            ->first();
-
-        $startsAt = now();
-        if ($existingActive && $existingActive->package_id === $payment->package_id) {
-            $startsAt = $existingActive->expires_at;
-        }
-
-        $expiresAt = $package->duration_days > 0 ? \Carbon\Carbon::parse($startsAt)->addDays($package->duration_days) : null;
-
-        if ($existingActive && $existingActive->package_id !== $payment->package_id) {
-            $startsAt = now();
-            $expiresAt = $package->duration_days > 0 ? now()->addDays($package->duration_days) : null;
-
-            StorePackage::where('store_id', $payment->store_id)
-                ->where('status', 'active')
-                ->update(['status' => 'cancelled']);
-        }
-
-        $subscription = StorePackage::create([
-            'store_id'       => $payment->store_id,
-            'seller_id'      => $payment->seller_id,
-            'package_id'     => $payment->package_id,
-            'status'         => 'active',
+        $store = Store::findOrFail($payment->store_id);
+        $subscription = app(StoreSubscriptionService::class)->activate($store, $package, [
             'amount_paid'    => $payment->package_amount,
             'payment_method' => 'MercadoPago',
             'payment_ref'    => (string) $paymentId,
-            'starts_at'      => $startsAt,
-            'expires_at'     => $expiresAt,
             'notes'          => 'Pago ' . $payment->trx . ' incluye comisión de pasarela S/ ' . number_format($payment->gateway_fee, 2),
         ]);
 

@@ -164,7 +164,7 @@ class DeliveryController extends Controller
             'sub_category_image_path'     => getFilePath('sub_category'),
             'sections'                    => $formattedSections,
             'store_image_path'            => getFilePath('store'),
-            'product_image_path'          => 'storage',
+            'product_image_path'          => getFilePath('product'),
         ]);
     }
 
@@ -248,7 +248,7 @@ class DeliveryController extends Controller
             'sub_category_image_path' => getFilePath('sub_category'),
             'store_image_path' => getFilePath('store'),
             'store_cover_path' => getFilePath('store_cover'),
-            'product_image_path' => 'storage',
+            'product_image_path' => getFilePath('product'),
         ]);
     }
 
@@ -425,7 +425,7 @@ class DeliveryController extends Controller
             'store_image_path'     => getFilePath('store'),
             'store_cover_path'     => getFilePath('store_cover'),
             'store_category_image' => getFilePath('store_category'),
-            'product_image_path'   => 'storage',
+            'product_image_path'   => getFilePath('product'),
         ]);
     }
 

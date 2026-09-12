@@ -6,9 +6,11 @@
 
 @section('seller-content')
 <div class="s-content">
+    @php $expenseTotal = $expenses->sum('amount'); @endphp
+    <section class="module-hero expenses"><div><div class="module-crumb"><i class="las la-home"></i> Inicio &nbsp;/&nbsp; Finanzas &nbsp;/&nbsp; Gastos</div><h2><i class="las la-receipt"></i> Control de Gastos</h2><p>Registra egresos y analiza su distribución por categoría y método de pago.</p></div><div class="module-hero-stats"><div><b>{{ $expenses->count() }}</b><small>Registros visibles</small></div><div><b>{{ $catTotals->count() }}</b><small>Categorías</small></div><div><b>S/ {{ number_format($expenseTotal,0) }}</b><small>Total visible</small></div></div></section>
 
     <!-- FORM -->
-    <div class="s-card" style="margin-bottom:24px">
+    <div class="s-card seller-work-card" style="margin-bottom:14px">
         <h3 class="s-card-title"><i class="las la-plus-circle"></i> Registrar Nuevo Gasto</h3>
         <form method="POST" action="{{ route('seller.expenses.store') }}">
             @csrf
@@ -75,7 +77,7 @@
     @endif
 
     <!-- HISTORIAL -->
-    <div class="s-card">
+    <div class="s-card seller-work-card">
         <h3 class="s-card-title"><i class="las la-list"></i> Historial de Gastos</h3>
         <div style="overflow-x:auto">
         <table class="s-table">

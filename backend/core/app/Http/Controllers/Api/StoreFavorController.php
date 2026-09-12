@@ -10,6 +10,8 @@ use App\Services\FcmService;
 use App\Services\SellerFavorDispatchService;
 use App\Support\DeliveryPricing;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class StoreFavorController extends Controller
@@ -75,28 +77,47 @@ class StoreFavorController extends Controller
         $orderNo = 'STF-' . now()->format('Ymd') . '-' . strtoupper(\Str::random(6));
         $pinCode = str_pad(rand(0, 9999), 4, '0', STR_PAD_LEFT);
 
-        $favor = Favor::create([
-            'order_no'         => $orderNo,
-            'user_id'          => 0,
-            'seller_id'        => $seller->id,
-            'source_type'      => 'seller',
-            'type'             => 'send',
-            'description'      => $request->description,
-            'pickup_address'   => $request->pickup_address,
-            'pickup_lat'       => $pickupLat,
-            'pickup_lng'       => $pickupLng,
-            'delivery_address' => $request->delivery_address,
-            'delivery_lat'     => $deliveryLat,
-            'delivery_lng'     => $deliveryLng,
-            'delivery_fee'     => $deliveryFee,
-            'total'            => $deliveryFee,
-            'status'           => 'searching_courier',
-            'pin_code'         => $pinCode,
-        ]);
+        try {
+            $favor = DB::transaction(function () use ($seller, $request, $orderNo, $pinCode, $pickupLat, $pickupLng, $deliveryLat, $deliveryLng, $deliveryFee) {
+                $favor = Favor::create([
+                    'order_no'         => $orderNo,
+                    // Seller favors do not belong to a marketplace user.
+                    // The column is nullable; using 0 violates the users FK.
+                    'user_id'          => null,
+                    'seller_id'        => $seller->id,
+                    'source_type'      => 'seller',
+                    'type'             => 'send',
+                    'description'      => $request->description,
+                    'pickup_address'   => $request->pickup_address,
+                    'pickup_lat'       => $pickupLat,
+                    'pickup_lng'       => $pickupLng,
+                    'delivery_address' => $request->delivery_address,
+                    'delivery_lat'     => $deliveryLat,
+                    'delivery_lng'     => $deliveryLng,
+                    'delivery_fee'     => $deliveryFee,
+                    'total'            => $deliveryFee,
+                    'status'           => 'searching_courier',
+                    'pin_code'         => $pinCode,
+                ]);
 
-        $favor->pin()->create(['pin_code' => $pinCode]);
+                $favor->pin()->create(['pin_code' => $pinCode]);
+                SellerFavorDispatchService::start($favor);
+                return $favor;
+            });
+        } catch (\Throwable $exception) {
+            Log::error('Store favor creation failed', [
+                'seller_id' => $seller->id,
+                'exception' => $exception->getMessage(),
+            ]);
 
-        SellerFavorDispatchService::start($favor);
+            return apiResponse(
+                'store_favor_creation_failed',
+                'error',
+                ['No se pudo iniciar la búsqueda de repartidor. Inténtalo nuevamente.'],
+                [],
+                500
+            );
+        }
 
         return apiResponse('store_favor_created', 'success', ['Buscando repartidor cercano'], [
             'favor' => $favor->fresh('courier', 'bids'),
@@ -171,8 +192,8 @@ class StoreFavorController extends Controller
             'status' => $favor->status,
             'courier' => $courier ? [
                 'name' => $courier->fullname,
-                'latitude' => $courier->current_lat ?? $courier->latitude,
-                'longitude' => $courier->current_lot ?? $courier->longitude,
+                'latitude' => $courier->current_lat,
+                'longitude' => $courier->current_lot,
             ] : null,
         ];
     }

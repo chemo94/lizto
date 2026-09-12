@@ -10,14 +10,47 @@
 </span>
 @endsection
 
+@push('style')
+<style>
+.seller-hero{min-height:132px;margin-bottom:18px;padding:22px 24px;border-radius:14px;position:relative;overflow:hidden;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;background:linear-gradient(90deg,rgba(14,22,38,.96),rgba(22,30,46,.76),rgba(19,30,31,.38)),url('{{ asset('assets/images/banner-cover.png') }}') center/cover no-repeat;color:#fff}
+.seller-hero:after{content:'';position:absolute;inset:0;background:linear-gradient(120deg,rgba(249,115,22,.12),transparent 45%);pointer-events:none}
+.seller-hero-copy,.seller-hero-filter{position:relative;z-index:1}.seller-hero-kicker{display:flex;align-items:center;gap:6px;font-size:10px;color:rgba(255,255,255,.72);margin-bottom:9px}.seller-hero h2{font:800 23px 'Plus Jakarta Sans','Inter',sans-serif;letter-spacing:-.6px;margin:0 0 3px}.seller-hero p{margin:0;color:rgba(255,255,255,.7);font-size:11px}.seller-hero-filter{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end}.seller-hero-filter select,.seller-hero-filter input{height:34px;border:1px solid rgba(255,255,255,.22)!important;background:rgba(15,23,42,.56)!important;color:#fff!important;border-radius:9px!important;padding:0 10px!important;font-size:10px!important;backdrop-filter:blur(8px)}.seller-hero-filter option{color:#172033;background:#fff}.seller-hero-filter button{height:34px;padding:0 13px!important;background:#fff!important;color:#334155!important;border-radius:9px!important;font-weight:700;box-shadow:0 5px 14px rgba(0,0,0,.12)}
+.s-stat{min-height:112px!important;padding:16px!important;border:1px solid var(--s-border)!important;border-left:1px solid var(--s-border)!important;border-radius:14px!important;background:#fff!important;box-shadow:var(--s-shadow-sm)!important;align-items:flex-start!important;position:relative;overflow:hidden}.s-stat:after{content:'';position:absolute;width:72px;height:72px;border-radius:50%;right:-30px;top:-30px;background:rgba(249,115,22,.035)}.s-stat-icon{width:40px!important;height:40px!important;border-radius:11px!important;box-shadow:0 7px 16px rgba(15,23,42,.09)}.s-stat strong{font-size:20px!important;letter-spacing:-.5px}.s-stat small{font-size:10px!important;color:#8b98aa!important}.s-grid-4{gap:12px!important}
+.dashboard-mini-stats>div{box-shadow:var(--s-shadow-sm);min-height:72px}.dashboard-mini-stats>div:hover{transform:translateY(-1px)}
+.seller-welcome{display:flex;align-items:center;gap:10px}.seller-welcome-avatar{width:38px;height:38px;border-radius:11px;border:2px solid rgba(255,255,255,.75);overflow:hidden;background:#fff;display:grid;place-items:center;color:#f97316;font-size:20px;box-shadow:0 6px 18px rgba(0,0,0,.2)}.seller-welcome-avatar img{width:100%;height:100%;object-fit:cover}
+.dashboard-primary .s-stat{display:block!important}.dashboard-primary .s-stat-icon{margin-bottom:12px}.dashboard-primary .s-stat strong{display:block;margin-bottom:2px}.dashboard-primary .s-stat small{display:block}.dashboard-primary .s-stat:nth-child(1) .s-stat-icon{background:linear-gradient(135deg,#34d399,#10b981)!important;color:#fff}.dashboard-primary .s-stat:nth-child(2) .s-stat-icon{background:linear-gradient(135deg,#60a5fa,#2563eb)!important;color:#fff}.dashboard-primary .s-stat:nth-child(3) .s-stat-icon{background:linear-gradient(135deg,#a78bfa,#7c3aed)!important;color:#fff}.dashboard-primary .s-stat:nth-child(4) .s-stat-icon{background:linear-gradient(135deg,#fbbf24,#f97316)!important;color:#fff}
+.dashboard-secondary{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:10px!important;margin-bottom:18px!important}.dashboard-secondary .s-stat{min-height:62px!important;padding:10px 13px!important;display:flex!important;align-items:center!important;gap:10px}.dashboard-secondary .s-stat-icon{width:30px!important;height:30px!important;border-radius:8px!important;margin:0!important;font-size:15px!important;box-shadow:none}.dashboard-secondary .s-stat strong{font-size:15px!important}.dashboard-secondary .s-stat small{font-size:8px!important}
+.dashboard-main-chart{min-height:330px}.dashboard-main-chart canvas{height:245px!important}.s-content>.s-card,.s-content>.s-grid-2>.s-card{border:1px solid #e8edf3!important;box-shadow:0 3px 12px rgba(15,23,42,.045)!important}.s-table thead th{background:#fbfcfe!important;color:#94a3b8!important;font-size:9px!important;text-transform:uppercase!important;letter-spacing:.4px}.s-table tbody td{padding-top:12px!important;padding-bottom:12px!important}.s-card-title i{color:#f97316}.dashboard-mini-stats{grid-template-columns:repeat(5,1fr)!important}.dashboard-mini-stats>div{background:#fff!important}
+.s-content>.s-grid-2{min-width:0;max-width:100%}.s-content>.s-grid-2>.s-card{min-width:0;max-width:100%}.s-content>.s-grid-2>.s-card>div[style*="overflow-x:auto"]{display:block;width:100%;max-width:100%;overflow-x:auto!important;-webkit-overflow-scrolling:touch}
+@media(max-width:767px){.seller-hero{min-height:180px;align-items:flex-start;flex-direction:column;padding:18px}.seller-hero-filter{justify-content:flex-start}.seller-hero h2{font-size:20px}.s-stat{min-height:100px!important}}
+@media(max-width:991px){.dashboard-secondary{grid-template-columns:repeat(2,1fr)!important}.dashboard-mini-stats{grid-template-columns:repeat(2,1fr)!important}}
+@media(max-width:560px){.dashboard-secondary{grid-template-columns:1fr!important}.dashboard-mini-stats{grid-template-columns:1fr!important}}
+</style>
+@endpush
+
 @section('seller-content')
 <div class="s-content">
 
-    <!-- ═══ DATE RANGE FILTER ═══ -->
-    <div class="s-card" style="margin-bottom:16px">
-        <form method="GET" action="{{ route('seller.dashboard') }}" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-            <div style="display:flex;gap:8px;align-items:center">
-                <label style="font-size:12px;font-weight:600;color:var(--s-text-2)">Período:</label>
+    <!-- ═══ HERO + DATE RANGE FILTER ═══ -->
+    <section class="seller-hero">
+        <div class="seller-hero-copy">
+            <div class="seller-hero-kicker"><i class="las la-home"></i><span>Inicio</span><i class="las la-angle-right"></i><span>Dashboard</span></div>
+            <div class="seller-welcome">
+                <div class="seller-welcome-avatar">
+                    @if($store && $store->image)
+                        <img src="{{ getImage('assets/images/store/' . $store->image) }}" alt="{{ $store->name }}">
+                    @else
+                        <i class="las la-store"></i>
+                    @endif
+                </div>
+                <div>
+                    <h2>Buenos días, {{ Str::before($seller->name ?? 'Administrador', ' ') }} <span aria-hidden="true">👋</span></h2>
+                    <p>Esto es lo que está pasando hoy en {{ $store->name ?? 'tu negocio' }}.</p>
+                </div>
+            </div>
+        </div>
+        <form class="seller-hero-filter" method="GET" action="{{ route('seller.dashboard') }}">
+            <div style="display:flex;gap:7px;align-items:center">
                 <select name="period" onchange="this.form.submit()" style="padding:6px 10px;border:1px solid var(--s-border);border-radius:6px;font-size:12px;background:var(--s-surface);color:var(--s-text)">
                     <option value="today" {{ $period === 'today' ? 'selected' : '' }}>Hoy</option>
                     <option value="week" {{ $period === 'week' ? 'selected' : '' }}>Esta Semana</option>
@@ -31,48 +64,43 @@
                 <input type="date" name="date_to" value="{{ $dateTo }}" style="padding:6px 10px;border:1px solid var(--s-border);border-radius:6px;font-size:12px">
                 <button type="submit" style="padding:6px 14px;background:#22c55e;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer">Filtrar</button>
             </div>
-            @if($period !== 'custom')
-            <div style="margin-left:auto;font-size:12px;color:var(--s-text-3)">
-                <i class="las la-calendar"></i> {{ \Carbon\Carbon::parse($dateFrom)->format('d/m/Y') }} — {{ \Carbon\Carbon::parse($dateTo)->format('d/m/Y') }}
-            </div>
-            @endif
         </form>
-    </div>
+    </section>
 
     <!-- ═══ ROW 1: KPI PRINCIPALES ═══ -->
-    <div class="s-grid-4" style="margin-bottom:16px">
+    <div class="s-grid-4 dashboard-primary" style="margin-bottom:16px">
         <div class="s-stat" style="border-left:4px solid #22c55e">
             <div class="s-stat-icon green"><i class="las la-dollar-sign"></i></div>
             <div>
                 <strong>S/ {{ number_format($stats['total_sales_today'], 2) }}</strong>
-                <small>Ventas Hoy</small>
+                <small>Ingresos de hoy</small>
             </div>
         </div>
         <div class="s-stat" style="border-left:4px solid #8b5cf6">
             <div class="s-stat-icon purple"><i class="las la-chart-line"></i></div>
             <div>
                 <strong>S/ {{ number_format($stats['total_sales_month'], 2) }}</strong>
-                <small>Ventas del Mes</small>
+                <small>Ingresos del mes</small>
             </div>
         </div>
         <div class="s-stat" style="border-left:4px solid #3b82f6">
             <div class="s-stat-icon blue"><i class="las la-shopping-bag"></i></div>
             <div>
                 <strong>{{ $stats['pos_today_count'] + $stats['del_today_count'] }}</strong>
-                <small>Pedidos Hoy</small>
+                <small>Pedidos de hoy</small>
             </div>
         </div>
         <div class="s-stat" style="border-left:4px solid #f59e0b">
             <div class="s-stat-icon amber"><i class="las la-utensils"></i></div>
             <div>
                 <strong>{{ $stats['kitchen_pending'] }}</strong>
-                <small>En Cocina</small>
+                <small>Pedidos en cocina</small>
             </div>
         </div>
     </div>
 
     <!-- ═══ ROW 2: KPI SECUNDARIOS ═══ -->
-    <div class="s-grid-4" style="margin-bottom:20px">
+    <div class="s-grid-4 dashboard-secondary" style="margin-bottom:20px">
         <div class="s-stat" style="border-left:4px solid #22c55e">
             <div class="s-stat-icon green"><i class="las la-receipt"></i></div>
             <div>
@@ -104,7 +132,7 @@
     </div>
 
     <!-- ═══ ROW 3: KPI EXTRA ═══ -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:24px">
+    <div class="dashboard-mini-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:24px">
         <div style="background:var(--s-surface);border:1px solid var(--s-border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px">
             <div style="width:40px;height:40px;border-radius:10px;background:#dbeafe;display:grid;place-items:center;flex-shrink:0"><i class="las la-calendar-check" style="color:#2563eb;font-size:20px"></i></div>
             <div><b style="font-size:18px;color:var(--s-text);display:block">{{ $stats['pos_month_count'] + $stats['del_month_count'] }}</b><small style="font-size:11px;color:var(--s-text-3)">Pedidos del Mes</small></div>
@@ -130,9 +158,9 @@
     </div>
 
     <!-- ═══ CHART: VENTAS 30 DÍAS (Chart.js) ═══ -->
-    <div class="s-card" style="margin-bottom:20px">
+    <div class="s-card dashboard-main-chart" style="margin-bottom:20px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:8px">
-            <h3 class="s-card-title" style="margin:0"><i class="las la-chart-bar"></i> Ventas — Últimos 30 Días</h3>
+            <div><h3 class="s-card-title" style="margin:0 0 3px"><i class="las la-chart-line"></i> Analítica de ingresos</h3><small style="color:#94a3b8;font-size:9px">Ventas POS y delivery de los últimos 30 días</small></div>
             <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
                 <span class="s-badge s-badge-green">S/ {{ number_format($chartDays->sum('total'), 2) }} total</span>
             </div>
@@ -454,7 +482,7 @@
                             </td>
                             <td><span class="s-badge s-badge-blue">{{ $c->total_orders }}</span></td>
                             <td><b>S/ {{ number_format($c->total_spent,2) }}</b></td>
-                            <td style="font-size:11px;color:var(--s-text-3)">{{ $c->last_order?->format('d/m') }}</td>
+                            <td style="font-size:11px;color:var(--s-text-3)">{{ $c->last_order ? \Carbon\Carbon::parse($c->last_order)->format('d/m') : '—' }}</td>
                         </tr>
                         @empty
                         <tr><td colspan="4"><div class="s-empty"><i class="las la-users"></i><p>Sin clientes</p></div></td></tr>
@@ -467,7 +495,7 @@
 
 </div>
 
-@push('scripts')
+@push('script')
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -488,25 +516,29 @@ document.addEventListener('DOMContentLoaded', function() {
         const delData = {!! json_encode($chartDays->pluck('del')->values()) !!};
 
         new Chart(ctx, {
-            type: 'bar',
+            type: 'line',
             data: {
                 labels: labels,
                 datasets: [
                     {
                         label: 'POS',
                         data: posData,
-                        backgroundColor: 'rgba(34, 197, 94, 0.8)',
-                        borderColor: '#22c55e',
-                        borderWidth: 1,
-                        borderRadius: 3,
+                        backgroundColor: 'rgba(249, 115, 22, 0.08)',
+                        borderColor: '#f97316',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: .38,
+                        fill: true,
                     },
                     {
                         label: 'Delivery',
                         data: delData,
-                        backgroundColor: 'rgba(139, 92, 246, 0.8)',
-                        borderColor: '#8b5cf6',
-                        borderWidth: 1,
-                        borderRadius: 3,
+                        backgroundColor: 'rgba(59, 130, 246, 0.04)',
+                        borderColor: '#3b82f6',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: .38,
+                        fill: true,
                     }
                 ]
             },
@@ -515,7 +547,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
                 plugins: {
-                    legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+                    legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 7, font: { size: 10 } } },
                     tooltip: {
                         callbacks: {
                             label: function(ctx) {
@@ -525,8 +557,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 },
                 scales: {
-                    x: { stacked: true, grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 45 } },
-                    y: { stacked: true, beginAtZero: true, ticks: { callback: v => 'S/ ' + v, font: { size: 10 } } }
+                    x: { stacked: false, grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } },
+                    y: { stacked: false, beginAtZero: true, border: { display:false }, grid:{color:'#eef2f6'}, ticks: { callback: v => 'S/ ' + v, font: { size: 9 } } }
                 }
             }
         });

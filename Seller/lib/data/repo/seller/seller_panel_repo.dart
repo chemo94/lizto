@@ -53,20 +53,22 @@ class SellerPanelRepo {
 
   // Billing
   Future<ResponseModel> billing() => _get(UrlContainer.panelBilling);
-  Future<ResponseModel> payOrder(int id, String method, {String? docType, String? docNum, String? name, String detailMode = 'detailed', String? consumptionDescription}) => _post(UrlContainer.panelBillingPay(id), {
+  Future<ResponseModel> payOrder(int id, String method, {String? docType, String? docNum, String? name, String? address, String detailMode = 'detailed', String? consumptionDescription}) => _post(UrlContainer.panelBillingPay(id), {
         'payment_method': method,
         if (docType != null) 'tipo_doc': docType,
         if (docNum != null) 'num_doc': docNum,
         if (name != null) 'nombre': name,
+        if (address != null) 'direccion': address,
         'detail_mode': detailMode,
         if (consumptionDescription != null) 'consumption_description': consumptionDescription,
       });
-  Future<ResponseModel> generateInvoice(int id, int seriesId, String method, {String? docType, String? docNum, String? name, String detailMode = 'detailed', String? consumptionDescription}) => _post(UrlContainer.panelBillingInvoice(id), {
+  Future<ResponseModel> generateInvoice(int id, int seriesId, String method, {String? docType, String? docNum, String? name, String? address, String detailMode = 'detailed', String? consumptionDescription}) => _post(UrlContainer.panelBillingInvoice(id), {
         'series_id': seriesId,
         'payment_method': method,
         if (docType != null) 'tipo_doc': docType,
         if (docNum != null) 'num_doc': docNum,
         if (name != null) 'nombre': name,
+        if (address != null) 'direccion': address,
         'detail_mode': detailMode,
         if (consumptionDescription != null) 'consumption_description': consumptionDescription,
       });

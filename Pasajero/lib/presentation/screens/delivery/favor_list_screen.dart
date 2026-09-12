@@ -76,9 +76,7 @@ class _FavorListScreenState extends State<FavorListScreen> {
                                 color: MyColor.colorWhite,
                                 borderRadius: BorderRadius.circular(Dimensions.largeRadius),
                                 boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))],
-                                border: favor.isActive
-                                    ? Border.all(color: MyColor.primaryColor.withValues(alpha: 0.3))
-                                    : null,
+                                border: favor.isActive ? Border.all(color: MyColor.primaryColor.withValues(alpha: 0.3)) : null,
                               ),
                               child: Row(
                                 children: [
@@ -103,8 +101,7 @@ class _FavorListScreenState extends State<FavorListScreen> {
                                       SizedBox(height: 2),
                                       Text(favor.description ?? '', style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor), maxLines: 1, overflow: TextOverflow.ellipsis),
                                       SizedBox(height: 4),
-                                      if (favor.total != null)
-                                        Text('S/ \${favor.total!.toStringAsFixed(2)}', style: boldDefault.copyWith(color: MyColor.primaryColor)),
+                                      if (favor.total != null) Text('S/ \${favor.total!.toStringAsFixed(2)}', style: boldDefault.copyWith(color: MyColor.primaryColor)),
                                     ]),
                                   ),
                                   Column(crossAxisAlignment: CrossAxisAlignment.end, children: [

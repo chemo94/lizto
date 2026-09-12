@@ -98,8 +98,7 @@ class _DeliveryPaymentHistoryScreenState extends State<DeliveryPaymentHistoryScr
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(p.orderNo ?? '', style: boldDefault),
                   Text(p.gatewayName ?? '', style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor)),
-                  if (p.transactionId != null)
-                    Text('ID: ${p.transactionId}', style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor, fontSize: Dimensions.fontSmall)),
+                  if (p.transactionId != null) Text('ID: ${p.transactionId}', style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor, fontSize: Dimensions.fontSmall)),
                 ]),
               ),
               Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -158,8 +157,7 @@ class _DeliveryPaymentHistoryScreenState extends State<DeliveryPaymentHistoryScr
             SizedBox(height: Dimensions.space6),
             Text('Motivo: ${r.reason ?? ""}', style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor)),
             SizedBox(height: Dimensions.space4),
-            Text('Monto: S/ ${r.amount?.toStringAsFixed(2) ?? "0.00"}',
-                style: boldDefault.copyWith(color: MyColor.primaryColor, fontSize: Dimensions.fontDefault)),
+            Text('Monto: S/ ${r.amount?.toStringAsFixed(2) ?? "0.00"}', style: boldDefault.copyWith(color: MyColor.primaryColor, fontSize: Dimensions.fontDefault)),
             if (r.adminRemark != null && r.adminRemark!.isNotEmpty) ...[
               SizedBox(height: Dimensions.space6),
               Container(

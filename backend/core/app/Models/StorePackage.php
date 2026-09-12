@@ -32,8 +32,8 @@ class StorePackage extends Model
     public function isActive(): bool
     {
         if ($this->status !== 'active') return false;
+        if ($this->starts_at && now()->lt($this->starts_at)) return false;
         if (!$this->expires_at) return true;
-        // Compare only dates — a plan expiring today is still active the full calendar day
-        return now()->toDateString() <= $this->expires_at->toDateString();
+        return now()->lt($this->expires_at);
     }
 }

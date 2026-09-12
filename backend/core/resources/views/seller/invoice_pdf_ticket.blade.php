@@ -67,6 +67,12 @@
     </style>
 </head>
 <body>
+    @include('seller.partials.credit_note_result')
+    @if($invoice->original_invoice_id)
+    @php $affected = \App\Models\SunatInvoice::find($invoice->original_invoice_id); @endphp
+    <p>Comprobante afectado: {{ $affected?->serie }}-{{ $affected?->correlativo }} ({{ $invoice->note_affected_type === '03' ? 'Boleta' : 'Factura' }})<br>
+    Motivo {{ $invoice->note_motivo }}: {{ $invoice->note_description }}</p>
+    @endif
 
     <!-- Store Header -->
     <div class="text-center">
@@ -140,6 +146,10 @@
             <td class="val">{{ $invoice->cliente_num_doc }}</td>
         </tr>
         <tr>
+            <td class="lbl">Dirección:</td>
+            <td class="val">{{ $customerAddress ?: '—' }}</td>
+        </tr>
+        <tr>
             <td class="lbl">F. Emisión:</td>
             <td class="val">{{ $invoice->fecha_emision?->format('d/m/Y H:i') }}</td>
         </tr>
@@ -161,14 +171,14 @@
             </tr>
         </thead>
         <tbody>
-            @if($invoice->isConsumptionSummary())
-                <tr><td>1.00 x {{ $invoice->consumption_description ?: 'Consumo' }}</td><td class="align-right">S/ {{ number_format($invoice->total, 2) }}</td></tr>
+            @if($invoice->isConsumptionSummary() && !$invoice->original_invoice_id)
+                <tr><td>1.00 x {{ $invoice->consumption_description ?: 'Consumo' }}</td><td class="align-right">{{ $invoice->moneda === 'PEN' ? 'S/' : $invoice->moneda }} {{ number_format($invoice->total, 2) }}</td></tr>
             @elseif(!empty($itemDetails) && count($itemDetails))
                 @foreach($itemDetails as $detail)
                     <tr>
                         <td class="text-left">{{ number_format($detail['quantity'], 0) }} x</td>
                         <td class="text-left">{{ $detail['name'] }}</td>
-                        <td class="text-right">S/ {{ number_format($detail['unit_price'] * $detail['quantity'], 2) }}</td>
+                        <td class="text-right">{{ $invoice->moneda === 'PEN' ? 'S/' : $invoice->moneda }} {{ number_format($detail['unit_price'] * $detail['quantity'], 2) }}</td>
                     </tr>
                 @endforeach
             @elseif($invoice->order && $invoice->order->items->count())
@@ -176,7 +186,7 @@
                     <tr>
                         <td class="text-left">{{ number_format($item->quantity, 0) }} x</td>
                         <td class="text-left">{{ $item->product_name }}</td>
-                        <td class="text-right">S/ {{ number_format($item->unit_price * $item->quantity, 2) }}</td>
+                        <td class="text-right">{{ $invoice->moneda === 'PEN' ? 'S/' : $invoice->moneda }} {{ number_format($item->unit_price * $item->quantity, 2) }}</td>
                     </tr>
                 @endforeach
             @else
@@ -191,70 +201,49 @@
 
     <!-- Totals -->
     @php
-        $totGravada = 0;
-        $totExonerada = 0;
-        $totInafecta = 0;
-        $totIgv = 0;
+        $totGravada = (double)($invoice->total_gravada ?? 0);
+        $totExonerada = (double)($invoice->total_exonerada ?? 0);
+        $totInafecta = (double)($invoice->total_inafecta ?? 0);
+        $totIgv = (double)($invoice->total_igv ?? 0);
+        $totTotal = (double)($invoice->total ?? 0);
         
-        if ($invoice->order && $invoice->order->items->count()) {
-            foreach ($invoice->order->items as $item) {
-                $product = $item->product;
-                $taxType = $product ? $product->tax_type : 'gravado';
-                $lineTotal = round($item->unit_price * $item->quantity, 2);
-                
-                if ($taxType === 'exonerado') {
-                    $totExonerada += $lineTotal;
-                } elseif ($taxType === 'inafecto') {
-                    $totInafecta += $lineTotal;
-                } else {
-                    $lineVal = round($lineTotal / 1.18, 2);
-                    $lineIgv = round($lineVal * 0.18, 2);
-                    $lineSum = round($lineVal + $lineIgv, 2);
-                    if ($lineSum !== $lineTotal) {
-                        $diff = round($lineTotal - $lineSum, 2);
-                        $lineIgv = round($lineIgv + $diff, 2);
-                    }
-                    $totGravada += $lineVal;
-                    $totIgv += $lineIgv;
-                }
-            }
-        } else {
-            $totGravada = (double)($invoice->total_gravada ?? 0);
-            $totIgv = (double)($invoice->total_igv ?? 0);
-            if ($totGravada == 0) {
-                $totExonerada = (double)($invoice->total ?? 0);
+        // Fallback para comprobantes antiguos sin columnas de desglose
+        if ($totGravada == 0 && $totExonerada == 0 && $totInafecta == 0 && $totTotal > 0) {
+            if ($totIgv > 0) {
+                $totGravada = round($totTotal - $totIgv, 2);
+            } else {
+                $totExonerada = $totTotal;
             }
         }
-        $totTotal = (double)($invoice->total ?? 0);
     @endphp
     <table class="totals-table">
         @if($totGravada > 0)
             <tr>
                 <td class="text-left">Op. Gravada:</td>
-                <td class="text-right">S/ {{ number_format($totGravada, 2) }}</td>
+                <td class="text-right">{{ $invoice->moneda === 'PEN' ? 'S/' : $invoice->moneda }} {{ number_format($totGravada, 2) }}</td>
             </tr>
         @endif
         @if($totExonerada > 0)
             <tr>
                 <td class="text-left">Op. Exonerada:</td>
-                <td class="text-right">S/ {{ number_format($totExonerada, 2) }}</td>
+                <td class="text-right">{{ $invoice->moneda === 'PEN' ? 'S/' : $invoice->moneda }} {{ number_format($totExonerada, 2) }}</td>
             </tr>
         @endif
         @if($totInafecta > 0)
             <tr>
                 <td class="text-left">Op. Inafecta:</td>
-                <td class="text-right">S/ {{ number_format($totInafecta, 2) }}</td>
+                <td class="text-right">{{ $invoice->moneda === 'PEN' ? 'S/' : $invoice->moneda }} {{ number_format($totInafecta, 2) }}</td>
             </tr>
         @endif
         @if($totIgv > 0)
             <tr>
                 <td class="text-left">IGV (18%):</td>
-                <td class="text-right">S/ {{ number_format($totIgv, 2) }}</td>
+                <td class="text-right">{{ $invoice->moneda === 'PEN' ? 'S/' : $invoice->moneda }} {{ number_format($totIgv, 2) }}</td>
             </tr>
         @endif
         <tr class="total-row">
             <td class="text-left">IMPORTE TOTAL:</td>
-            <td class="text-right">S/ {{ number_format($totTotal, 2) }}</td>
+            <td class="text-right">{{ $invoice->moneda === 'PEN' ? 'S/' : $invoice->moneda }} {{ number_format($totTotal, 2) }}</td>
         </tr>
     </table>
 

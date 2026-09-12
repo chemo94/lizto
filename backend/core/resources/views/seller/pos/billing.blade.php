@@ -11,12 +11,18 @@
 @endsection
 
 @section('seller-content')
-<div class="s-content">
+<style>
+.billing-touch .s-table tbody td{padding-top:14px;padding-bottom:14px}.billing-touch .s-table tbody tr{transition:.15s}.billing-touch .s-table tbody tr:active{background:#fff7ed}.billing-touch .s-table td .s-btn{min-height:42px;padding:8px 12px;border-radius:9px;font-size:11px;touch-action:manipulation}.billing-touch .s-table td>div{flex-wrap:wrap}.billing-pay-dialog .s-input{min-height:48px;font-size:14px!important;border-radius:10px!important}.billing-pay-dialog select.s-input{padding-top:0!important;padding-bottom:0!important}.billing-pay-dialog input[type=checkbox],.billing-pay-dialog input[type=radio]{width:22px!important;height:22px!important;min-width:22px;accent-color:var(--s-primary)}.billing-pay-dialog label{line-height:1.3}.billing-pay-dialog .s-btn{min-height:48px;padding:10px 16px;border-radius:10px;font-size:13px;touch-action:manipulation}.billing-pay-dialog [id^="payment-row-"] button{min-width:44px;min-height:42px!important;padding:8px!important;border-radius:8px!important}.billing-pay-dialog [id^="payment-row-"] .s-input{min-height:46px!important;height:46px!important}.billing-pay-dialog #pay-submit-btn{min-height:54px;font-size:15px;font-weight:800}.billing-pay-dialog #pay-doc-result>div{min-height:46px;padding:11px 13px!important}.billing-touch .pagination .page-link{min-width:44px;min-height:44px;display:grid;place-items:center}@media(hover:none),(pointer:coarse){.billing-touch .module-hero{min-height:150px}.billing-touch .s-card{padding:20px}.billing-touch .s-table tbody td{font-size:13px}.billing-touch .s-table td .s-btn{min-height:48px;padding:10px 14px;font-size:12px}.billing-pay-dialog{width:min(720px,calc(100vw - 20px))!important;padding:22px!important}.billing-pay-dialog button:active,.billing-touch .s-btn:active{transform:scale(.97)}.billing-pay-dialog [style*="height: 28px"],.billing-pay-dialog [style*="height: 30px"]{height:48px!important;min-height:48px!important}.billing-pay-dialog [style*="width: 64px"]{width:86px!important}.billing-pay-dialog [style*="width: 100px"],.billing-pay-dialog [style*="width: 125px"],.billing-pay-dialog [style*="width: 180px"],.billing-pay-dialog [style*="width: 220px"]{width:100%!important}.billing-pay-dialog [style*="display: flex"]{row-gap:10px}.billing-pay-dialog [style*="position: absolute; top: 16px"]{width:46px;height:46px;top:8px!important;right:8px!important;border-radius:50%!important;background:#f8fafc!important}}
+.billing-touch .s-table td .s-btn{min-width:42px}@media(hover:none),(pointer:coarse){.billing-touch .s-table td .s-btn{min-width:48px}}
+</style>
+<div class="s-content billing-touch">
+    @php $pendingBillingTotal = $pendingOrders->sum('total'); $paidBillingTotal = $paidOrders->sum('total'); @endphp
+    <section class="module-hero billing"><div><div class="module-crumb"><i class="las la-home"></i> Inicio &nbsp;/&nbsp; Finanzas &nbsp;/&nbsp; Cobros</div><h2><i class="las la-hand-holding-usd"></i> Cobros y Facturación POS</h2><p>Procesa cuentas pendientes, medios de pago y comprobantes electrónicos.</p></div><div class="module-hero-stats"><div><b>{{ $pendingOrders->count() }}</b><small>Por cobrar</small></div><div><b>S/ {{ number_format($pendingBillingTotal,0) }}</b><small>Saldo pendiente</small></div><div><b>S/ {{ number_format($paidBillingTotal,0) }}</b><small>Cobrado reciente</small></div></div></section>
     
     <div style="display: flex; flex-direction: column; gap: 24px;">
         
         <!-- PENDING ORDERS -->
-        <div class="s-card">
+        <div class="s-card seller-work-card">
             <h3 style="margin-bottom: 20px; font-weight: 700; font-size: 16px; color: var(--s-text-primary); display: flex; align-items: center; gap: 8px;">
                 <i class="las la-clock" style="color: var(--s-warning); font-size: 22px;"></i> Pedidos Pendientes de Cobro ({{ $pendingOrders->count() }})
             </h3>
@@ -98,7 +104,7 @@
 
         <!-- PAID ORDERS -->
         @if($paidOrders->count())
-        <div class="s-card">
+        <div class="s-card seller-work-card">
             <h3 style="margin-bottom: 20px; font-weight: 700; font-size: 16px; color: var(--s-text-primary); display: flex; align-items: center; gap: 8px;">
                 <i class="las la-check-circle" style="color: var(--s-success); font-size: 22px;"></i> Comprobantes y Pagos Recientes
             </h3>
@@ -196,7 +202,7 @@
 
 <!-- PAYMENT MODAL -->
 <div id="pay-modal" class="s-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15,25,35,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);">
-    <div style="background: #fff; width: min(620px, calc(100vw - 32px)); padding: 24px; border-radius: 16px; border: 1px solid var(--s-border); position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-height: calc(100vh - 32px); overflow-y: auto;">
+    <div class="billing-pay-dialog" style="background: #fff; width: min(620px, calc(100vw - 32px)); padding: 24px; border-radius: 16px; border: 1px solid var(--s-border); position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-height: calc(100vh - 32px); overflow-y: auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch;">
         <button onclick="closePayModal()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 20px; color: var(--s-text-secondary); cursor: pointer;">✕</button>
         <h3 style="margin-bottom: 8px; font-weight: 800; font-size: 18px; color: var(--s-text-primary); display: flex; align-items: center; gap: 8px;">
             <i class="las la-wallet" style="color: var(--s-success); font-size: 24px;"></i> Registrar Cobro <span id="pay-order-no"></span>
@@ -206,6 +212,7 @@
         <form method="POST" action="" id="pay-form">
             @csrf
             <input type="hidden" name="customer_name" id="pay-customer-name">
+            <input type="hidden" name="customer_address" id="pay-customer-address">
             <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px;">
                 <label style="display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer; padding:12px 14px; border:1px solid var(--s-border); border-radius:12px; background:var(--s-bg-light);">
                     <span style="display:flex; align-items:center; gap:10px;">
@@ -220,13 +227,13 @@
                 @if($invoiceTypes->count())
                 <div>
                     <label class="s-label" style="font-weight:700;">Comprobante a emitir</label>
-                    <select class="s-input" name="series_id" id="pay-series" style="height:44px; border-radius:10px;">
-                        <option value="">Nota de Venta (Clientes Varios - Por defecto)</option>
+                    <select class="s-input" name="series_id" id="pay-series" style="height:44px; border-radius:10px;" onchange="onBillingSeriesChange()">
+                        <option value="" data-code="NV">Nota de Venta (Clientes Varios - Por defecto)</option>
                         @foreach($invoiceTypes as $type)
                         @if(in_array($type->code, ['01', '03', 'NV']))
                         <optgroup label="{{ $type->code }} - {{ $type->name }}">
                             @foreach($type->series as $s)
-                            <option value="{{ $s->id }}">{{ $s->series }} (Siguiente: {{ $s->nextNumber() }})</option>
+                            <option value="{{ $s->id }}" data-code="{{ $type->code }}">{{ $s->series }} (Siguiente: {{ $s->nextNumber() }})</option>
                             @endforeach
                         </optgroup>
                         @endif
@@ -260,6 +267,10 @@
                     <i class="las la-user-check"></i>
                     <span id="pay-client-badge-name"></span>
                     <button type="button" onclick="clearDocResult()" style="margin-left:auto; background:none; border:none; color:#15803d; cursor:pointer; font-size:14px; line-height:1;">✕</button>
+                </div>
+                <div id="pay-client-address-wrap" style="display:none;">
+                    <label class="s-label" style="font-weight:700;">Dirección del cliente</label>
+                    <textarea class="s-input" id="pay-client-address-display" rows="2" maxlength="500" placeholder="Dirección fiscal o domicilio" oninput="document.getElementById('pay-customer-address').value=this.value" style="resize:vertical;font-size:12px;"></textarea>
                 </div>
 
                 <div style="background: var(--s-bg-light); border: 1px solid var(--s-border); border-radius: 12px; padding: 16px;">
@@ -656,7 +667,33 @@ function openPayModal(orderId, total, orderNo){
     renderProductSplit('pay');
     clearDocResult();
     document.getElementById('pay-num-doc').value = '';
+    onBillingSeriesChange();
     document.getElementById('pay-modal').style.display = 'flex';
+}
+
+function onBillingSeriesChange() {
+    const seriesSelect = document.getElementById('pay-series');
+    if (!seriesSelect) return;
+    const selectedOption = seriesSelect.options[seriesSelect.selectedIndex];
+    const docCode = selectedOption ? (selectedOption.getAttribute('data-code') || '') : '';
+    const tipoDocSelect = document.getElementById('pay-tipo-doc');
+    const numDocInput = document.getElementById('pay-num-doc');
+    if (!tipoDocSelect || !numDocInput) return;
+
+    if (docCode === '01') {
+        tipoDocSelect.value = '6';
+        numDocInput.placeholder = 'N° RUC cliente (11 dígitos - obligatorio)';
+        numDocInput.required = true;
+    } else if (docCode === '03') {
+        tipoDocSelect.value = '1';
+        numDocInput.placeholder = 'N° DNI cliente (8 dígitos - opcional)';
+        numDocInput.required = false;
+    } else {
+        tipoDocSelect.value = '1';
+        numDocInput.placeholder = 'N° Documento cliente (opcional)';
+        numDocInput.required = false;
+    }
+    clearDocResult();
 }
 
 function updateTupperFee() {
@@ -727,10 +764,16 @@ function clearDocResult() {
     var b = document.getElementById('pay-client-badge');
     b.style.display = 'none';
     document.getElementById('pay-customer-name').value = '';
+    document.getElementById('pay-customer-address').value = '';
+    document.getElementById('pay-client-address-display').value = '';
+    document.getElementById('pay-client-address-wrap').style.display = 'none';
 }
 
-function selectClient(name) {
+function selectClient(name, address) {
     document.getElementById('pay-customer-name').value = name;
+    document.getElementById('pay-customer-address').value = address || '';
+    document.getElementById('pay-client-address-display').value = address || '';
+    document.getElementById('pay-client-address-wrap').style.display = 'block';
     var r = document.getElementById('pay-doc-result');
     r.style.display = 'none';
     r.innerHTML = '';
@@ -758,7 +801,9 @@ function searchDoc() {
     .then(function(x) { return x.json(); })
     .then(function(d) {
         if (d.status && d.nombre) {
-            r.innerHTML = '<div onclick="selectClient(\'' + d.nombre.replace(/'/g, "\\'") + '\')" onmouseover="this.style.background=\'rgba(34,197,94,0.2)\'" onmouseout="this.style.background=\'rgba(34,197,94,0.1)\'" style="cursor:pointer; background:rgba(34,197,94,0.1); color:#15803d; border:1px solid rgba(34,197,94,0.3); border-radius:6px; padding:8px 12px; font-weight:700; display:flex; justify-content:space-between; align-items:center; transition:background 0.2s;"><span>✓ ' + d.nombre + '</span><span style="font-size:10px; background:#22c55e; color:#fff; padding:2px 6px; border-radius:4px; text-transform:uppercase; letter-spacing:0.5px;">Seleccionar</span></div>';
+            selectClient(d.nombre, d.direccion || '');
+            r.style.display = 'block';
+            r.innerHTML = '<div style="background:rgba(34,197,94,0.1);color:#15803d;border-radius:6px;padding:8px 12px;font-weight:700;">✓ Datos del cliente cargados automáticamente</div>';
         } else {
             r.innerHTML = '<div style="color:var(--s-danger-text); padding:4px 6px;">✗ ' + (d.result || 'No encontrado') + '</div>';
         }
@@ -782,6 +827,20 @@ document.addEventListener('DOMContentLoaded', function() {
         payForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
+            var seriesSelect = document.getElementById('pay-series');
+            var selectedOpt = seriesSelect ? seriesSelect.options[seriesSelect.selectedIndex] : null;
+            var docCode = selectedOpt ? (selectedOpt.getAttribute('data-code') || '') : '';
+            var numDocInput = document.getElementById('pay-num-doc');
+
+            if (docCode === '01') {
+                var rucVal = numDocInput ? numDocInput.value.trim() : '';
+                if (rucVal.length !== 11 || !/^\d{11}$/.test(rucVal)) {
+                    alert('Para emitir una Factura Electrónica debes ingresar un número de RUC válido de 11 dígitos.');
+                    if (numDocInput) numDocInput.focus();
+                    return;
+                }
+            }
+
             var submitBtn = document.getElementById('pay-submit-btn');
             submitBtn.disabled = true;
             submitBtn.style.opacity = '0.5';

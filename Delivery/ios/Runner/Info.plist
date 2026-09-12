@@ -56,6 +56,10 @@
 	<string>Lizto Delivery requiere reconocimiento de voz para permitir la entrada de voz de manera eficiente en la aplicación.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UISupportedInterfaceOrientations</key>

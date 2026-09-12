@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Seller;
 
 use App\Http\Controllers\Controller;
+use App\Lib\SocialLogin;
 use App\Models\DeviceToken;
 use App\Models\PosStaff;
 use App\Models\Seller;
@@ -10,13 +11,88 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Sanctum\PersonalAccessToken;
+use App\Services\FirebasePhoneAuthService;
+use Throwable;
 
 class AuthController extends Controller
 {
+    public function authorization()
+    {
+        $account = auth()->user();
+        if ($account instanceof PosStaff) {
+            return apiResponse('seller_phone_not_available', 'error', ['La verificación telefónica corresponde al propietario del negocio']);
+        }
+
+        return apiResponse('firebase_phone_required', 'success', ['Verifica tu teléfono con Firebase'], [
+            'phone_number' => app(FirebasePhoneAuthService::class)->phoneFor($account),
+            'verification_provider' => 'firebase',
+        ]);
+    }
+
+    public function mobileVerification(Request $request)
+    {
+        $request->validate(['firebase_id_token' => ['required', 'string']]);
+        $account = auth()->user();
+
+        if ($account instanceof PosStaff) {
+            return apiResponse('seller_phone_not_available', 'error', ['La verificación telefónica corresponde al propietario del negocio']);
+        }
+
+        try {
+            $matches = app(FirebasePhoneAuthService::class)->tokenMatchesAccount($request->firebase_id_token, $account);
+        } catch (Throwable $exception) {
+            report($exception);
+            return apiResponse('firebase_token_invalid', 'error', ['No se pudo validar el teléfono con Firebase']);
+        }
+
+        if (!$matches) {
+            return apiResponse('phone_not_match', 'error', ['El teléfono verificado no corresponde a esta cuenta']);
+        }
+
+        $account->phone_verified_at = now();
+        $account->save();
+        $account->setAttribute('sv', '1');
+
+        return apiResponse('mobile_verified', 'success', ['Teléfono verificado correctamente'], ['user' => $account]);
+    }
+
+    public function socialLogin(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'token'    => 'required',
+            'provider' => 'required|in:google,apple,facebook,linkedin,phone',
+        ]);
+
+        if ($validator->fails()) {
+            return apiResponse('validation_error', 'error', $validator->errors()->all());
+        }
+
+        if ($request->provider === 'phone') {
+            try {
+                $seller = app(FirebasePhoneAuthService::class)->findAccount($request->token, Seller::class, 'phone');
+            } catch (Throwable $exception) {
+                report($exception);
+                return apiResponse('firebase_token_invalid', 'error', ['No se pudo validar el teléfono con Firebase']);
+            }
+            if (!$seller || !$seller->status) return apiResponse('phone_account_not_found', 'error', ['No existe una cuenta activa con este número celular']);
+            $token = $seller->createToken('seller_token')->plainTextToken;
+            $deviceToken = $request->device_token ?? $request->fcm_token;
+            if ($deviceToken) {
+                DeviceToken::updateOrCreate(
+                    ['token' => $deviceToken],
+                    ['seller_id' => $seller->id, 'pos_staff_id' => null, 'user_id' => null, 'driver_id' => null, 'is_app' => 1, 'app_type' => 'seller']
+                );
+            }
+            return apiResponse('login_success', 'success', ['Inicio de sesión exitoso'], ['seller' => $seller, 'access_token' => $token, 'token' => $token, 'token_type' => 'Bearer']);
+        }
+
+        $socialLogin = new SocialLogin('seller', $request->provider);
+        return $socialLogin->login();
+    }
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'email'    => 'required|email',
+            'email'    => 'required|string',
             'password' => 'required',
         ]);
 
@@ -25,7 +101,7 @@ class AuthController extends Controller
         }
 
         // 1. Try seller login
-        $seller = Seller::where('email', $request->email)->first();
+        $seller = Seller::where('email', $request->email)->orWhere('phone', $request->email)->first();
         if ($seller && Hash::check($request->password, $seller->password)) {
             if (!$seller->status) {
                 return apiResponse('inactive', 'error', ['Tu cuenta está desactivada']);
@@ -51,7 +127,7 @@ class AuthController extends Controller
         }
 
         // 2. Try staff/mozo login
-        $staff = PosStaff::where('email', $request->email)->first();
+        $staff = PosStaff::where('email', $request->email)->orWhere('phone', $request->email)->first();
         if ($staff && $staff->password && Hash::check($request->password, $staff->password)) {
             if ($staff->status !== 'active') {
                 return apiResponse('inactive', 'error', ['Cuenta de empleado inactiva']);
@@ -100,7 +176,7 @@ class AuthController extends Controller
             'total_products'  => $totalProducts,
             'receivable_balance' => (float) $seller->receivable_balance,
             'store_image_path' => getFilePath('store'),
-            'product_image_path' => 'storage',
+            'product_image_path' => getFilePath('product'),
         ]);
     }
 

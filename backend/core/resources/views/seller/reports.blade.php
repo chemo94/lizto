@@ -12,9 +12,10 @@
 
 @section('seller-content')
 <div class="s-content">
+    <section class="module-hero reports"><div><div class="module-crumb"><i class="las la-home"></i> Inicio &nbsp;/&nbsp; Analítica &nbsp;/&nbsp; Reportes</div><h2><i class="las la-chart-line"></i> Reportes del Negocio</h2><p>Analiza ventas, pedidos, canales y desempeño dentro del periodo seleccionado.</p></div><div class="module-hero-stats"><div><b>S/ {{ number_format($report['total_sales'],0) }}</b><small>Ventas</small></div><div><b>{{ $report['total_orders'] }}</b><small>Pedidos</small></div><div><b>S/ {{ $report['total_orders'] ? number_format($report['total_sales']/$report['total_orders'],0) : 0 }}</b><small>Ticket promedio</small></div></div></section>
 
     <!-- FILTER BAR -->
-    <div class="s-card" style="margin-bottom:24px">
+    <div class="s-card seller-work-card" style="margin-bottom:14px">
         <form method="GET" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
             <div class="s-input-group">
                 <label class="s-input-label">Desde</label>
@@ -41,10 +42,10 @@
             </a>
             <div style="margin-left:auto;display:flex;gap:8px;margin-bottom:1px">
                 <a href="{{ route('seller.reports.export.excel', request()->query()) }}" class="s-btn s-btn-outline" style="font-size:11px;padding:6px 12px">
-                    <i class="las la-file-excel"></i> Excel
+                    <i class="las la-file-excel"></i> Ventas generales Excel
                 </a>
                 <a href="{{ route('seller.reports.export.pdf', request()->query()) }}" class="s-btn s-btn-outline" style="font-size:11px;padding:6px 12px">
-                    <i class="las la-file-pdf"></i> PDF
+                    <i class="las la-file-pdf"></i> Ventas generales PDF
                 </a>
             </div>
         </form>
@@ -121,7 +122,7 @@
     @endif
 
     <!-- ORDERS TABLE -->
-    <div class="s-card">
+    <div class="s-card seller-work-card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
             <h3 class="s-card-title" style="margin:0"><i class="las la-list"></i> Detalle de Pedidos POS</h3>
             <span class="s-badge s-badge-gray">{{ $orders->total() }} registros</span>

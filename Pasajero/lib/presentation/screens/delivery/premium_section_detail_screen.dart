@@ -210,9 +210,7 @@ class _PremiumSectionDetailScreenState extends State<PremiumSectionDetailScreen>
               ),
             ],
           ),
-          bottomNavigationBar: controller.hasItemsInCart
-              ? FloatingCartBar(controller: controller)
-              : null,
+          bottomNavigationBar: controller.hasItemsInCart ? FloatingCartBar(controller: controller) : null,
         );
       },
     );
@@ -247,9 +245,7 @@ class _PremiumGridProductCard extends StatelessWidget {
     }
 
     final hasDiscount = product.discountPrice != null && product.discountPrice! < (product.price ?? 0);
-    final discountPct = hasDiscount
-        ? (((product.price! - product.discountPrice!) / product.price!) * 100).round()
-        : 0;
+    final discountPct = hasDiscount ? (((product.price! - product.discountPrice!) / product.price!) * 100).round() : 0;
 
     return InkWell(
       onTap: () {
@@ -419,9 +415,7 @@ class _PremiumListStoreCard extends StatelessWidget {
             Stack(
               children: [
                 MyImageWidget(
-                  imageUrl: store.coverImage != null
-                      ? '${controller.storeCoverPath}/${store.coverImage}'
-                      : '${controller.storeImagePath}/${store.image}',
+                  imageUrl: store.coverImage != null ? '${controller.storeCoverPath}/${store.coverImage}' : '${controller.storeImagePath}/${store.image}',
                   height: 96,
                   width: 96,
                   boxFit: BoxFit.cover,

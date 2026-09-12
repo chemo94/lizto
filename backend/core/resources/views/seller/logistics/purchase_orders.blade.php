@@ -6,11 +6,13 @@
 
 @section('seller-content')
 <div class="s-content">
+    @php $purchaseOrderTotal = $orders->sum('total'); @endphp
+    <section class="module-hero logistics"><div><div class="module-crumb"><i class="las la-home"></i> Inicio &nbsp;/&nbsp; Logística &nbsp;/&nbsp; Órdenes de compra</div><h2><i class="las la-file-invoice-dollar"></i> Órdenes de Compra</h2><p>Planifica abastecimiento, controla aprobaciones y prepara recepciones.</p></div><div class="module-hero-stats"><div><b>{{ $orders->total() }}</b><small>Órdenes</small></div><div><b>{{ $orders->where('status','pending')->count() }}</b><small>Pendientes visibles</small></div><div><b>S/ {{ number_format($purchaseOrderTotal,0) }}</b><small>Total visible</small></div></div></section>
 
-    <div class="s-grid-2" style="grid-template-columns: 1fr 1.3fr; gap: 24px; align-items: start;">
+    <div class="s-grid-2 logistics-workspace" style="grid-template-columns: 1fr 1.3fr; gap: 14px; align-items: start;">
         
         <!-- REGISTRAR ORDEN DE COMPRA -->
-        <div class="s-card">
+        <div class="s-card seller-work-card">
             <h3 class="s-card-title"><i class="las la-plus-circle"></i> Nueva Orden de Compra</h3>
 
             <form method="POST" action="{{ route('seller.logistics.purchase_orders.store') }}" onsubmit="return validateOrderForm(event)">
@@ -105,7 +107,7 @@
         </div>
 
         <!-- LISTADO Y ESTADOS -->
-        <div class="s-card">
+        <div class="s-card seller-work-card">
             <h3 class="s-card-title"><i class="las la-history"></i> Historial de Órdenes</h3>
 
             <div class="s-table-responsive">

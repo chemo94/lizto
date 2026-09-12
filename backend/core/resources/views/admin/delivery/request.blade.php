@@ -12,9 +12,12 @@
                     @csrf
 
                     <div class="form-group">
-                        <label>@lang('Seleccionar Tienda')</label>
+                        <label>@lang('Origen de la solicitud')</label>
                         <select class="form-control select2" name="store_id" id="store-select" required>
                             <option value="">@lang('-- Selecciona una tienda --')</option>
+                            <option value="custom" {{ old('request_mode') === 'custom' ? 'selected' : '' }}>
+                                @lang('Compra o recojo libre (sin tienda registrada)')
+                            </option>
                             @foreach($stores as $store)
                             <option value="{{ $store->id }}"
                                 data-address="{{ $store->address }}"
@@ -25,6 +28,13 @@
                             </option>
                             @endforeach
                         </select>
+                        <input type="hidden" name="request_mode" id="request-mode" value="{{ old('request_mode', 'store') }}">
+                    </div>
+
+                    <div class="form-group" id="custom-origin-name-group" style="display:none;">
+                        <label>@lang('Nombre del lugar de compra o recojo')</label>
+                        <input type="text" class="form-control" name="custom_store_name" id="custom-store-name"
+                            value="{{ old('custom_store_name') }}" placeholder="@lang('Ej: Mercado Central, domicilio del remitente...')" maxlength="255">
                     </div>
 
                     <div class="form-group">
@@ -46,8 +56,15 @@
                                 <i class="las la-map-marker"></i> o seleccionar del mapa
                             </button>
                         </div>
-                        <input type="text" class="form-control" id="store-address" placeholder="@lang('Busca una dirección de recogida...')" autocomplete="off">
+                        <input type="text" class="form-control" name="pickup_address" id="store-address"
+                            value="{{ old('pickup_address') }}" placeholder="@lang('Busca una dirección de compra o recogida...')" required autocomplete="off">
                         <small class="text-muted mt-1 d-block">@lang('Coordenadas:') <span id="store-coords">--</span></small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>@lang('Nombre del cliente o destinatario')</label>
+                        <input type="text" class="form-control" name="recipient_name"
+                            value="{{ old('recipient_name') }}" placeholder="@lang('Nombre completo del cliente')" required maxlength="255">
                     </div>
 
                     <div class="form-group">
@@ -76,6 +93,16 @@
                         <label>@lang('Teléfono del destinatario')</label>
                         <input type="text" class="form-control" name="recipient_phone"
                             value="{{ old('recipient_phone') }}" placeholder="@lang('+51 999 888 777')">
+                    </div>
+
+                    <div class="form-group">
+                        <label>@lang('Cargo adicional al total estimado')</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend"><span class="input-group-text">S/</span></div>
+                            <input type="number" class="form-control" name="estimated_amount" id="additional-charge"
+                                value="{{ old('estimated_amount', '0.00') }}" min="0" max="999999.99" step="0.01" inputmode="decimal">
+                        </div>
+                        <small class="text-muted">@lang('Opcional. Se sumará a la tarifa del delivery y será visible en el total del pedido.')</small>
                     </div>
 
                     <button type="submit" class="btn btn--primary w-100" id="submit-btn">
@@ -185,6 +212,10 @@
                         <tr id="surge-row" style="display:none;">
                             <td class="text-warning">@lang('Demanda (surge)')</td>
                             <td class="text-end text-warning">×<span id="fee-surge">--</span></td>
+                        </tr>
+                        <tr>
+                            <td>@lang('Cargo adicional')</td>
+                            <td class="text-end">S/ <span id="fee-additional">0.00</span></td>
                         </tr>
                         <tr class="table-active">
                             <td><strong>@lang('TOTAL ESTIMADO')</strong></td>
@@ -329,6 +360,9 @@
 <script>
 (function() {
     var storeSelect = document.getElementById('store-select');
+    var requestMode = document.getElementById('request-mode');
+    var customOriginNameGroup = document.getElementById('custom-origin-name-group');
+    var customStoreName = document.getElementById('custom-store-name');
     var storeInfo = document.getElementById('store-info');
     var storeAddr = document.getElementById('store-address');
     var storeCoords = document.getElementById('store-coords');
@@ -341,18 +375,65 @@
     var driverCard = document.getElementById('driver-card');
     var submitBtn = document.getElementById('submit-btn');
     var cancelBtn = document.getElementById('cancel-btn');
+    var additionalChargeInput = document.getElementById('additional-charge');
+    var baseDeliveryFee = 0;
 
-    var pickupLat = null, pickupLng = null;
-    var deliveryLat = null, deliveryLng = null;
+    var pickupLat = parseFloat(document.getElementById('pickup-lat').value) || null;
+    var pickupLng = parseFloat(document.getElementById('pickup-lng').value) || null;
+    var deliveryLat = parseFloat(document.getElementById('delivery-lat').value) || null;
+    var deliveryLng = parseFloat(document.getElementById('delivery-lng').value) || null;
     var pollingInterval = null;
     var pollStartTime = null;
     var maxPollTime = 180000; // 3 minutes
     var timerInterval = null;
 
+    function formatFeeDisplay(val) {
+        var num = parseFloat(val) || 0;
+        var floor = Math.floor(num);
+        var dec = Math.round((num - floor) * 100) / 100;
+        if (dec >= 0.46 && dec <= 0.54) {
+            return (floor + 0.50).toFixed(2);
+        } else if (dec > 0.54) {
+            return Math.ceil(num).toString();
+        } else {
+            return floor.toString();
+        }
+    }
+
+    function refreshEstimatedTotal() {
+        var additional = Math.max(0, parseFloat(additionalChargeInput.value) || 0);
+        var total = baseDeliveryFee + additional;
+        document.getElementById('fee-additional').textContent = additional > 0 ? formatFeeDisplay(additional) : '0.00';
+        if (baseDeliveryFee > 0) {
+            document.getElementById('fee-total').textContent = formatFeeDisplay(total);
+            submitBtn.innerHTML = '<i class="las la-paper-plane"></i> Enviar solicitud a repartidores · S/ ' + formatFeeDisplay(total);
+        }
+    }
+
+    additionalChargeInput.addEventListener('input', refreshEstimatedTotal);
+
     // Store selection
     storeSelect.addEventListener('change', function() {
         var opt = this.options[this.selectedIndex];
-        if (opt.value) {
+        var isCustom = opt.value === 'custom';
+        var previousMode = requestMode.value;
+        requestMode.value = isCustom ? 'custom' : 'store';
+        customOriginNameGroup.style.display = isCustom ? 'block' : 'none';
+        customStoreName.required = isCustom;
+
+        if (isCustom) {
+            storeInfo.style.display = 'block';
+            if (previousMode !== 'custom') {
+                storeAddr.value = '';
+                pickupLat = null;
+                pickupLng = null;
+                document.getElementById('pickup-lat').value = '';
+                document.getElementById('pickup-lng').value = '';
+            }
+            storeCoords.textContent = pickupLat && pickupLng
+                ? pickupLat.toFixed(6) + ', ' + pickupLng.toFixed(6)
+                : '--';
+        } else if (opt.value) {
             storeInfo.style.display = 'block';
             storeAddr.value = opt.dataset.address || '';
             storeCoords.textContent = (opt.dataset.lat || '--') + ', ' + (opt.dataset.lng || '--');
@@ -362,7 +443,11 @@
             document.getElementById('pickup-lng').value = pickupLng || '';
         } else {
             storeInfo.style.display = 'none';
+            customOriginNameGroup.style.display = 'none';
+            customStoreName.required = false;
             pickupLat = null; pickupLng = null;
+            document.getElementById('pickup-lat').value = '';
+            document.getElementById('pickup-lng').value = '';
         }
         calculateFee();
     });
@@ -635,13 +720,14 @@
                 var distKm = parseFloat(data.distance_km) || 0;
                 var isShort = distKm > 0 && distKm < 1.0;
                 var feeTotal = (isShort || data.is_short_distance) ? 4.0 : (parseFloat(data.delivery_fee) || 0);
+                baseDeliveryFee = feeTotal;
 
                 document.getElementById('fee-distance').textContent = data.distance_km || '--';
                 document.getElementById('fee-base').textContent = (isShort || data.is_short_distance) ? '4.00 (Corta)' : (data.base_fare || '--');
                 document.getElementById('fee-distance-fee').textContent = (isShort || data.is_short_distance) ? '0.00' : (data.distance_fee || '0.00');
                 document.getElementById('fee-time-min').textContent = data.time_min || '--';
                 document.getElementById('fee-time').textContent = (isShort || data.is_short_distance) ? '0.00' : (data.time_fee || '0.00');
-                document.getElementById('fee-total').textContent = feeTotal.toFixed(2);
+                refreshEstimatedTotal();
 
                 var shortAlert = document.getElementById('short-distance-warning');
                 if (shortAlert) {
@@ -652,10 +738,6 @@
                     } else {
                         shortAlert.style.display = 'none';
                     }
-                }
-
-                if (submitBtn) {
-                    submitBtn.innerHTML = '<i class="las la-paper-plane"></i> Enviar solicitud a repartidores · S/ ' + feeTotal.toFixed(2);
                 }
 
                 if (parseFloat(data.surge) > 1) {

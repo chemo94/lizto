@@ -127,9 +127,7 @@ class _CourierJobDetailScreenState extends State<CourierJobDetailScreen> {
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: c.updatingStatus ? null : () => _updateStatus(c, job),
-                      icon: c.updatingStatus
-                          ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: MyColor.colorWhite))
-                          : Icon(job.statusIcon, size: 20),
+                      icon: c.updatingStatus ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: MyColor.colorWhite)) : Icon(job.statusIcon, size: 20),
                       label: Text(job.nextAction, style: boldDefault.copyWith(color: MyColor.colorWhite)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: job.statusColor,
@@ -185,8 +183,7 @@ class _CourierJobDetailScreenState extends State<CourierJobDetailScreen> {
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(job.customerName ?? 'Cliente', style: boldDefault),
-            if (job.customerPhone != null)
-              Text(job.customerPhone!, style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor)),
+            if (job.customerPhone != null) Text(job.customerPhone!, style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor)),
           ]),
         ),
         IconButton(
@@ -284,8 +281,7 @@ class _CourierJobDetailScreenState extends State<CourierJobDetailScreen> {
         Get.back();
         bool ok = await c.updateJobStatus(job.id ?? 0, job.nextStatus ?? '');
         if (ok) {
-          Get.snackbar('Actualizado', 'Estado actualizado correctamente',
-              backgroundColor: job.statusColor, colorText: MyColor.colorWhite);
+          Get.snackbar('Actualizado', 'Estado actualizado correctamente', backgroundColor: job.statusColor, colorText: MyColor.colorWhite);
           final nextS = job.nextStatus;
           if (nextS == 'on_way' || nextS == 'accepted' || nextS == 'on_way_to_pickup' || nextS == 'at_pickup' || nextS == 'on_way_to_delivery') {
             c.startLocationBroadcast(job.id ?? 0);
@@ -316,7 +312,8 @@ class _CourierJobDetailScreenState extends State<CourierJobDetailScreen> {
                       child: Image.file(_proofImage!, height: 120, width: double.infinity, fit: BoxFit.cover),
                     ),
                     Positioned(
-                      top: 4, right: 4,
+                      top: 4,
+                      right: 4,
                       child: GestureDetector(
                         onTap: () => setDialogState(() => _proofImage = null),
                         child: Container(
@@ -341,7 +338,8 @@ class _CourierJobDetailScreenState extends State<CourierJobDetailScreen> {
                     }
                   },
                   child: Container(
-                    width: double.infinity, height: 120,
+                    width: double.infinity,
+                    height: 120,
                     decoration: BoxDecoration(
                       border: Border.all(color: MyColor.borderColor, style: BorderStyle.solid),
                       borderRadius: BorderRadius.circular(Dimensions.defaultRadius),
@@ -372,8 +370,7 @@ class _CourierJobDetailScreenState extends State<CourierJobDetailScreen> {
       confirmTextColor: MyColor.colorWhite,
       onConfirm: () async {
         if (_proofImage == null) {
-          Get.snackbar('Falta foto', 'Sube una foto del comprobante',
-              backgroundColor: MyColor.redCancelTextColor, colorText: MyColor.colorWhite);
+          Get.snackbar('Falta foto', 'Sube una foto del comprobante', backgroundColor: MyColor.redCancelTextColor, colorText: MyColor.colorWhite);
           return;
         }
         Get.back();
@@ -384,8 +381,7 @@ class _CourierJobDetailScreenState extends State<CourierJobDetailScreen> {
         _uploadingProof = false;
         if (mounted) setState(() {});
         if (ok) {
-          Get.snackbar('Entregado', 'Pedido completado correctamente',
-              backgroundColor: const Color(0xFF10B981), colorText: MyColor.colorWhite);
+          Get.snackbar('Entregado', 'Pedido completado correctamente', backgroundColor: const Color(0xFF10B981), colorText: MyColor.colorWhite);
         }
       },
     );

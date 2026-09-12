@@ -332,7 +332,20 @@ class DeliveryPricing
 
     public static function roundFee(float $amount): float
     {
-        return round($amount);
+        $amount = round($amount, 2);
+        $floor = floor($amount);
+        $dec = round($amount - $floor, 2);
+
+        // Si el monto está en torno a .50 (ej. entre 0.46 y 0.54), no redondear a entero y mantener .50
+        if ($dec >= 0.46 && $dec <= 0.54) {
+            return (float) ($floor + 0.50);
+        } elseif ($dec > 0.54) {
+            // Más de .50 -> redondear al entero superior (ej. 5.60 -> 6)
+            return (float) ceil($amount);
+        } else {
+            // Menos de .50 -> redondear al entero inferior (ej. 5.40 -> 5)
+            return (float) $floor;
+        }
     }
 
     private static function firstCoordinateValue(Request $request, array $keys): ?float

@@ -44,20 +44,56 @@ class AdminDeliveryRequestDispatchService
             return null;
         }
 
+        if ($favor->dispatch_mode === 'admin_broadcast') {
+            CourierOfferTracker::expireOpen($favor);
+        } elseif ($favor->courier_id) {
+            CourierOfferTracker::expireOpen($favor, (int) $favor->courier_id);
+        }
+
         $attemptedIds = collect($favor->dispatch_attempted_driver_ids ?? [])
             ->map(fn ($id) => (int) $id)
             ->filter()
             ->values()
             ->all();
 
-        $courier = Driver::query()
-            ->where('status', Status::ENABLE)
-            ->where('online_status', 1)
-            ->where('service_type', 'delivery')
-            ->whereHas('wallet', fn ($query) => $query->where('balance', '>', 0))
-            ->when($attemptedIds, fn ($query) => $query->whereNotIn('id', $attemptedIds))
-            ->orderBy('id')
-            ->first();
+        $courier = null;
+
+        // 1. Try finding nearest courier via Uber H3 + Redis spatial indexing
+        if ($favor->pickup_lat && $favor->pickup_lng) {
+            $nearbyCouriers = \App\Services\H3\DriverGeoRedisService::findNearbyCouriers(
+                (float) $favor->pickup_lat,
+                (float) $favor->pickup_lng,
+                radiusKm: (float) (gs('delivery_coverage_radius') ?? 10),
+                excludeDriverIds: $attemptedIds,
+                limit: 5
+            );
+
+            if ($nearbyCouriers->isNotEmpty()) {
+                $candidateIds = $nearbyCouriers->pluck('id')->all();
+                $courier = Driver::query()
+                    ->whereIn('id', $candidateIds)
+                    ->where('status', Status::ENABLE)
+                    ->where('online_status', 1)
+                    ->whereHas('wallet', fn ($query) => $query->where('balance', '>', 0))
+                    ->get()
+                    ->sortBy(function ($d) use ($candidateIds) {
+                        return array_search($d->id, $candidateIds);
+                    })
+                    ->first();
+            }
+        }
+
+        // 2. Fallback to standard query if no nearby courier found in range
+        if (!$courier) {
+            $courier = Driver::query()
+                ->where('status', Status::ENABLE)
+                ->where('online_status', 1)
+                ->whereIn('service_type', ['delivery', 'both'])
+                ->whereHas('wallet', fn ($query) => $query->where('balance', '>', 0))
+                ->when($attemptedIds, fn ($query) => $query->whereNotIn('id', $attemptedIds))
+                ->orderBy('id')
+                ->first();
+        }
 
         if (!$courier) {
             // Start a new round if every currently available courier was consulted.
@@ -65,7 +101,7 @@ class AdminDeliveryRequestDispatchService
             $courier = Driver::query()
                 ->where('status', Status::ENABLE)
                 ->where('online_status', 1)
-                ->where('service_type', 'delivery')
+                ->whereIn('service_type', ['delivery', 'both'])
                 ->whereHas('wallet', fn ($query) => $query->where('balance', '>', 0))
                 ->orderBy('id')
                 ->first();
@@ -85,19 +121,18 @@ class AdminDeliveryRequestDispatchService
             'dispatch_timeout_at'          => now()->addSeconds(self::TARGETED_WAIT_SECONDS),
         ]);
 
-        FcmService::sendToDriver(
+        $notified = FcmService::sendToDriver(
             $courier,
             '¿Puedes realizar este envío?',
             'Responde al envío #' . $favor->order_no . ' en los próximos 30 segundos.',
-            [
-                'type'         => 'targeted_delivery_request',
-                'favor_id'     => (string) $favor->id,
-                'order_id'     => (string) $favor->id,
-                'job_id'       => (string) $favor->id,
-                'order_no'     => $favor->order_no,
-                'for_app'      => 'courier_job_detail-' . $favor->id,
-                'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
-            ]
+            FcmService::courierJobPayload($favor, ['type' => 'targeted_delivery_request'])
+        );
+        CourierOfferTracker::offered(
+            $courier,
+            $favor,
+            'admin_targeted',
+            (bool) $notified,
+            $favor->dispatch_timeout_at
         );
 
         event(new FavorStatusUpdated($favor->fresh(), 'waiting_courier_response'));

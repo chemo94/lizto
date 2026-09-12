@@ -8,21 +8,21 @@ import 'package:liztogo/core/utils/my_color.dart';
 import 'package:liztogo/data/controller/delivery/delivery_controller.dart';
 import 'package:liztogo/presentation/screens/delivery/order_confirmation_screen.dart';
 
-class DeliveryMercadoPagoCheckoutScreen extends StatefulWidget {
+class MercadoPagoCheckoutScreen extends StatefulWidget {
   final Map<String, dynamic> mpData;
   final int orderId;
 
-  const DeliveryMercadoPagoCheckoutScreen({
+  const MercadoPagoCheckoutScreen({
     Key? key,
     required this.mpData,
     required this.orderId,
   }) : super(key: key);
 
   @override
-  State<DeliveryMercadoPagoCheckoutScreen> createState() => _DeliveryMercadoPagoCheckoutScreenState();
+  State<MercadoPagoCheckoutScreen> createState() => _MercadoPagoCheckoutScreenState();
 }
 
-class _DeliveryMercadoPagoCheckoutScreenState extends State<DeliveryMercadoPagoCheckoutScreen> {
+class _MercadoPagoCheckoutScreenState extends State<MercadoPagoCheckoutScreen> {
   final _formKey = GlobalKey<FormState>();
 
   final _cardNumberController = TextEditingController();
@@ -244,7 +244,9 @@ class _DeliveryMercadoPagoCheckoutScreenState extends State<DeliveryMercadoPagoC
       final String cardToken = tokenData['id'] ?? '';
       if (cardToken.isEmpty) {
         Get.snackbar('Error de Tarjeta', 'No se pudo obtener el token de la tarjeta', backgroundColor: Colors.red, colorText: Colors.white);
-        setState(() { _isTokenizing = false; });
+        setState(() {
+          _isTokenizing = false;
+        });
         return;
       }
       String resolvedPaymentMethodId = _detectedPaymentMethodId ?? tokenData['payment_method_id'] ?? tokenData['payment_method']?['id'] ?? _cardBrand ?? 'visa';
@@ -278,11 +280,9 @@ class _DeliveryMercadoPagoCheckoutScreenState extends State<DeliveryMercadoPagoC
         }
         Get.off(() => const OrderConfirmationScreen());
       } else {
-        // Payment was rejected — delete the pending order so it doesn't linger in DB
-        final controller2 = Get.find<DeliveryController>();
-        await controller2.deletePendingOrder(widget.orderId);
+        // Payment rejected — delete the pending order so it doesn't linger in DB
+        await controller.deletePendingOrder(widget.orderId);
         Get.back();
-        // Show rejection reason on the previous screen
         Get.snackbar(
           'Pago rechazado',
           resultError,
@@ -367,7 +367,6 @@ class _DeliveryMercadoPagoCheckoutScreenState extends State<DeliveryMercadoPagoC
                 ),
               ),
               const SizedBox(height: 24),
-
               AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 height: 200,
@@ -416,9 +415,7 @@ class _DeliveryMercadoPagoCheckoutScreenState extends State<DeliveryMercadoPagoC
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      _cardNumberController.text.isEmpty
-                          ? '•••• •••• •••• ••••'
-                          : _cardNumberController.text,
+                      _cardNumberController.text.isEmpty ? '•••• •••• •••• ••••' : _cardNumberController.text,
                       style: const TextStyle(color: Colors.white, fontSize: 20, letterSpacing: 2, fontFamily: 'monospace', fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
@@ -432,9 +429,7 @@ class _DeliveryMercadoPagoCheckoutScreenState extends State<DeliveryMercadoPagoC
                               const Text('TITULAR', style: TextStyle(color: Colors.white54, fontSize: 8, fontWeight: FontWeight.bold)),
                               const SizedBox(height: 2),
                               Text(
-                                _cardNameController.text.isEmpty
-                                    ? 'NOMBRE COMPLETO'
-                                    : _cardNameController.text.toUpperCase(),
+                                _cardNameController.text.isEmpty ? 'NOMBRE COMPLETO' : _cardNameController.text.toUpperCase(),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
@@ -459,7 +454,6 @@ class _DeliveryMercadoPagoCheckoutScreenState extends State<DeliveryMercadoPagoC
                 ),
               ),
               const SizedBox(height: 24),
-
               Form(
                 key: _formKey,
                 child: Column(
@@ -649,9 +643,7 @@ class _DeliveryMercadoPagoCheckoutScreenState extends State<DeliveryMercadoPagoC
                               final installments = cost['installments'] ?? 1;
                               final totalAmount = (cost['total_amount'] as num?)?.toDouble() ?? 0.0;
                               final installmentAmount = (cost['installment_amount'] as num?)?.toDouble() ?? 0.0;
-                              final label = installments == 1
-                                  ? '1 cuota de S/ ${totalAmount.toStringAsFixed(2)}'
-                                  : '$installments cuotas de S/ ${installmentAmount.toStringAsFixed(2)} c/u (Total: S/ ${totalAmount.toStringAsFixed(2)})';
+                              final label = installments == 1 ? '1 cuota de S/ ${totalAmount.toStringAsFixed(2)}' : '$installments cuotas de S/ ${installmentAmount.toStringAsFixed(2)} c/u (Total: S/ ${totalAmount.toStringAsFixed(2)})';
                               return DropdownMenuItem<int>(
                                 value: installments,
                                 child: Text(label, style: const TextStyle(color: MyColor.primaryTextColor, fontSize: 13)),
@@ -664,7 +656,6 @@ class _DeliveryMercadoPagoCheckoutScreenState extends State<DeliveryMercadoPagoC
                 ),
               ),
               const SizedBox(height: 32),
-
               ElevatedButton(
                 onPressed: _isTokenizing ? null : _processPayment,
                 style: ElevatedButton.styleFrom(

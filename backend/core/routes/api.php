@@ -355,6 +355,7 @@ Route::namespace('Api\Driver')->prefix('driver')->group(function () {
                     Route::get('jobs/history', '\App\Http\Controllers\Api\Driver\CourierJobController@jobHistory');
                     Route::get('jobs/{id}', '\App\Http\Controllers\Api\Driver\CourierJobController@jobDetail');
                     Route::post('jobs/{id}/accept', '\App\Http\Controllers\Api\Driver\CourierJobController@acceptJob');
+                    Route::post('jobs/{id}/reject', '\App\Http\Controllers\Api\Driver\CourierJobController@rejectJob');
                     Route::post('jobs/{id}/status', '\App\Http\Controllers\Api\Driver\CourierJobController@updateJobStatus');
                     Route::post('jobs/{id}/cancel', '\App\Http\Controllers\Api\Driver\CourierJobController@cancelJob');
                     Route::post('jobs/{id}/location', '\App\Http\Controllers\Api\Driver\CourierJobController@sendLocation');
@@ -390,8 +391,14 @@ Route::namespace('Api\Driver')->prefix('driver')->group(function () {
 
 Route::namespace('Api\Seller')->prefix('seller')->name('seller.')->group(function () {
     Route::post('login', 'AuthController@login');
-        Route::middleware('auth:sanctum')->group(function () {
-            Route::post('sunat-lookup', [\App\Http\Controllers\SellerPosController::class, 'sunatLookup']);
+    Route::post('social-login', 'AuthController@socialLogin');
+    Route::get('onboarding/packages', 'PackageController@onboardingPlans');
+    Route::post('register', [\App\Http\Controllers\Api\Seller\PanelController::class, 'register']);
+    Route::middleware('auth:sanctum')->group(function () {
+            Route::get('authorization', 'AuthController@authorization');
+            Route::get('resend-verify/mobile', 'AuthController@authorization');
+            Route::post('verify-mobile', 'AuthController@mobileVerification');
+            Route::post('sunat-lookup', [\App\Http\Controllers\Api\Seller\PanelController::class, 'sunatLookup']);
             Route::post('save-device-token', 'AuthController@registerDeviceToken');
             Route::get('dashboard', 'AuthController@dashboard');
             Route::get('profile', 'AuthController@profile');
@@ -448,7 +455,7 @@ Route::namespace('Api\Seller')->prefix('seller')->name('seller.')->group(functio
             });
 
             // SUNAT lookup endpoint
-            Route::post('sunat-lookup', [\App\Http\Controllers\SellerPosController::class, 'sunatLookup']);
+            Route::post('sunat-lookup', [\App\Http\Controllers\Api\Seller\PanelController::class, 'sunatLookup']);
 
             // Business packages
             Route::controller('PackageController')->prefix('packages')->group(function () {
@@ -461,7 +468,7 @@ Route::namespace('Api\Seller')->prefix('seller')->name('seller.')->group(functio
             });
 
             // Seller Panel (dashboard, tables, cash, billing, etc.) — requires active subscription
-            Route::middleware(\App\Http\Middleware\CheckSubscription::class)->controller('\App\Http\Controllers\Api\Seller\PanelController')->prefix('panel')->group(function () {
+            Route::middleware(\App\Http\Middleware\CheckSubscription::class . ':restaurant_platform')->controller('\App\Http\Controllers\Api\Seller\PanelController')->prefix('panel')->group(function () {
 
                 Route::get('dashboard', 'dashboard');
                 Route::get('tables', 'tables');
@@ -495,8 +502,6 @@ Route::namespace('Api\Seller')->prefix('seller')->name('seller.')->group(functio
                 Route::post('notifications/send', 'sendNotification');
                 Route::get('qrmenu', 'qrMenu');
                 Route::get('reports', 'reports');
-                Route::post('register', 'register');
-
                 // Mozo ordering endpoints
                 Route::get('products', 'products');
                 Route::post('order/create', 'orderCreate');
@@ -504,7 +509,7 @@ Route::namespace('Api\Seller')->prefix('seller')->name('seller.')->group(functio
             });
 
             // Store favors (solicitar repartidor para entregas propias)
-            Route::controller('\App\Http\Controllers\Api\StoreFavorController')->prefix('favors')->group(function () {
+            Route::middleware(\App\Http\Middleware\CheckSubscription::class . ':delivery_requests')->controller('\App\Http\Controllers\Api\StoreFavorController')->prefix('favors')->group(function () {
             Route::post('fee-estimate', 'feeEstimate');
             Route::post('create', 'create');
             Route::get('/', 'myFavors');
@@ -515,5 +520,40 @@ Route::namespace('Api\Seller')->prefix('seller')->name('seller.')->group(functio
             Route::get('{id}/bids', 'bids');
             Route::post('{favorId}/bids/{bidId}/accept', 'acceptBid');
         });
+
+            // Seller Inventory & Gastronomy Modules
+            Route::controller('\App\Http\Controllers\Api\Seller\InventoryApiController')->prefix('inventory')->group(function () {
+                Route::get('metadata', 'metadata');
+
+                // Insumos & Stock
+                Route::get('items', 'items');
+                Route::post('items/store', 'itemStore');
+                Route::post('items/update/{id}', 'itemUpdate');
+                Route::post('items/delete/{id}', 'itemDelete');
+                Route::post('stock-adjust', 'stockAdjust');
+
+                // Recetas & Producción
+                Route::get('recipes', 'recipes');
+                Route::post('recipes/store', 'recipeStore');
+                Route::post('recipes/delete/{id}', 'recipeDelete');
+                Route::post('recipes/production', 'recipeProduction');
+                Route::post('recipes/production/void/{id}', 'recipeProductionVoid');
+
+                // Compras
+                Route::get('purchases', 'purchases');
+                Route::post('purchases/store', 'purchaseStore');
+
+                // Mermas
+                Route::get('wastes', 'wastes');
+                Route::post('wastes/store', 'wasteStore');
+
+                // Kardex
+                Route::get('kardex', 'kardex');
+
+                // Proveedores
+                Route::get('suppliers', 'suppliers');
+                Route::post('suppliers/store', 'supplierStore');
+                Route::post('suppliers/delete/{id}', 'supplierDelete');
+            });
     });
 });

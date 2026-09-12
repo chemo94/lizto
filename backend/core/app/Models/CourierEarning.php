@@ -10,6 +10,10 @@ class CourierEarning extends Model
     protected $casts = [
         'amount'    => 'double',
         'commission' => 'double',
+        'commission_base_percent' => 'double',
+        'commission_effective_percent' => 'double',
+        'commission_minimum' => 'double',
+        'completed_jobs_snapshot' => 'integer',
     ];
 
     public function courier()

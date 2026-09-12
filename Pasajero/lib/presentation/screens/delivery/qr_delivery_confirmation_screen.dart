@@ -61,11 +61,13 @@ class QrDeliveryConfirmationScreen extends StatelessWidget {
                       color: MyColor.primaryColor.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(Dimensions.largeRadius),
                     ),
-                    child: Text(pinCode, style: TextStyle(
-                      fontSize: 36, fontWeight: FontWeight.w700,
-                      letterSpacing: 12,
-                      color: MyColor.primaryColor,
-                    )),
+                    child: Text(pinCode,
+                        style: TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 12,
+                          color: MyColor.primaryColor,
+                        )),
                   ),
                   SizedBox(height: Dimensions.space8),
                   Text('PIN de verificación', style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor)),
@@ -121,9 +123,7 @@ class _QrPainter extends CustomPainter {
 
         bool fill;
         if (isFinderBorder && !isFinder) {
-          fill = (row == 0 || row == 7 || col == 0 || col == 7) &&
-                 !(row == 0 && col == 0) && !(row == 7 && col == 0) &&
-                 !(row == 0 && col == 7);
+          fill = (row == 0 || row == 7 || col == 0 || col == 7) && !(row == 0 && col == 0) && !(row == 7 && col == 0) && !(row == 0 && col == 7);
           fill = fill && (row < 8 && col < 8 || row < 8 && col > 12 || row > 12 && col < 8);
         } else if (isFinder) {
           fill = (row == 0 || row == 6 || col == 0 || col == 6) && row < 7 && col < 7;

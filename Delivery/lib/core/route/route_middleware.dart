@@ -69,7 +69,7 @@ class RouteMiddleware {
         Get.offAndToNamed(RouteHelper.smsVerificationScreen);
       } else {
         PushNotificationService(apiClient: Get.find()).sendUserToken();
-        Get.toNamed(RouteHelper.dashboard);
+        Get.offAllNamed(RouteHelper.dashboard);
       }
     } catch (e) {
       printD(e);

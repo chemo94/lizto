@@ -35,6 +35,7 @@ class SocialAuthRepo {
     if (provider == 'apple') {
       map = {'token': accessToken, 'provider': "apple"};
     }
+    if (provider == 'phone') map = {'token': accessToken, 'provider': 'phone'};
 
     if (map != null && deviceToken.isNotEmpty) {
       map['device_token'] = deviceToken;

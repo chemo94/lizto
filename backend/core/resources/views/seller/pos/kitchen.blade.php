@@ -28,6 +28,9 @@
 @endsection
 
 @section('seller-content')
+<style>
+.kitchen-head{min-height:118px;margin-bottom:16px;padding:20px 22px;border-radius:14px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:18px;background:linear-gradient(100deg,#2d1d45,#68439a 55%,#9670c2);box-shadow:var(--s-shadow-sm)}.kitchen-head .crumb{font-size:9px;color:rgba(255,255,255,.68);margin-bottom:7px}.kitchen-head h2{font:800 22px 'Plus Jakarta Sans','Inter',sans-serif;margin:0 0 3px;letter-spacing:-.45px}.kitchen-head p{font-size:10px;color:rgba(255,255,255,.7);margin:0}.kitchen-summary{display:flex;gap:8px}.kitchen-summary div{min-width:84px;padding:10px 12px;text-align:center;border:1px solid rgba(255,255,255,.18);border-radius:10px;background:rgba(255,255,255,.1);backdrop-filter:blur(8px)}.kitchen-summary b{display:block;font-size:17px}.kitchen-summary small{font-size:8px;color:rgba(255,255,255,.72)}#kitchen-grid{gap:14px!important}.task-card{border-radius:14px!important;box-shadow:var(--s-shadow-sm)!important}.task-card:hover{transform:translateY(-2px);box-shadow:var(--s-shadow)!important}.task-card--preparing{border-top-color:#f97316!important}.station-btn.station-active{background:#f97316!important;color:#fff!important}.kitchen-topbar-wrapper{display:flex;gap:8px;align-items:center}@media(max-width:767px){.kitchen-head{align-items:flex-start;flex-direction:column}.kitchen-summary{width:100%;overflow:auto}.kitchen-summary div{flex:1}.kitchen-topbar-wrapper{overflow:auto;max-width:72vw}}
+</style>
 <div class="s-content">
     @php
     $statusColors = ['confirmed' => 'var(--s-warning)', 'preparing' => 'var(--s-primary)', 'ready' => 'var(--s-success)'];
@@ -35,7 +38,15 @@
     $statusLabels = ['confirmed' => 'Nueva', 'preparing' => 'Preparando', 'ready' => 'Listo'];
     $typeIcons = ['delivery'=>'motorcycle','takeaway'=>'shopping-bag','dine_in'=>'utensils','daz'=>'bolt','llama'=>'fire','rappi'=>'biking','pedidosya'=>'truck','lizto_delivery'=>'motorcycle','app_delivery'=>'mobile-alt'];
     $typeLabels = ['dine_in'=>'Para Servir','takeaway'=>'Para Llevar','delivery'=>'Delivery','daz'=>'DAZ','llama'=>'LLAMA','rappi'=>'RAPPI','pedidosya'=>'PEDIDOSYA','lizto_delivery'=>'LIZTO','app_delivery'=>'App Delivery'];
+    $kitchenPending = $orders->where('status', 'confirmed')->count();
+    $kitchenPreparing = $orders->where('status', 'preparing')->count();
+    $kitchenReady = $orders->where('status', 'ready')->count();
     @endphp
+
+    <section class="kitchen-head">
+        <div><div class="crumb"><i class="las la-home"></i> Inicio &nbsp;/&nbsp; Operaciones &nbsp;/&nbsp; Cocina</div><h2><i class="las la-fire"></i> Monitor de Cocina</h2><p>Prioriza comandas, controla tiempos y despacha pedidos en tiempo real.</p></div>
+        <div class="kitchen-summary"><div><b>{{ $orders->count() }}</b><small>Comandas</small></div><div><b>{{ $kitchenPending }}</b><small>Nuevas</small></div><div><b>{{ $kitchenPreparing }}</b><small>Preparando</small></div><div><b>{{ $kitchenReady }}</b><small>Listas</small></div></div>
+    </section>
 
     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 24px;" id="kitchen-grid">
         @forelse($orders as $order)

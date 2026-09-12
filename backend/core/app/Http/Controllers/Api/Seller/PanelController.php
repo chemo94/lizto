@@ -8,6 +8,7 @@ use App\Models\DeliveryOrder;
 use App\Models\DeviceToken;
 use App\Models\PosArea;
 use App\Models\PosCashSession;
+use App\Models\PosCustomerProfile;
 use App\Models\PosExpense;
 use App\Models\PosInvoiceSeries;
 use App\Models\PosInvoiceType;
@@ -18,11 +19,14 @@ use App\Models\PosTable;
 use App\Models\PosTransaction;
 use App\Models\Seller;
 use App\Models\Store;
+use App\Models\BusinessPackage;
 use App\Models\SunatInvoice;
 use App\Services\FcmService;
+use App\Services\StoreSubscriptionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class PanelController extends Controller
 {
@@ -42,6 +46,51 @@ class PanelController extends Controller
         return null;
     }
     private function store() { return Store::where('seller_id', $this->seller()->id)->first(); }
+
+    public function sunatLookup(Request $request)
+    {
+        // Reuse the normalized RENIEC/SUNAT response while keeping API auth in
+        // this controller (the web controller itself authenticates by session).
+        $response = app(\App\Http\Controllers\SellerPosController::class)->sunatLookup($request);
+        $payload = $response->getData(true);
+        if (($payload['status'] ?? false) && filled($payload['nombre'] ?? null)) {
+            $document = preg_replace('/\D+/', '', (string) ($payload['numeroDocumento'] ?? $request->numdoc));
+            if ($document !== '') {
+                $this->syncCustomerProfile(
+                    (string) $request->tpdoc,
+                    $document,
+                    (string) $payload['nombre'],
+                    null,
+                    (string) ($payload['direccion'] ?? '')
+                );
+            }
+        }
+        return $response;
+    }
+
+    private function syncCustomerProfile(string $documentType, string $documentNumber, string $name, ?string $phone, ?string $address): PosCustomerProfile
+    {
+        $seller = $this->seller();
+        $documentNumber = preg_replace('/\D+/', '', $documentNumber);
+        $profile = PosCustomerProfile::firstOrNew([
+            'seller_id' => $seller->id,
+            'identity_key' => 'doc:' . $documentNumber,
+        ]);
+        $profile->document_type = $documentType;
+        $profile->document_number = $documentNumber;
+        $profile->name = trim($name);
+        if (filled($phone)) $profile->phone = trim((string) $phone);
+        if (filled($address)) $profile->address = trim((string) $address);
+        $profile->save();
+        return $profile;
+    }
+
+    private function customerAddress(string $documentNumber): string
+    {
+        return (string) PosCustomerProfile::where('seller_id', $this->seller()->id)
+            ->where('document_number', preg_replace('/\D+/', '', $documentNumber))
+            ->value('address');
+    }
 
     // ── Dashboard ──
     public function dashboard()
@@ -338,6 +387,8 @@ class PanelController extends Controller
             'tipo_doc'       => 'nullable|string|in:1,6',
             'num_doc'        => 'nullable|string|max:20',
             'nombre'         => 'nullable|string|max:255',
+            'direccion'      => 'nullable|string|max:500',
+            'address'        => 'nullable|string|max:500',
             'payment_method' => 'nullable|string',
             'payments'       => 'nullable|array',
             'detail_mode'    => 'nullable|in:detailed,consumption',
@@ -373,6 +424,18 @@ class PanelController extends Controller
             'customer_doc_type' => $request->tipo_doc ?? $order->customer_doc_type,
             'customer_name'     => $request->nombre ?? $order->customer_name,
         ]);
+
+        $customerAddress = trim((string) ($request->direccion ?? $request->address ?? ''));
+        if ($request->filled('num_doc') && $request->filled('nombre')) {
+            $profile = $this->syncCustomerProfile(
+                (string) ($request->tipo_doc ?: (strlen((string) $request->num_doc) === 11 ? '6' : '1')),
+                (string) $request->num_doc,
+                (string) $request->nombre,
+                $order->customer_phone,
+                $customerAddress
+            );
+            $customerAddress = (string) ($profile->address ?? $customerAddress);
+        }
 
         if ($order->pos_table_id) {
             PosTable::where('id', $order->pos_table_id)
@@ -452,6 +515,7 @@ class PanelController extends Controller
                 'tipo_doc' => $request->tipo_doc ?? ($tipoDoc === '01' ? '6' : '1'),
                 'num_doc'  => $request->num_doc ?? ($order->customer_doc ?? '0'),
                 'nombre'   => $request->nombre ?? ($order->customer_name ?? 'CLIENTE VARIOS'),
+                'direccion'=> $customerAddress ?: $this->customerAddress((string) ($request->num_doc ?? $order->customer_doc)),
             ];
 
             $consumptionTaxType = $detailMode === 'consumption'
@@ -473,10 +537,27 @@ class PanelController extends Controller
                 $totalInafecta = round($order->total, 2);
                 $totalIgv = 0;
             } else {
-                $totalGravada = $order->subtotal ?? $order->total;
+                $totalGravada = 0;
                 $totalExonerada = 0;
                 $totalInafecta = 0;
-                $totalIgv = round($order->total - $order->total / 1.18, 2);
+                $totalIgv = 0;
+                foreach ($order->items as $item) {
+                    $taxType = $item->tax_type ?? ($item->product?->tax_type ?? 'gravado');
+                    $lineTotal = (float) $item->total_price;
+                    if ($taxType === 'exonerado') {
+                        $totalExonerada += $lineTotal;
+                    } elseif ($taxType === 'inafecto') {
+                        $totalInafecta += $lineTotal;
+                    } else {
+                        $base = round($lineTotal / 1.18, 2);
+                        $totalGravada += $base;
+                        $totalIgv += round($lineTotal - $base, 2);
+                    }
+                }
+                $totalGravada = round($totalGravada, 2);
+                $totalExonerada = round($totalExonerada, 2);
+                $totalInafecta = round($totalInafecta, 2);
+                $totalIgv = round($totalIgv, 2);
             }
 
             \App\Models\SunatInvoice::create([
@@ -489,6 +570,7 @@ class PanelController extends Controller
                 'cliente_tipo_doc' => $clientData['tipo_doc'],
                 'cliente_num_doc'  => $clientData['num_doc'],
                 'cliente_nombre'   => $clientData['nombre'],
+                'cliente_direccion'=> $clientData['direccion'] ?: null,
                 'detail_mode'      => $detailMode,
                 'consumption_description' => $consumptionDescription,
                 'total_gravada'    => $totalGravada,
@@ -531,6 +613,8 @@ class PanelController extends Controller
             'tipo_doc'  => 'nullable|string|in:1,6',
             'num_doc'   => 'nullable|string|max:20',
             'nombre'    => 'nullable|string|max:255',
+            'direccion' => 'nullable|string|max:500',
+            'address'   => 'nullable|string|max:500',
             'detail_mode' => 'nullable|in:detailed,consumption',
             'consumption_description' => 'nullable|string|max:250',
         ]);
@@ -560,7 +644,21 @@ class PanelController extends Controller
             'tipo_doc' => $request->tipo_doc ?? ($tipoDoc === '01' ? '6' : '1'),
             'num_doc'  => $request->num_doc ?? ($order->customer_doc ?? '0'),
             'nombre'   => $request->nombre ?? ($order->customer_name ?? 'CLIENTE VARIOS'),
+            'direccion'=> trim((string) ($request->direccion ?? $request->address ?? '')),
         ];
+        if ($clientData['num_doc'] && $clientData['nombre']) {
+            $profile = $this->syncCustomerProfile(
+                (string) $clientData['tipo_doc'],
+                (string) $clientData['num_doc'],
+                (string) $clientData['nombre'],
+                $order->customer_phone,
+                (string) $clientData['direccion']
+            );
+            $clientData['direccion'] = (string) ($profile->address ?? $clientData['direccion']);
+        }
+        if ($clientData['direccion'] === '') {
+            $clientData['direccion'] = $this->customerAddress((string) $clientData['num_doc']);
+        }
         $detailMode = $request->input('detail_mode', 'detailed');
         $consumptionDescription = $detailMode === 'consumption'
             ? ($request->input('consumption_description') ?: 'Consumo')
@@ -585,10 +683,27 @@ class PanelController extends Controller
             $totalInafecta = round($order->total, 2);
             $totalIgv = 0;
         } else {
-            $totalGravada = $order->subtotal ?? $order->total;
+            $totalGravada = 0;
             $totalExonerada = 0;
             $totalInafecta = 0;
-            $totalIgv = round($order->total - $order->total / 1.18, 2);
+            $totalIgv = 0;
+            foreach ($order->items as $item) {
+                $taxType = $item->tax_type ?? ($item->product?->tax_type ?? 'gravado');
+                $lineTotal = (float) $item->total_price;
+                if ($taxType === 'exonerado') {
+                    $totalExonerada += $lineTotal;
+                } elseif ($taxType === 'inafecto') {
+                    $totalInafecta += $lineTotal;
+                } else {
+                    $base = round($lineTotal / 1.18, 2);
+                    $totalGravada += $base;
+                    $totalIgv += round($lineTotal - $base, 2);
+                }
+            }
+            $totalGravada = round($totalGravada, 2);
+            $totalExonerada = round($totalExonerada, 2);
+            $totalInafecta = round($totalInafecta, 2);
+            $totalIgv = round($totalIgv, 2);
         }
 
         \App\Models\SunatInvoice::create([
@@ -601,10 +716,13 @@ class PanelController extends Controller
             'cliente_tipo_doc' => $clientData['tipo_doc'],
             'cliente_num_doc'  => $clientData['num_doc'],
             'cliente_nombre'   => $clientData['nombre'],
+            'cliente_direccion'=> $clientData['direccion'] ?: null,
             'detail_mode'      => $detailMode,
             'consumption_description' => $consumptionDescription,
-            'total_gravada'    => $order->subtotal ?? $order->total,
-            'total_igv'        => round($order->total - $order->total / 1.18, 2),
+            'total_gravada'    => $totalGravada,
+            'total_exonerada'  => $totalExonerada,
+            'total_inafecta'   => $totalInafecta,
+            'total_igv'        => $totalIgv,
             'total'            => $order->total,
             'moneda'           => 'PEN',
             'cdr_status'       => 'pending',
@@ -679,6 +797,11 @@ class PanelController extends Controller
         $businessName = $company?->business_name ?? $seller->business_name ?? $seller->name ?? '';
         $tradeName = $company?->trade_name ?? $seller->trade_name ?? '';
         $address = $company?->address ?? $seller->address ?? '';
+        $customerAddress = trim((string) ($invoice->cliente_direccion ?? ''));
+        if ($customerAddress === '') {
+            $customerAddress = trim((string) ($this->customerAddress((string) $invoice->cliente_num_doc)
+                ?: $invoice->order?->delivery_address));
+        }
 
         $logoBase64 = null;
         if ($store && $store->image) {
@@ -751,7 +874,16 @@ class PanelController extends Controller
         $montoLetras = $this->numeroALetrasPdf($invoice->total);
 
         $itemDetails = [];
-        if ($invoice->order && $invoice->order->items->count()) {
+        if ($invoice->isConsumptionSummary()) {
+            $itemDetails[] = [
+                'quantity' => 1,
+                'unit_code' => 'NIU',
+                'sunat_code' => null,
+                'name' => $invoice->consumption_description ?: 'Consumo',
+                'tax_type' => $invoice->total_exonerada > 0 ? 'exonerado' : ($invoice->total_inafecta > 0 ? 'inafecto' : 'gravado'),
+                'unit_price' => $invoice->total,
+            ];
+        } elseif ($invoice->order && $invoice->order->items->count()) {
             foreach ($invoice->order->items as $item) {
                 $product = $item->product;
                 $unitCode = 'NIU';
@@ -777,7 +909,7 @@ class PanelController extends Controller
                     'unit_code' => $unitCode,
                     'sunat_code'=> $sunatCode,
                     'name'      => $item->product_name,
-                    'tax_type'  => $product ? ($product->tax_type ?? 'gravado') : 'gravado',
+                    'tax_type'  => $item->tax_type ?? ($product?->tax_type ?? 'gravado'),
                     'unit_price'=> $item->unit_price,
                 ];
             }
@@ -787,7 +919,7 @@ class PanelController extends Controller
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($viewName, compact(
             'invoice', 'seller', 'company', 'docNumber', 'businessName', 'tradeName',
-            'address', 'qrBase64', 'qrData', 'montoLetras', 'store', 'logoBase64', 'itemDetails'
+            'address', 'customerAddress', 'qrBase64', 'qrData', 'montoLetras', 'store', 'logoBase64', 'itemDetails'
         ));
 
         $paperSize = $format === 'a5' ? 'a5' : ($format === 'ticket' ? [0, 0, 226.77, 600] : 'a4');
@@ -801,7 +933,7 @@ class PanelController extends Controller
         $ruc = $docNumber ?: '00000000000';
         $tipoDoc = $invoice->tipo_doc ?: '03';
         $filename = $ruc . '-' . $tipoDoc . '-' . $invoice->serie . '-' . str_pad($invoice->correlativo, 8, '0', STR_PAD_LEFT) . '.pdf';
-        return $pdf->download($filename);
+        return $pdf->stream($filename);
     }
 
     public function invoiceXml($id)
@@ -962,10 +1094,34 @@ class PanelController extends Controller
             'name' => 'required|string|max:100', 'email' => 'required|email|unique:sellers,email',
             'password' => 'required|min:6', 'phone' => 'required|string|max:20',
             'address' => 'required|string|max:500', 'zone_id' => 'required|exists:zones,id',
+            'latitude' => 'required|numeric', 'longitude' => 'required|numeric',
+            'store_type' => 'required|in:restaurant,supermarket,pharmacy,liquor_store,pet_shop',
+            'service_mode' => 'required|in:restaurant,delivery_only',
+            'package_id' => 'required|integer|exists:business_packages,id',
         ]);
-        $seller = Seller::create($request->only(['name','email','phone','address','zone_id','business_name','trade_name']) + ['password' => Hash::make($request->password), 'status' => 1]);
-        $subCat = \App\Models\SubCategory::first();
-        $store = Store::create(['seller_id' => $seller->id, 'sub_category_id' => $subCat?->id ?? 1, 'name' => $request->trade_name ?: $request->business_name ?: $request->name, 'address' => $request->address, 'latitude' => $request->latitude, 'longitude' => $request->longitude, 'status' => 1, 'is_open' => 1]);
+
+        $package = BusinessPackage::active()->findOrFail($request->package_id);
+        if ($package->service_mode !== $request->service_mode) {
+            return apiResponse('invalid_package_mode', 'error', ['El plan no corresponde a la modalidad seleccionada']);
+        }
+
+        [$seller, $store] = DB::transaction(function () use ($request, $package) {
+            $seller = Seller::create($request->only(['name','email','phone','address','zone_id','business_name','trade_name']) + [
+                'password' => Hash::make($request->password), 'status' => 1,
+                'document_type' => $request->ruc_number ? 'RUC' : null,
+                'document_number' => $request->ruc_number,
+            ]);
+            $subCat = \App\Models\SubCategory::first();
+            $store = Store::create([
+                'seller_id' => $seller->id, 'sub_category_id' => $subCat?->id ?? 1,
+                'name' => $request->trade_name ?: $request->business_name ?: $request->name,
+                'address' => $request->address, 'latitude' => $request->latitude,
+                'longitude' => $request->longitude, 'store_type' => $request->store_type,
+                'service_mode' => $request->service_mode, 'status' => 1, 'is_open' => 1,
+            ]);
+            app(StoreSubscriptionService::class)->startTrial($store, $package);
+            return [$seller, $store];
+        });
         $token = $seller->createToken('auth_token')->plainTextToken;
 
         $deviceToken = $request->device_token ?? $request->fcm_token;
@@ -977,7 +1133,11 @@ class PanelController extends Controller
             );
         }
 
-        return apiResponse('registered', 'success', ['Registro exitoso'], compact('seller', 'store', 'token'));
+        $store->load('activePackagesRelation');
+        return apiResponse('registered', 'success', ['Registro exitoso. Tu primer mes gratis está activo.'], [
+            'seller' => $seller, 'store' => $store, 'token' => $token,
+            'service_mode' => $store->service_mode, 'trial_days' => 30,
+        ]);
     }
 
     // ── Products (for mozo ordering) ──

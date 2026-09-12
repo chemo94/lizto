@@ -133,8 +133,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> with SingleTicker
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Detalle del pedido', style: boldLarge.copyWith(fontSize: 20, color: MyColor.primaryTextColor)),
-                          if (order != null)
-                            Text('# ${order.orderNo ?? ''}', style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor)),
+                          if (order != null) Text('# ${order.orderNo ?? ''}', style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor)),
                         ],
                       ),
                     ),
@@ -202,8 +201,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> with SingleTicker
                                       _updateTrackingMap(order);
                                     },
                                   ),
-                                if (order.status != 'pending' && order.status != 'cancelled')
-                                  const SizedBox(height: Dimensions.space16),
+                                if (order.status != 'pending' && order.status != 'cancelled') const SizedBox(height: Dimensions.space16),
 
                                 // ── Driver Card (if assigned) ──
                                 if (order.driver != null) ...[
@@ -268,12 +266,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> with SingleTicker
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       _AddressRow(icon: Icons.home_rounded, text: order.deliveryAddress ?? 'No disponible'),
-                                      if (order.contactName?.isNotEmpty == true)
-                                        _AddressRow(icon: Icons.person_rounded, text: order.contactName!),
-                                      if (order.contactPhone?.isNotEmpty == true)
-                                        _AddressRow(icon: Icons.phone_rounded, text: order.contactPhone!),
-                                      if (order.notes?.isNotEmpty == true)
-                                        _AddressRow(icon: Icons.note_rounded, text: order.notes!),
+                                      if (order.contactName?.isNotEmpty == true) _AddressRow(icon: Icons.person_rounded, text: order.contactName!),
+                                      if (order.contactPhone?.isNotEmpty == true) _AddressRow(icon: Icons.phone_rounded, text: order.contactPhone!),
+                                      if (order.notes?.isNotEmpty == true) _AddressRow(icon: Icons.note_rounded, text: order.notes!),
                                     ],
                                   ),
                                 ),
@@ -342,11 +337,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> with SingleTicker
                                           color: MyColor.primaryColor,
                                           outlined: true,
                                           onTap: () => Get.to(() => DeliveryChatScreen(
-                                            orderId: order.id ?? 0,
-                                            orderTitle: 'Pedido ${order.orderNo ?? ""}',
-                                            courierName: order.driver?['name']?.toString() ?? 'Repartidor',
-                                            courierImage: order.driver?['image']?.toString(),
-                                          )),
+                                                orderId: order.id ?? 0,
+                                                orderTitle: 'Pedido ${order.orderNo ?? ""}',
+                                                courierName: order.driver?['name']?.toString() ?? 'Repartidor',
+                                                courierImage: order.driver?['image']?.toString(),
+                                              )),
                                         ),
                                       ),
                                       SizedBox(width: Dimensions.space12),
@@ -357,9 +352,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> with SingleTicker
                                           color: MyColor.primaryColor,
                                           outlined: false,
                                           onTap: () => Get.to(() => DeliveryTrackingScreen(
-                                            orderId: order.id ?? 0,
-                                            order: order,
-                                          )),
+                                                orderId: order.id ?? 0,
+                                                order: order,
+                                              )),
                                         ),
                                       ),
                                     ],
@@ -490,8 +485,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> with SingleTicker
     if (!_routeLoaded && storeLat != null && storeLng != null && deliveryLat != null && deliveryLng != null) {
       _routeLoaded = true;
       DirectionsService.getDirections(
-        originLat: storeLat, originLng: storeLng,
-        destLat: deliveryLat, destLng: deliveryLng,
+        originLat: storeLat,
+        originLng: storeLng,
+        destLat: deliveryLat,
+        destLng: deliveryLng,
         apiKey: Environment.mapKey,
       ).then((result) {
         if (result != null && mounted) {
@@ -531,35 +528,35 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> with SingleTicker
             Text('Seleccionar método de pago', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
             const SizedBox(height: 16),
             ...gateways.map((gw) => ListTile(
-              leading: gw.image != null ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(gw.image!, width: 40, height: 40, fit: BoxFit.contain)) : Icon(gw.isCash ? Icons.payments_rounded : Icons.credit_card_rounded, color: MyColor.primaryColor),
-              title: Text(gw.name ?? 'Pago'),
-              subtitle: Text(gw.isCash ? 'Pago en efectivo' : (gw.currency ?? 'PEN')),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () async {
-                Get.back();
-                final errorMsg = await c.payPendingOrder(orderId, gw.code ?? 0);
-                if (errorMsg == null && mounted) {
-                  if (c.mpCheckoutData != null) {
-                    final mpData = c.mpCheckoutData!;
-                    final resolvedOrderId = c.pendingOrderId ?? orderId;
-                    c.mpCheckoutData = null;
-                    c.pendingOrderId = null;
-                    await Get.to(() => DeliveryMercadoPagoCheckoutScreen(mpData: mpData, orderId: resolvedOrderId));
-                    c.loadOrderDetail(widget.orderId);
-                  } else if (c.paymentRedirectUrl != null) {
-                    final url = c.paymentRedirectUrl!;
-                    c.paymentRedirectUrl = null;
-                    await Get.to(() => MyWebViewScreen(model: WebviewModel(url: url, rideId: '')));
-                    c.loadOrderDetail(widget.orderId);
-                  } else {
-                    Get.snackbar('Metodo actualizado', 'El pedido sera procesado con ${gw.name}', backgroundColor: const Color(0xFF10B981), colorText: Colors.white);
-                    c.loadOrderDetail(widget.orderId);
-                  }
-                } else if (mounted) {
-                  Get.snackbar('Error', errorMsg ?? 'No se pudo iniciar el pago', backgroundColor: MyColor.redCancelTextColor, colorText: Colors.white);
-                }
-              },
-            )),
+                  leading: gw.image != null ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(gw.image!, width: 40, height: 40, fit: BoxFit.contain)) : Icon(gw.isCash ? Icons.payments_rounded : Icons.credit_card_rounded, color: MyColor.primaryColor),
+                  title: Text(gw.name ?? 'Pago'),
+                  subtitle: Text(gw.isCash ? 'Pago en efectivo' : (gw.currency ?? 'PEN')),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () async {
+                    Get.back();
+                    final errorMsg = await c.payPendingOrder(orderId, gw.code ?? 0);
+                    if (errorMsg == null && mounted) {
+                      if (c.mpCheckoutData != null) {
+                        final mpData = c.mpCheckoutData!;
+                        final orderId = c.pendingOrderId ?? widget.orderId;
+                        c.mpCheckoutData = null;
+                        c.pendingOrderId = null;
+                        await Get.to(() => MercadoPagoCheckoutScreen(mpData: mpData, orderId: orderId));
+                        c.loadOrderDetail(widget.orderId);
+                      } else if (c.paymentRedirectUrl != null) {
+                        final url = c.paymentRedirectUrl!;
+                        c.paymentRedirectUrl = null;
+                        await Get.to(() => MyWebViewScreen(model: WebviewModel(url: url, rideId: '')));
+                        c.loadOrderDetail(widget.orderId);
+                      } else {
+                        Get.snackbar('Metodo actualizado', 'El pedido sera procesado con ${gw.name}', backgroundColor: const Color(0xFF10B981), colorText: Colors.white);
+                        c.loadOrderDetail(widget.orderId);
+                      }
+                    } else if (mounted) {
+                      Get.snackbar('Error', errorMsg ?? 'No se pudo iniciar el pago', backgroundColor: MyColor.redCancelTextColor, colorText: Colors.white);
+                    }
+                  },
+                )),
             const SizedBox(height: 12),
           ],
         ),
@@ -1092,10 +1089,8 @@ class _OrderItemTile extends StatelessWidget {
               children: [
                 Text(item.productName ?? '', style: boldDefault.copyWith(fontSize: 14)),
                 Text('x${item.quantity ?? 0}', style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor)),
-                if (item.variation != null)
-                  Text('• ${item.variation.variationName}', style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor)),
-                if (item.addons != null && item.addons.isNotEmpty)
-                  ...item.addons.map<Widget>((a) => Text('+ ${a.addonName}', style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor))),
+                if (item.variation != null) Text('• ${item.variation.variationName}', style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor)),
+                if (item.addons != null && item.addons.isNotEmpty) ...item.addons.map<Widget>((a) => Text('+ ${a.addonName}', style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor))),
               ],
             ),
           ),
@@ -1173,9 +1168,7 @@ class _ActionButton extends StatelessWidget {
           color: outlined ? Colors.transparent : color,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: color, width: outlined ? 1.5 : 0),
-          boxShadow: outlined
-              ? []
-              : [BoxShadow(color: color.withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 4))],
+          boxShadow: outlined ? [] : [BoxShadow(color: color.withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 4))],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,

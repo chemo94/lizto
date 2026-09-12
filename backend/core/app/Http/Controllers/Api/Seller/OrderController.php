@@ -29,7 +29,7 @@ class OrderController extends Controller
 
         return apiResponse('seller_orders', 'success', ['Pedidos de tu tienda'], [
             'orders'             => $orders,
-            'product_image_path' => 'storage',
+            'product_image_path' => getFilePath('product'),
             'store_image_path'   => getFilePath('store'),
             'user_image_path'    => getFilePath('user'),
         ]);
@@ -44,7 +44,7 @@ class OrderController extends Controller
 
         return apiResponse('seller_order_detail', 'success', ['Detalle del pedido'], [
             'order'              => $order,
-            'product_image_path' => 'storage',
+            'product_image_path' => getFilePath('product'),
             'store_image_path'   => getFilePath('store'),
             'user_image_path'    => getFilePath('user'),
         ]);

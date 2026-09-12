@@ -92,8 +92,7 @@ class _CourierHomeScreenState extends State<CourierHomeScreen> with SingleTicker
                       children: [
                         Icon(Icons.circle, size: 8, color: c.isOnline ? const Color(0xFF10B981) : MyColor.redCancelTextColor),
                         SizedBox(width: 4),
-                        Text(c.isOnline ? 'En línea' : 'Fuera de línea',
-                            style: regularSmall.copyWith(color: MyColor.colorWhite)),
+                        Text(c.isOnline ? 'En línea' : 'Fuera de línea', style: regularSmall.copyWith(color: MyColor.colorWhite)),
                         Spacer(),
                       ],
                     ),
@@ -214,16 +213,14 @@ class _CourierHomeScreenState extends State<CourierHomeScreen> with SingleTicker
             Text('S/ ${job.totalEarning?.toStringAsFixed(2) ?? "0.00"}', style: boldDefault.copyWith(color: const Color(0xFF10B981))),
           ]),
           SizedBox(height: Dimensions.space8),
-          if (job.description != null)
-            Text(job.description!, style: regularDefault, maxLines: 2, overflow: TextOverflow.ellipsis),
+          if (job.description != null) Text(job.description!, style: regularDefault, maxLines: 2, overflow: TextOverflow.ellipsis),
           SizedBox(height: Dimensions.space8),
           _locationRow(Icons.location_on_outlined, job.pickupAddress ?? '', 'Recogida'),
           SizedBox(height: 4),
           _locationRow(Icons.flag_rounded, job.deliveryAddress ?? '', 'Entrega'),
           SizedBox(height: Dimensions.space8),
           Row(children: [
-            if (job.deliveryFee != null)
-              _infoTag('Delivery: S/ ${job.deliveryFee!.toStringAsFixed(2)}'),
+            if (job.deliveryFee != null) _infoTag('Delivery: S/ ${job.deliveryFee!.toStringAsFixed(2)}'),
             SizedBox(width: Dimensions.space8),
             _infoTag(job.statusLabel),
           ]),
@@ -250,7 +247,8 @@ class _CourierHomeScreenState extends State<CourierHomeScreen> with SingleTicker
               child: ElevatedButton(
                 onPressed: () => Get.to(() => CourierJobDetailScreen(jobId: job.id ?? 0)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: MyColor.primaryColor, foregroundColor: MyColor.colorWhite,
+                  backgroundColor: MyColor.primaryColor,
+                  foregroundColor: MyColor.colorWhite,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Dimensions.defaultRadius)),
                   padding: EdgeInsets.symmetric(horizontal: Dimensions.space16),
                 ),
@@ -298,8 +296,7 @@ class _CourierHomeScreenState extends State<CourierHomeScreen> with SingleTicker
         Get.back();
         bool ok = await c.acceptJob(job.id ?? 0, job.type ?? 'delivery');
         if (ok) {
-          Get.snackbar('Aceptado', 'Pedido aceptado correctamente',
-              backgroundColor: const Color(0xFF10B981), colorText: MyColor.colorWhite);
+          Get.snackbar('Aceptado', 'Pedido aceptado correctamente', backgroundColor: const Color(0xFF10B981), colorText: MyColor.colorWhite);
         }
       },
     );

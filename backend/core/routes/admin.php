@@ -175,6 +175,7 @@ Route::middleware('admin')->group(function () {
 
     // Driver Manager
     Route::controller('ManageDriversController')->name('driver.')->prefix('drivers')->group(function () {
+        Route::get('tracking', 'tracking')->name('tracking')->middleware('permission:view drivers,admin');
         Route::get('/', 'allDrivers')->name('all')->middleware('permission:view drivers,admin');
         Route::get('active', 'activeDrivers')->name('active')->middleware('permission:view drivers,admin');
         Route::get('banned', 'bannedDrivers')->name('banned')->middleware('permission:view drivers,admin');

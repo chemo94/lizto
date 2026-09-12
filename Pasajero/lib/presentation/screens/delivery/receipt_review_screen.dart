@@ -263,8 +263,7 @@ class _ReceiptReviewScreenState extends State<ReceiptReviewScreen> {
           Text('Resumen', style: boldLarge.copyWith(fontSize: Dimensions.fontLarge)),
           SizedBox(height: Dimensions.space12),
           _buildSummaryRow('Productos', 'S/ ${widget.actualTotal.toStringAsFixed(2)}'),
-          if (widget.budget?.maxDeliveryFee != null)
-            _buildSummaryRow('Delivery fee', 'S/ ${widget.budget!.maxDeliveryFee!.toStringAsFixed(2)}'),
+          if (widget.budget?.maxDeliveryFee != null) _buildSummaryRow('Delivery fee', 'S/ ${widget.budget!.maxDeliveryFee!.toStringAsFixed(2)}'),
           Divider(color: Colors.grey.shade200),
           _buildSummaryRow(
             'Total a pagar',

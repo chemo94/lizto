@@ -16,8 +16,43 @@
     #det-eta-display { padding:8px 14px; background:rgba(34,197,94,0.06); border:1px solid rgba(34,197,94,0.2); border-radius:8px; margin-bottom:12px; display:none; font-size:13px; color:var(--s-text-2); }
     #det-route-info { padding:8px 14px; background:var(--s-bg-2); border-radius:8px; margin-bottom:12px; display:none; font-size:12px; color:var(--s-text-3); }
     #detail-modal .s-modal-box { max-width:800px; }
+    .orders-hero{min-height:138px;border-radius:14px;padding:24px;margin-bottom:18px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:20px;position:relative;overflow:hidden;background:linear-gradient(90deg,rgba(24,61,145,.95),rgba(62,62,168,.78),rgba(78,50,155,.58)),url('{{ asset('assets/images/banner-cover.png') }}') center/cover no-repeat}.orders-hero:after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 65% 20%,rgba(255,255,255,.12),transparent 35%);pointer-events:none}.orders-hero>div{position:relative;z-index:1}.orders-hero .crumb{font-size:10px;color:rgba(255,255,255,.72);margin-bottom:9px}.orders-hero h2{font:800 24px 'Plus Jakarta Sans','Inter',sans-serif;letter-spacing:-.6px;margin:0 0 4px}.orders-hero p{font-size:11px;color:rgba(255,255,255,.72);margin:0}.orders-hero-actions{display:flex;gap:8px}.orders-hero-actions a,.orders-hero-actions button{height:35px;border:1px solid rgba(255,255,255,.28);border-radius:9px;padding:0 13px;color:#fff;background:rgba(255,255,255,.12);backdrop-filter:blur(8px);font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:6px;text-decoration:none}.orders-hero-actions .primary{background:#fff;color:#3253a8;border-color:#fff}
+    .orders-kpis{display:grid;grid-template-columns:repeat(6,minmax(130px,1fr));gap:12px;margin-bottom:18px}.orders-kpi{background:#fff;border:1px solid var(--s-border);border-radius:14px;min-height:104px;padding:15px;box-shadow:var(--s-shadow-sm)}.orders-kpi-icon{width:37px;height:37px;border-radius:10px;display:grid;place-items:center;color:#fff;font-size:18px;margin-bottom:10px;box-shadow:0 7px 15px rgba(15,23,42,.11)}.orders-kpi b{display:block;font-size:19px;line-height:1;color:#172033;margin-bottom:5px}.orders-kpi small{color:#94a3b8;font-size:9px}.orders-tools{padding:0 20px;border-bottom:1px solid var(--s-border);min-width:0}.orders-tabs{display:flex;gap:4px;max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;overscroll-behavior-x:contain}.orders-tab{flex:0 0 auto;border:0;background:transparent;padding:14px 12px 12px;color:#8b98aa;font-size:10px;font-weight:700;white-space:nowrap;border-bottom:2px solid transparent}.orders-tab.active{color:#f97316;border-bottom-color:#f97316}.orders-tabs::-webkit-scrollbar{height:4px}.orders-tabs::-webkit-scrollbar-thumb{background:var(--s-border);border-radius:4px}.orders-filterbar{padding:14px 20px;display:flex;gap:9px;align-items:center}.orders-search{height:38px;flex:1;min-width:220px;border:1px solid var(--s-border);border-radius:9px;padding:0 12px 0 36px;background:#fff;outline:none;font-size:11px}.orders-search-wrap{position:relative;flex:1}.orders-search-wrap i{position:absolute;left:12px;top:11px;color:#94a3b8}.orders-filterbar select{height:38px;border:1px solid var(--s-border);border-radius:9px;background:#fff;padding:0 10px;color:#64748b;font-size:10px}.s-table tbody tr{transition:background .15s}.s-table tbody tr:hover{background:#fffaf6}.s-table th{font-size:9px!important;text-transform:uppercase;letter-spacing:.35px;color:#9aa6b6!important}.s-table td{padding-top:13px!important;padding-bottom:13px!important}
+    @media(max-width:1100px){.orders-kpis{grid-template-columns:repeat(3,1fr)}}@media(max-width:767px){.orders-hero{align-items:flex-start;flex-direction:column;min-height:190px;padding:18px}.orders-kpis{grid-template-columns:repeat(2,1fr)}.orders-tools{padding:0 12px}.orders-tab{padding:14px 14px 12px;font-size:11px}.orders-filterbar{align-items:stretch;flex-direction:column}.orders-search-wrap{width:100%}.orders-filterbar select{width:100%}.orders-hero h2{font-size:21px}}
 </style>
 <div class="s-content">
+    @php
+        $orderCollection = collect($orders);
+        $orderStats = [
+            'all' => $orderCollection->count(),
+            'pending' => $orderCollection->whereIn('status', ['pending','confirmed'])->count(),
+            'preparing' => $orderCollection->where('status', 'preparing')->count(),
+            'way' => $orderCollection->whereIn('status', ['ready','on_the_way','on_way','accepted','on_way_to_pickup','at_pickup','on_way_to_delivery'])->count(),
+            'delivered' => $orderCollection->where('status', 'delivered')->count(),
+            'cancelled' => $orderCollection->where('status', 'cancelled')->count(),
+        ];
+    @endphp
+    <section class="orders-hero">
+        <div>
+            <div class="crumb"><i class="las la-home"></i> Inicio &nbsp;/&nbsp; Pedidos</div>
+            <h2><i class="las la-box" style="color:#ffbd59"></i> Gestión de Pedidos</h2>
+            <p>Revisa y administra todos los pedidos del POS, la app y los envíos de tu negocio.</p>
+        </div>
+        <div class="orders-hero-actions">
+            <a class="primary" href="{{ route('seller.pos') }}"><i class="las la-plus"></i> Crear pedido</a>
+            <button type="button" onclick="window.print()"><i class="las la-print"></i> Imprimir</button>
+        </div>
+    </section>
+
+    <div class="orders-kpis">
+        <div class="orders-kpi"><span class="orders-kpi-icon" style="background:#3b82f6"><i class="las la-layer-group"></i></span><b>{{ $orderStats['all'] }}</b><small>Total pedidos</small></div>
+        <div class="orders-kpi"><span class="orders-kpi-icon" style="background:#f59e0b"><i class="las la-hourglass-half"></i></span><b style="color:#d97706">{{ $orderStats['pending'] }}</b><small>Pendientes</small></div>
+        <div class="orders-kpi"><span class="orders-kpi-icon" style="background:#8b5cf6"><i class="las la-utensils"></i></span><b style="color:#7c3aed">{{ $orderStats['preparing'] }}</b><small>Preparando</small></div>
+        <div class="orders-kpi"><span class="orders-kpi-icon" style="background:#22b8cf"><i class="las la-motorcycle"></i></span><b style="color:#0891b2">{{ $orderStats['way'] }}</b><small>Listos / en camino</small></div>
+        <div class="orders-kpi"><span class="orders-kpi-icon" style="background:#10b981"><i class="las la-check-circle"></i></span><b style="color:#059669">{{ $orderStats['delivered'] }}</b><small>Entregados</small></div>
+        <div class="orders-kpi"><span class="orders-kpi-icon" style="background:#ef4444"><i class="las la-ban"></i></span><b style="color:#dc2626">{{ $orderStats['cancelled'] }}</b><small>Cancelados</small></div>
+    </div>
+
     <div class="s-card" style="overflow-x:auto;padding:0">
         <div style="padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
             <h3 class="s-card-title" style="margin:0"><i class="las la-receipt"></i> Todos los Pedidos</h3>
@@ -26,7 +61,22 @@
                 <span class="s-badge s-badge-purple"><i class="las la-mobile"></i> App</span>
             </div>
         </div>
-        <div style="padding:16px 24px 24px;overflow-x:auto">
+        <div class="orders-tools">
+            <div class="orders-tabs">
+                <button class="orders-tab active" data-filter="all">Todos <span class="s-badge s-badge-amber">{{ $orderStats['all'] }}</span></button>
+                <button class="orders-tab" data-filter="pending">Pendientes <span class="s-badge s-badge-amber">{{ $orderStats['pending'] }}</span></button>
+                <button class="orders-tab" data-filter="preparing">Preparando <span class="s-badge s-badge-purple">{{ $orderStats['preparing'] }}</span></button>
+                <button class="orders-tab" data-filter="way">Listos / en camino <span class="s-badge s-badge-blue">{{ $orderStats['way'] }}</span></button>
+                <button class="orders-tab" data-filter="delivered">Entregados <span class="s-badge s-badge-green">{{ $orderStats['delivered'] }}</span></button>
+                <button class="orders-tab" data-filter="cancelled">Cancelados <span class="s-badge s-badge-red">{{ $orderStats['cancelled'] }}</span></button>
+            </div>
+        </div>
+        <div class="orders-filterbar">
+            <label class="orders-search-wrap"><i class="las la-search"></i><input class="orders-search" id="ordersSearch" type="search" placeholder="Buscar por pedido, cliente, repartidor..."></label>
+            <select id="ordersSource"><option value="all">Todos los orígenes</option><option value="POS">POS</option><option value="App">App</option><option value="Envío">Envío</option></select>
+            <select id="ordersType"><option value="all">Todos los tipos</option><option value="delivery">Delivery</option><option value="takeaway">Para llevar</option><option value="dine_in">Mesa</option></select>
+        </div>
+        <div style="padding:0 20px 20px;overflow-x:auto">
         <table class="s-table">
             <thead>
                 <tr>
@@ -44,7 +94,7 @@
             </thead>
             <tbody>
                 @forelse($orders as $o)
-                <tr style="{{ $o['status'] === 'cancelled' ? 'opacity:.45' : '' }}">
+                <tr class="order-data-row" data-status="{{ $o['status'] }}" data-source="{{ $o['source'] }}" data-type="{{ $o['type'] }}" style="{{ $o['status'] === 'cancelled' ? 'opacity:.45' : '' }}">
                     <td>
                         <b style="font-size:12px;color:var(--s-text)">{{ $o['order_no'] }}</b>
                     </td>
@@ -114,9 +164,11 @@
                     <td style="font-size:11px;color:var(--s-text-3);white-space:nowrap">{{ \Carbon\Carbon::parse($o['created_at'])->format('d/m H:i') }}</td>
                     <td>
                         <div style="display:flex;gap:4px">
-                            <button class="s-btn s-btn-outline s-btn-xs" onclick="viewDetails(this)" data-order='@json($o)'>
-                                <i class="las la-eye"></i> Detalle
-                            </button>
+                            @if($o['is_pos'] || (!($o['is_favor'] ?? false) && $o['source'] === 'Delivery'))
+                            <a class="s-btn s-btn-outline s-btn-xs" href="{{ route('seller.orders.show', [$o['is_pos'] ? 'pos' : 'delivery', $o['id']]) }}"><i class="las la-eye"></i> Detalle</a>
+                            @else
+                            <button class="s-btn s-btn-outline s-btn-xs" onclick="viewDetails(this)" data-order='@json($o)'><i class="las la-eye"></i> Detalle</button>
+                            @endif
                             @if($o['is_pos'] && !in_array($o['status'], ['delivered','cancelled']))
                             <button class="s-btn s-btn-ghost s-btn-xs" style="color:var(--s-danger)" onclick="cancelOrder({{ $o['id'] }})">
                                 <i class="las la-times-circle"></i> Cancelar
@@ -405,6 +457,41 @@
 @endif
 <script>
 var currentDetailOrder = null;
+var activeOrderFilter = 'all';
+
+function orderMatchesGroup(status, group) {
+    if (group === 'all') return true;
+    if (group === 'pending') return ['pending', 'confirmed'].includes(status);
+    if (group === 'way') return ['ready', 'on_the_way', 'on_way', 'accepted', 'on_way_to_pickup', 'at_pickup', 'on_way_to_delivery'].includes(status);
+    return status === group;
+}
+
+function filterSellerOrders() {
+    var query = (document.getElementById('ordersSearch')?.value || '').trim().toLowerCase();
+    var source = document.getElementById('ordersSource')?.value || 'all';
+    var type = document.getElementById('ordersType')?.value || 'all';
+    document.querySelectorAll('.order-data-row').forEach(function(row) {
+        var matches = orderMatchesGroup(row.dataset.status, activeOrderFilter)
+            && (source === 'all' || row.dataset.source === source)
+            && (type === 'all' || row.dataset.type === type)
+            && (!query || row.textContent.toLowerCase().includes(query));
+        row.style.display = matches ? '' : 'none';
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.orders-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.orders-tab').forEach(function(item) { item.classList.remove('active'); });
+            tab.classList.add('active');
+            activeOrderFilter = tab.dataset.filter || 'all';
+            filterSellerOrders();
+        });
+    });
+    document.getElementById('ordersSearch')?.addEventListener('input', filterSellerOrders);
+    document.getElementById('ordersSource')?.addEventListener('change', filterSellerOrders);
+    document.getElementById('ordersType')?.addEventListener('change', filterSellerOrders);
+});
 var orderMap = null;
 var orderCourierMarker = null;
 var orderPickupMarker = null;

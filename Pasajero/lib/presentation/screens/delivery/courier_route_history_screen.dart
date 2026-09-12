@@ -62,7 +62,9 @@ class CourierRouteHistoryScreen extends StatelessWidget {
             zoomControlsEnabled: false,
           ),
           Positioned(
-            bottom: Dimensions.space20, left: Dimensions.space20, right: Dimensions.space20,
+            bottom: Dimensions.space20,
+            left: Dimensions.space20,
+            right: Dimensions.space20,
             child: Container(
               padding: EdgeInsets.all(Dimensions.space12),
               decoration: BoxDecoration(
@@ -72,14 +74,16 @@ class CourierRouteHistoryScreen extends StatelessWidget {
               ),
               child: Row(children: [
                 Container(
-                  width: 12, height: 12,
+                  width: 12,
+                  height: 12,
                   decoration: BoxDecoration(color: const Color(0xFF10B981), shape: BoxShape.circle),
                 ),
                 SizedBox(width: Dimensions.space6),
                 Text('Inicio', style: regularSmall),
                 SizedBox(width: Dimensions.space16),
                 Container(
-                  width: 12, height: 12,
+                  width: 12,
+                  height: 12,
                   decoration: BoxDecoration(color: MyColor.redCancelTextColor, shape: BoxShape.circle),
                 ),
                 SizedBox(width: Dimensions.space6),

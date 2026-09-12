@@ -959,6 +959,12 @@
 .pac-container {
     z-index: 9999999 !important;
 }
+
+.simple-summary-column > .s-card { display:none !important; }
+@media (max-width: 767px) {
+    #shipment-type-grid { grid-template-columns:repeat(2,1fr) !important; }
+    #request-form details > div { grid-template-columns:1fr !important; }
+}
 </style>
 @endpush
 
@@ -967,7 +973,7 @@
 <div class="s-content">
     
     <!-- Top Access Info Banner -->
-    <div style="display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,rgba(34,197,94,0.08),rgba(16,185,129,0.03));border:1.5px solid rgba(34,197,94,0.25);border-radius:14px;padding:12px 18px;margin-bottom:20px;box-shadow:0 2px 8px rgba(34,197,94,0.05);">
+    <div style="display:none;align-items:center;justify-content:space-between;background:linear-gradient(135deg,rgba(34,197,94,0.08),rgba(16,185,129,0.03));border:1.5px solid rgba(34,197,94,0.25);border-radius:14px;padding:12px 18px;margin-bottom:20px;box-shadow:0 2px 8px rgba(34,197,94,0.05);">
         <div style="display:flex;align-items:center;gap:12px;">
             <span style="font-size:22px;background:rgba(34,197,94,0.15);width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;">⚡</span>
             <div>
@@ -978,12 +984,22 @@
         <span class="info-chip green" style="font-size:11.5px;padding:6px 12px;font-weight:700;"><i class="las la-check-circle"></i> Habilitado</span>
     </div>
 
-    <div class="s-grid-2" style="grid-template-columns: 1.1fr 0.9fr; gap: 24px; align-items: start;">
+    <div class="s-grid-2" style="grid-template-columns: 1.2fr 0.8fr; gap: 24px; align-items: start;">
 
         <!-- ═══ LEFT: FORM (WIZARD INTERACTIVO TÁCTIL EN 3 PASOS) ═══ -->
         <div class="s-card" style="padding:0;overflow:hidden;border-radius:18px;box-shadow:0 10px 25px rgba(0,0,0,0.05);">
             
-            <!-- Wizard Header Progress Bar -->
+            <!-- Cabecera simple -->
+            <div class="wizard-progress-bar" style="display:block;padding:22px 24px;">
+                <div style="display:flex;align-items:center;gap:13px;">
+                    <span style="width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;display:grid;place-items:center;font-size:25px;box-shadow:0 7px 18px rgba(34,197,94,.25);"><i class="las la-motorcycle"></i></span>
+                    <div>
+                        <h3 style="margin:0;font-size:20px;font-weight:900;color:var(--s-text);">Solicitar un delivery</h3>
+                        <p style="margin:3px 0 0;color:var(--s-text-3);font-size:12.5px;">Completa la ruta, calcula el precio y solicita un repartidor.</p>
+                    </div>
+                </div>
+            </div>
+            <div style="display:none">
             <div class="wizard-progress-bar">
                 <div class="wizard-step-item active" id="wizard-step-indicator-1" onclick="goToStep(1)">
                     <div class="wizard-step-badge">1</div>
@@ -1009,6 +1025,7 @@
                     </div>
                 </div>
             </div>
+            </div>
 
             @if(!$store || !$store->latitude || !$store->longitude)
             <div style="padding:16px 24px 0;">
@@ -1023,104 +1040,39 @@
                 @csrf
                 <input type="hidden" name="driver_id" value="all">
 
-                <!-- ════════════ PASO 1: TIPO DE ENVÍO Y PRODUCTO ════════════ -->
-                <div class="wizard-step-content active" id="wizard-step-1" style="padding:24px;">
+                <div style="padding:24px;display:flex;flex-direction:column;gap:22px;">
                     <div class="form-section-header" style="margin-top:0;">
                         <div class="section-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;"><i class="las la-box" style="font-size:20px;"></i></div>
                         <div>
-                            <h4 style="font-size:15px;margin:0;">Paso 1: ¿Qué vas a enviar?</h4>
-                            <span style="font-size:11.5px;color:var(--s-text-3);">Selecciona la categoría para asignar el repartidor ideal</span>
+                            <h4 style="font-size:15px;margin:0;">¿Qué envías?</h4>
+                            <span style="font-size:11.5px;color:var(--s-text-3);">Selecciona una opción</span>
                         </div>
                     </div>
 
-                    <div class="shipment-type-grid" id="shipment-type-grid" style="grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; margin-top: 16px;">
+                    <div class="shipment-type-grid" id="shipment-type-grid" style="grid-template-columns:repeat(4,1fr);gap:12px;">
                         <div class="shipment-type-card active" data-type="document" onclick="selectShipmentType('document', this)">
                             <div class="shipment-type-icon">📄</div>
                             <div class="shipment-type-label">Documento</div>
-                            <div class="shipment-type-desc">Cartas, sobres</div>
                         </div>
                         <div class="shipment-type-card" data-type="food" onclick="selectShipmentType('food', this)">
                             <div class="shipment-type-icon">🍽️</div>
                             <div class="shipment-type-label">Comida</div>
-                            <div class="shipment-type-desc">Restaurantes</div>
                         </div>
                         <div class="shipment-type-card" data-type="package" onclick="selectShipmentType('package', this)">
                             <div class="shipment-type-icon">📦</div>
                             <div class="shipment-type-label">Paquete</div>
-                            <div class="shipment-type-desc">Cajas, productos</div>
-                        </div>
-                        <div class="shipment-type-card" data-type="pharmacy" onclick="selectShipmentType('pharmacy', this)">
-                            <div class="shipment-type-icon">💊</div>
-                            <div class="shipment-type-label">Farmacia</div>
-                            <div class="shipment-type-desc">Medicamentos</div>
-                        </div>
-                        <div class="shipment-type-card" data-type="grocery" onclick="selectShipmentType('grocery', this)">
-                            <div class="shipment-type-icon">🛒</div>
-                            <div class="shipment-type-label">Supermercado</div>
-                            <div class="shipment-type-desc">Abarrotes</div>
                         </div>
                         <div class="shipment-type-card" data-type="other" onclick="selectShipmentType('other', this)">
                             <div class="shipment-type-icon">🏷️</div>
                             <div class="shipment-type-label">Otro</div>
-                            <div class="shipment-type-desc">Cualquier ítem</div>
                         </div>
                     </div>
                     <input type="hidden" name="shipment_type" id="shipment-type-hidden" value="document">
 
-                    <div class="s-input-group mt-4">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                            <label class="s-input-label" style="margin:0;font-weight:700;">Descripción o notas del envío</label>
-                            <span style="font-size:11px;color:var(--s-text-3);font-weight:600;">⚡ Atajos en 1-tap:</span>
-                        </div>
-                        <textarea class="s-input touch-input-lg" name="description" rows="2"
-                            placeholder="Ej: Recoger pedido de comida caliente y entregar en dpto 402." style="height:auto !important;resize:vertical;" required></textarea>
-                        
-                        <!-- Quick Note Presets -->
-                        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
-                            <button type="button" class="s-btn s-btn-sm" style="font-size:12px;padding:6px 12px;border-radius:12px;background:rgba(34,197,94,0.08);color:#16a34a;border:1px solid rgba(34,197,94,0.25);font-weight:700;" onclick="applyQuickNote('🍽️ Comida lista para entregar. Tocar timbre.')">🍽️ Comida lista</button>
-                            <button type="button" class="s-btn s-btn-sm" style="font-size:12px;padding:6px 12px;border-radius:12px;background:rgba(59,130,246,0.08);color:#2563eb;border:1px solid rgba(59,130,246,0.25);font-weight:700;" onclick="applyQuickNote('📄 Entregar documentos en sobre en recepción.')">📄 Documento</button>
-                            <button type="button" class="s-btn s-btn-sm" style="font-size:12px;padding:6px 12px;border-radius:12px;background:rgba(245,158,11,0.08);color:#d97706;border:1px solid rgba(245,158,11,0.25);font-weight:700;" onclick="applyQuickNote('📦 Paquete delicado. Llamar al cliente al llegar.')">📦 Paquete delicado</button>
-                        </div>
-                    </div>
-
-                    <!-- Package Details (conditional) -->
-                    <div id="package-details-section" style="display:none;margin-top:16px;">
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                            <div class="s-input-group">
-                                <label class="s-input-label">Peso (kg)</label>
-                                <input type="number" class="s-input touch-input-lg" name="package_weight_kg" placeholder="2.5" step="0.1" min="0" max="100">
-                            </div>
-                            <div class="s-input-group">
-                                <label class="s-input-label">Valor ítem (S/)</label>
-                                <input type="number" class="s-input touch-input-lg" name="item_value" placeholder="50.00" step="0.01" min="0">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Next Step Button 1 -->
-                    <div class="wizard-nav-btns">
-                        <div></div>
-                        <button type="button" class="s-btn s-btn-primary s-btn-lg" style="padding:14px 28px;border-radius:14px;font-size:15px;font-weight:800;background:linear-gradient(135deg,#22c55e,#16a34a);" onclick="nextStep(2)">
-                            Siguiente: Ubicaciones <i class="las la-arrow-right"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- ════════════ PASO 2: DIRECCIONES Y MAPA ════════════ -->
-                <div class="wizard-step-content" id="wizard-step-2" style="padding:24px;">
-                    <div class="form-section-header" style="margin-top:0;">
-                        <div class="section-icon" style="background:rgba(34,197,94,0.1);color:#22c55e;"><i class="las la-map-marked-alt" style="font-size:20px;"></i></div>
-                        <div>
-                            <h4 style="font-size:15px;margin:0;">Paso 2: Punto de Recojo y Entrega</h4>
-                            <span style="font-size:11.5px;color:var(--s-text-3);">Escribe o selecciona la ubicación exacta en el mapa</span>
-                        </div>
-                    </div>
-
-                    <!-- Pickup Address -->
                     <div class="address-card" style="border-radius:16px;padding:16px;">
                         <div class="address-label">
                             <div class="dot pickup"></div>
-                            <span style="font-size:12px;font-weight:800;">Punto de Recogida (Tu negocio)</span>
+                            <span style="font-size:13px;font-weight:800;">Recojo</span>
                         </div>
                         <input type="text" class="s-input touch-input-lg" name="pickup_address" id="pickup-address"
                             value="{{ $store->name ?? 'Mi Tienda' }} - {{ $store->address ?? '' }}"
@@ -1129,22 +1081,15 @@
                         <input type="hidden" name="pickup_lng" id="pickup-lng" value="{{ $store->longitude }}">
                     </div>
 
-                    <!-- Connector -->
-                    <div class="address-connector" style="height:24px;"></div>
-
-                    <!-- Intermediate Stops Container -->
-                    <div id="intermediate-stops-container"></div>
-
-                    <!-- Destinations Container -->
                     <div id="destinations-container">
                         <div class="address-card" data-stop-index="0" style="border-radius:16px;padding:16px;border-color:#22c55e;">
                             <div class="address-label" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                                 <div style="display:flex; align-items:center; gap:8px;">
                                     <div class="dot destination"></div>
-                                    <span style="font-size:12px;font-weight:800;color:#ef4444;">Destino Principal</span>
+                                    <span style="font-size:13px;font-weight:800;color:#ef4444;">Destino</span>
                                 </div>
                                 <button type="button" class="s-btn s-btn-sm" id="select-dest-map-btn" style="padding: 6px 14px; font-size: 12px; height: auto; background: rgba(34, 197, 94, 0.12); border: 1.5px solid rgba(34, 197, 94, 0.4); color: #16a34a; border-radius: 10px; font-weight:800;">
-                                    <i class="las la-map-marker" style="font-size:16px;"></i> Seleccionar en mapa
+                                    <i class="las la-map-marker" style="font-size:16px;"></i> Ver mapa
                                 </button>
                             </div>
                             <input type="text" class="s-input dest-address-input touch-input-lg" name="delivery_address" id="dest-address"
@@ -1153,13 +1098,7 @@
                             <input type="hidden" name="delivery_lng" id="delivery-lng">
                         </div>
                     </div>
-
-                    <!-- Add Stop Button -->
-                    <button type="button" class="add-stop-btn" id="add-stop-btn" onclick="addStop()" style="margin-top:12px;padding:12px;border-radius:14px;">
-                        <i class="las la-plus-circle" style="font-size:18px;"></i> Agregar parada intermedia (+1 destino)
-                    </button>
-
-                    <!-- Short Distance Warning Alert (Dynamic) -->
+                    <div id="intermediate-stops-container" style="display:none"></div>
                     <div id="short-distance-warning" style="display:none;margin-top:16px;padding:14px 16px;background:rgba(245,158,11,0.08);border:1.5px solid rgba(245,158,11,0.35);border-radius:14px;color:#d97706;animation:fadeInStep 0.3s ease;">
                         <div style="font-weight:800;font-size:13.5px;margin-bottom:3px;display:flex;align-items:center;gap:6px;">
                             <span style="font-size:18px;">⚠️</span> Distancia súper corta (<span id="short-dist-km">--</span> km)
@@ -1167,140 +1106,40 @@
                         <span style="font-size:12px;line-height:1.4;display:block;">¿Es correcta la dirección? Se aplicó automáticamente la <strong>tarifa plana reducida de S/ 4.00</strong>.</span>
                     </div>
 
-                    <!-- Nav Buttons 2 -->
-                    <div class="wizard-nav-btns">
-                        <button type="button" class="s-btn s-btn-secondary" style="padding:12px 20px;border-radius:12px;font-weight:700;" onclick="prevStep(1)">
-                            <i class="las la-arrow-left"></i> Atrás
-                        </button>
-                        <button type="button" class="s-btn s-btn-primary s-btn-lg" style="padding:14px 28px;border-radius:14px;font-size:15px;font-weight:800;background:linear-gradient(135deg,#22c55e,#16a34a);" onclick="nextStep(3)">
-                            Siguiente: Datos de Entrega <i class="las la-arrow-right"></i>
-                        </button>
-                    </div>
-                </div>
 
-                <!-- ════════════ PASO 3: DESTINATARIO Y PAGO ════════════ -->
-                <div class="wizard-step-content" id="wizard-step-3" style="padding:24px;">
-                    <div class="form-section-header" style="margin-top:0;">
-                        <div class="section-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;"><i class="las la-user-check" style="font-size:20px;"></i></div>
-                        <div>
-                            <h4 style="font-size:15px;margin:0;">Paso 3: Destinatario, Pago y Confirmación</h4>
-                            <span style="font-size:11.5px;color:var(--s-text-3);">Ingresa los datos del cliente y confirma la solicitud</span>
-                        </div>
+                    <div class="s-input-group">
+                        <label class="s-input-label" style="font-weight:800;font-size:13px;">Descripción</label>
+                        <textarea class="s-input touch-input-lg" name="description" rows="3" placeholder="¿Qué debe recoger y cómo debe entregarlo?" style="height:92px!important;resize:none;" required></textarea>
                     </div>
 
-                    <!-- Recipient Info -->
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" class="mb-4">
-                        <div class="s-input-group">
-                            <label class="s-input-label" style="font-weight:700;">Nombre del cliente</label>
-                            <input type="text" class="s-input touch-input-lg" name="recipient_name" placeholder="Ej: Juan Pérez">
+                    <details style="border:1.5px solid var(--s-border);border-radius:14px;padding:0 15px;background:var(--s-bg);">
+                        <summary style="cursor:pointer;list-style:none;padding:14px 0;font-weight:800;font-size:13px;color:var(--s-text-2);"><i class="las la-user-plus" style="font-size:18px;color:#8b5cf6;"></i> Agregar contacto del destinatario <span style="font-weight:500;color:var(--s-text-3);">(opcional)</span></summary>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding-bottom:15px;">
+                            <input type="text" class="s-input touch-input-lg" name="recipient_name" placeholder="Nombre">
+                            <input type="tel" class="s-input touch-input-lg" name="recipient_phone" placeholder="Celular">
                         </div>
-                        <div class="s-input-group">
-                            <label class="s-input-label" style="font-weight:700;">Teléfono celular</label>
-                            <input type="text" class="s-input touch-input-lg" name="recipient_phone" placeholder="Ej: 999 888 777">
-                        </div>
-                    </div>
+                    </details>
 
-                    <!-- Payer Type -->
-                    <div class="mb-4">
-                        <label class="s-input-label mb-2" style="font-weight:800;font-size:13px;">¿Quién paga la tarifa del delivery?</label>
-                        <div class="payer-type-grid mb-2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                            <div class="payer-type-card active" id="payer-sender-card" onclick="selectPayerType('sender', this)" style="padding:14px;border-radius:14px;">
-                                <div class="payer-icon" style="font-size:28px;">🏪</div>
-                                <div class="payer-label" style="font-weight:800;font-size:13px;">Yo pago el envío</div>
-                                <div class="payer-desc" style="font-size:11px;">Cobra a mi tienda</div>
-                            </div>
-                            <div class="payer-type-card" id="payer-recipient-card" onclick="selectPayerType('recipient', this)" style="padding:14px;border-radius:14px;">
-                                <div class="payer-icon" style="font-size:28px;">📍</div>
-                                <div class="payer-label" style="font-weight:800;font-size:13px;">El cliente paga (COD)</div>
-                                <div class="payer-desc" style="font-size:11px;">El repartidor cobra al entregar</div>
-                            </div>
-                        </div>
-                        <input type="hidden" name="payer_type" id="payer-type-hidden" value="sender">
-                    </div>
-
-                    <!-- Payment Method (sender) -->
-                    <div id="payment-method-section" class="mb-4">
-                        <label class="s-input-label mb-2" style="font-weight:700;">Método de Pago</label>
-                        <div class="payment-method-grid mb-2" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
-                            <div class="pm-card active" data-method="cash" onclick="selectPaymentMethod('cash', this)" style="padding:12px;font-weight:700;border-radius:12px;">
-                                <i class="las la-money-bill-wave" style="color:#22c55e"></i> Efectivo
-                            </div>
-                            <div class="pm-card" data-method="yape" onclick="selectPaymentMethod('yape', this)" style="padding:12px;font-weight:700;border-radius:12px;">
-                                <i class="las la-mobile-alt" style="color:#7c3aed"></i> Yape
-                            </div>
-                            <div class="pm-card" data-method="plin" onclick="selectPaymentMethod('plin', this)" style="padding:12px;font-weight:700;border-radius:12px;">
-                                <i class="las la-wallet" style="color:#06b6d4"></i> Plin
-                            </div>
-                            <div class="pm-card" data-method="card" onclick="selectPaymentMethod('card', this)" style="padding:12px;font-weight:700;border-radius:12px;">
-                                <i class="las la-credit-card" style="color:#f59e0b"></i> Tarjeta
-                            </div>
-                        </div>
-                        <input type="hidden" name="payment_method" id="payment-method-hidden" value="cash">
-                    </div>
-
-                    <!-- COD Amount Field -->
-                    <div class="cod-amount-field mb-4" id="cod-amount-section" style="display:none;background:rgba(245,158,11,0.06);border:1.5px solid rgba(245,158,11,0.3);padding:14px;border-radius:14px;">
-                        <div class="s-input-group" style="margin:0;">
-                            <label class="s-input-label" style="display:flex;align-items:center;gap:6px;font-weight:800;color:#d97706;">
-                                <i class="las la-coins" style="font-size:18px;"></i> Monto a cobrar al cliente en destino (S/)
-                            </label>
-                            <input type="number" class="s-input touch-input-lg" name="cod_amount" id="cod-amount-input" placeholder="0.00" step="0.01" min="0" style="font-size:20px;font-weight:800;">
-                        </div>
-                    </div>
-
-                    <!-- Evidence Type Selector -->
-                    <div class="mb-4">
-                        <label class="s-input-label mb-2" style="font-weight:800;font-size:13px;display:flex;align-items:center;gap:6px;">
-                            <i class="las la-shield-alt" style="color:#22c55e;font-size:18px;"></i> Evidencia de Entrega requerida
-                        </label>
-                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
-                            <div class="pm-card active" id="ev-photo-card" onclick="selectEvidenceType('photo', this)" style="padding:14px;border-radius:12px;text-align:center;cursor:pointer;">
-                                <div style="font-size:22px;margin-bottom:4px;">📷</div>
-                                <div style="font-weight:800;font-size:12.5px;">Foto</div>
-                                <div style="font-size:10.5px;color:var(--s-text-3);">Evidencia fotográfica</div>
-                            </div>
-                            <div class="pm-card" id="ev-pin-card" onclick="selectEvidenceType('pin', this)" style="padding:14px;border-radius:12px;text-align:center;cursor:pointer;">
-                                <div style="font-size:22px;margin-bottom:4px;">🔢</div>
-                                <div style="font-weight:800;font-size:12.5px;">PIN de 4 dígitos</div>
-                                <div style="font-size:10.5px;color:var(--s-text-3);">Clave de seguridad</div>
-                            </div>
-                            <div class="pm-card" id="ev-both-card" onclick="selectEvidenceType('both', this)" style="padding:14px;border-radius:12px;text-align:center;cursor:pointer;">
-                                <div style="font-size:22px;margin-bottom:4px;">🛡️</div>
-                                <div style="font-weight:800;font-size:12.5px;">Foto + PIN</div>
-                                <div style="font-size:10.5px;color:var(--s-text-3);">Máxima seguridad</div>
-                            </div>
-                        </div>
-                        <input type="hidden" name="evidence_type" id="evidence-type-hidden" value="photo">
-                    </div>
-
-                    <!-- Express Toggle Card -->
-                    <div class="express-toggle-card mb-4" id="express-card" onclick="toggleExpress()" style="padding:14px 16px;border-radius:14px;">
-                        <div class="express-toggle-left">
-                            <div class="express-icon" style="font-size:26px;">⚡</div>
-                            <div>
-                                <div class="express-label" style="font-weight:800;font-size:13.5px;">Envío Express Prioritario</div>
-                                <div class="express-sublabel" style="font-size:11px;">Asignación prioritaria directa del repartidor más cercano</div>
-                            </div>
-                        </div>
-                        <div class="express-toggle-right" style="font-weight:800;font-size:14px;">+50%</div>
-                    </div>
+                    <div id="package-details-section" style="display:none"></div>
+                    <input type="hidden" name="payer_type" id="payer-type-hidden" value="sender">
+                    <input type="hidden" name="payment_method" id="payment-method-hidden" value="cash">
+                    <input type="hidden" name="evidence_type" id="evidence-type-hidden" value="photo">
                     <input type="hidden" name="is_express" id="is-express-hidden" value="0">
+                    <input type="hidden" name="scheduled_at" value="">
+                    <select name="time_slot" style="display:none"><option value="" selected></option></select>
 
-                    <!-- Nav Buttons 3 -->
-                    <div class="wizard-nav-btns">
-                        <button type="button" class="s-btn s-btn-secondary" style="padding:12px 20px;border-radius:12px;font-weight:700;" onclick="prevStep(2)">
-                            <i class="las la-arrow-left"></i> Atrás
-                        </button>
-                        <button type="submit" class="s-btn s-btn-primary s-btn-lg" style="padding:16px 32px;border-radius:14px;font-size:16px;font-weight:800;background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 6px 20px rgba(34,197,94,0.35);" id="submit-btn" {{ (!$store || !$store->latitude) ? 'disabled' : '' }}>
-                            <i class="las la-paper-plane"></i> Solicitar Delivery · S/ 4.00
-                        </button>
-                    </div>
+                    <button type="button" class="s-btn" onclick="calculateFee()" style="width:100%;min-height:54px;justify-content:center;border-radius:14px;border:1.5px solid #22c55e;background:#fff;color:#16a34a;font-size:15px;font-weight:900;">
+                        <i class="las la-calculator" style="font-size:21px;"></i> Calcular envío
+                    </button>
+                    <button type="submit" class="s-btn s-btn-primary s-btn-lg" style="width:100%;min-height:60px;justify-content:center;border-radius:15px;font-size:17px;font-weight:900;background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 8px 22px rgba(34,197,94,.3);" id="submit-btn" {{ (!$store || !$store->latitude) ? 'disabled' : '' }}>
+                        <i class="las la-paper-plane" style="font-size:22px;"></i> Enviar solicitud · S/ 4.00
+                    </button>
                 </div>
             </form>
         </div>
 
         <!-- ═══ RIGHT: SUMMARY & MAP ═══ -->
-        <div style="display:flex;flex-direction:column;gap:20px;">
+        <div class="simple-summary-column" style="display:flex;flex-direction:column;gap:20px;">
 
             <!-- Dynamic Summary -->
             <div class="summary-card">
@@ -1482,6 +1321,15 @@
                     <i class="las la-info-circle" style="color:#22c55e;font-size:16px;"></i>
                     <span style="color:#22c55e">Orden: <strong id="overlay-order-no">--</strong></span>
                 </div>
+                <div id="dispatch-exhausted-actions" style="display:none;max-width:470px;margin:0 auto 18px;padding:18px;border:1px solid rgba(245,158,11,.35);border-radius:16px;background:rgba(245,158,11,.08);">
+                    <strong style="display:block;color:#fbbf24;font-size:16px;margin-bottom:6px;">Ningún repartidor respondió</strong>
+                    <span style="display:block;color:var(--s-text-3);font-size:13px;margin-bottom:15px;">Consultamos a todos los repartidores disponibles, desde los más cercanos hasta los más alejados.</span>
+                    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                        <button type="button" id="retry-dispatch-btn" class="s-btn" style="min-height:48px;padding:0 20px;border-radius:13px;background:#22c55e;color:#fff;font-weight:800;border:0;"><i class="las la-redo-alt"></i> Volver a enviar</button>
+                        <button type="button" id="cancel-dispatch-btn" class="s-btn" style="min-height:48px;padding:0 20px;border-radius:13px;background:#ef4444;color:#fff;font-weight:800;border:0;"><i class="las la-times"></i> Cancelar solicitud</button>
+                    </div>
+                </div>
+                <button type="button" id="cancel-search-btn" class="s-btn" style="min-height:44px;padding:0 18px;border-radius:12px;background:transparent;color:#f87171;border:1px solid rgba(248,113,113,.45);font-weight:800;"><i class="las la-times"></i> Cancelar búsqueda</button>
             </div>
 
             <!-- Driver Assigned -->
@@ -2065,6 +1913,19 @@
         }
     };
 
+    function formatFeeDisplay(val) {
+        var num = parseFloat(val) || 0;
+        var floor = Math.floor(num);
+        var dec = Math.round((num - floor) * 100) / 100;
+        if (dec >= 0.46 && dec <= 0.54) {
+            return (floor + 0.50).toFixed(2);
+        } else if (dec > 0.54) {
+            return Math.ceil(num).toString();
+        } else {
+            return floor.toString();
+        }
+    }
+
     function updateFeeDisplay(data) {
         var distKm = parseFloat(data.distance_km) || 0;
         var isShort = distKm > 0 && distKm < 1.0;
@@ -2078,7 +1939,7 @@
         document.getElementById('fee-distance-fee').textContent = (isShort || data.is_short_distance) ? '0.00' : (data.distance_fee || '0.00');
         document.getElementById('fee-time-min').textContent = data.time_min || '--';
         document.getElementById('fee-time').textContent = (isShort || data.is_short_distance) ? '0.00' : (data.time_fee || '0.00');
-        document.getElementById('fee-total').textContent = total.toFixed(1);
+        document.getElementById('fee-total').textContent = formatFeeDisplay(total);
 
         // Short distance warning banner
         var shortAlert = document.getElementById('short-distance-warning');
@@ -2094,7 +1955,7 @@
 
         var submitBtn = document.getElementById('submit-btn');
         if (submitBtn) {
-            submitBtn.innerHTML = '<i class="las la-paper-plane"></i> Solicitar Delivery · S/ ' + total.toFixed(2);
+            submitBtn.innerHTML = '<i class="las la-paper-plane"></i> Solicitar Delivery · S/ ' + formatFeeDisplay(total);
         }
 
         if (parseFloat(data.surge) > 1) {
@@ -2417,7 +2278,7 @@
     var driverPhoneDisplay = document.getElementById('driver-phone-display');
     var driverAvatarContainer = document.getElementById('driver-avatar-container');
     var pollingInterval = null;
-    var maxPollTime = 180000;
+    var maxPollTime = 900000;
     var pollStartTime = 0;
 
     // Tracking state
@@ -2493,8 +2354,7 @@
         pollingInterval = setInterval(function() {
             if (Date.now() - pollStartTime > maxPollTime) {
                 clearInterval(pollingInterval);
-                alert('Tiempo de espera agotado. No se encontraron repartidores disponibles.');
-                window.location.reload();
+                showDispatchExhausted();
                 return;
             }
 
@@ -2503,6 +2363,11 @@
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (data.status === 'success') {
+                    if (data.dispatch_mode === 'seller_exhausted') {
+                        clearInterval(pollingInterval);
+                        showDispatchExhausted();
+                        return;
+                    }
                     if (['accepted', 'on_way_to_pickup', 'at_pickup', 'on_way_to_delivery'].includes(data.favor_status)) {
                         clearInterval(pollingInterval);
                         currentFavorData = data.favor;
@@ -2518,6 +2383,64 @@
             .catch(function(err) { console.error('Poll error:', err); });
         }, 5000);
     }
+
+    function showDispatchExhausted() {
+        var actions = document.getElementById('dispatch-exhausted-actions');
+        var cancelSearch = document.getElementById('cancel-search-btn');
+        if (actions) actions.style.display = 'block';
+        if (cancelSearch) cancelSearch.style.display = 'none';
+        var title = radarSearchWrapper ? radarSearchWrapper.querySelector('h3') : null;
+        var text = radarSearchWrapper ? radarSearchWrapper.querySelector('p') : null;
+        if (title) title.textContent = 'No encontramos repartidor';
+        if (text) text.textContent = 'Puedes volver a enviar la solicitud o cancelarla.';
+    }
+
+    function cancelCurrentDispatch() {
+        if (!favorId || !confirm('¿Cancelar esta solicitud de delivery?')) return;
+        fetch('{{ route("seller.delivery.request.cancel", ":id") }}'.replace(':id', favorId), {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ cancel_reason_code: 'no_courier_available' })
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.status === 'success') window.location.reload();
+            else alert(data.message || 'No se pudo cancelar la solicitud.');
+        }).catch(function() { alert('No se pudo cancelar la solicitud.'); });
+    }
+
+    document.getElementById('cancel-search-btn')?.addEventListener('click', cancelCurrentDispatch);
+    document.getElementById('cancel-dispatch-btn')?.addEventListener('click', cancelCurrentDispatch);
+    document.getElementById('retry-dispatch-btn')?.addEventListener('click', function() {
+        if (!favorId) return;
+        var button = this;
+        button.disabled = true;
+        button.innerHTML = '<i class="las la-spinner la-spin"></i> Reenviando...';
+        fetch('{{ route("seller.delivery.request.retry", ":id") }}'.replace(':id', favorId), {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json'
+            }
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.status !== 'success') throw new Error(data.message || 'No se pudo reenviar.');
+            document.getElementById('dispatch-exhausted-actions').style.display = 'none';
+            document.getElementById('cancel-search-btn').style.display = '';
+            var title = radarSearchWrapper.querySelector('h3');
+            var text = radarSearchWrapper.querySelector('p');
+            if (title) title.textContent = 'Buscando Repartidor...';
+            if (text) text.textContent = 'Notificando a todos los repartidores disponibles.';
+            button.disabled = false;
+            button.innerHTML = '<i class="las la-redo-alt"></i> Volver a enviar';
+            startStatusPolling(favorId);
+        }).catch(function(error) {
+            alert(error.message || 'No se pudo reenviar la solicitud.');
+            button.disabled = false;
+            button.innerHTML = '<i class="las la-redo-alt"></i> Volver a enviar';
+        });
+    });
 
     function updateWhatsAppShareBtn(f, pinCode) {
         var waBtn = document.getElementById('share-pin-wa-btn');

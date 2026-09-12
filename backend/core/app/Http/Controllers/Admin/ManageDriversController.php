@@ -5,6 +5,7 @@ use App\Constants\Status;
 use App\Http\Controllers\Controller;
 use App\Lib\UserNotificationSender;
 use App\Models\Deposit;
+use App\Models\DeliveryOrder;
 use App\Models\Driver;
 use App\Models\NotificationLog;
 use App\Models\Ride;
@@ -20,6 +21,35 @@ use App\Services\FcmService;
 use Illuminate\Http\Request;
 
 class ManageDriversController extends Controller {
+    public function tracking(Request $request) {
+        $pageTitle = 'Seguimiento de flota';
+        $drivers = Driver::query()
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $search = mb_substr((string) $request->search, 0, 100);
+                $query->where(function ($query) use ($search) {
+                    $query->where('firstname', 'like', "%{$search}%")
+                        ->orWhere('lastname', 'like', "%{$search}%")
+                        ->orWhere('username', 'like', "%{$search}%");
+                });
+            })->orderByDesc('online_status')->orderBy('id')->paginate(30)->withQueryString();
+        $positions = $drivers->getCollection()->map(fn ($driver) => [
+            'id' => $driver->id, 'name' => $driver->fullname,
+            'lat' => $driver->current_lat, 'lng' => $driver->current_lot,
+            'updated' => $driver->last_location_fetch_at ? showDateTime($driver->last_location_fetch_at) : null,
+            'url' => route('admin.driver.live.location', $driver->id),
+        ]);
+        $admin = auth('admin')->user();
+        $driverIds = $drivers->getCollection()->pluck('id');
+        $assignedRides = $admin->can('view rides')
+            ? Ride::whereIn('driver_id', $driverIds)->whereIn('status', [Status::RIDE_ACTIVE, Status::RIDE_RUNNING])
+                ->latest()->get()->unique('driver_id')->keyBy('driver_id') : collect();
+        $assignedOrders = $admin->can('delivery.orders')
+            ? DeliveryOrder::with('store')->whereIn('driver_id', $driverIds)
+                ->whereIn('status', ['pending', 'confirmed', 'preparing', 'ready', 'on_way'])
+                ->latest()->get()->groupBy('driver_id') : collect();
+        return view('admin.driver.tracking', compact('pageTitle', 'drivers', 'positions', 'assignedRides', 'assignedOrders'));
+    }
+
     public function allDrivers() {
         $pageTitle = __('All Drivers');
         extract($this->driverData());

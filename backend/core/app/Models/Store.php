@@ -14,6 +14,8 @@ class Store extends Model
     const TYPE_PHARMACY    = 'pharmacy';
     const TYPE_LIQUOR      = 'liquor_store';
     const TYPE_PET_SHOP    = 'pet_shop';
+    const SERVICE_MODE_RESTAURANT = 'restaurant';
+    const SERVICE_MODE_DELIVERY_ONLY = 'delivery_only';
 
     public static function types(): array
     {
@@ -29,6 +31,16 @@ class Store extends Model
     public function isRestaurant(): bool
     {
         return $this->store_type === self::TYPE_RESTAURANT;
+    }
+
+    public function isDeliveryOnlyMode(): bool
+    {
+        return $this->service_mode === self::SERVICE_MODE_DELIVERY_ONLY;
+    }
+
+    public function usesRestaurantPlatform(): bool
+    {
+        return !$this->isDeliveryOnlyMode();
     }
 
     protected $guarded = ['id'];
@@ -139,9 +151,13 @@ class Store extends Model
         return $this->storePackages()
             ->where('status', 'active')
             ->where(function ($q) {
-                // Compare dates only — a plan expiring today is still active for the full day
-                $q->whereNull('expires_at')->orWhereRaw('DATE(expires_at) >= ?', [now()->toDateString()]);
+                $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
             })
+            ->where(function ($q) {
+                $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            })
+            ->orderByRaw('expires_at IS NULL DESC')
+            ->orderByDesc('expires_at')
             ->with('package');
     }
 
@@ -252,8 +268,13 @@ class Store extends Model
         return $query->with(['storePackages' => function ($q) {
             $q->where('status', 'active')
               ->where(function ($q) {
+                  $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
+              })
+              ->where(function ($q) {
                   $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
               })
+              ->orderByRaw('expires_at IS NULL DESC')
+              ->orderByDesc('expires_at')
               ->with('package');
         }]);
     }
@@ -264,9 +285,10 @@ class Store extends Model
             '(SELECT COUNT(*) FROM store_packages sp 
               JOIN business_packages bp ON bp.id = sp.package_id 
               WHERE sp.store_id = stores.id AND sp.status = ? 
+              AND (sp.starts_at IS NULL OR sp.starts_at <= ?)
               AND (sp.expires_at IS NULL OR sp.expires_at > ?) 
               AND bp.type IN (?, ?)) DESC',
-            ['active', now(), 'premium', 'featured']
+            ['active', now(), now(), 'premium', 'featured']
         );
     }
 

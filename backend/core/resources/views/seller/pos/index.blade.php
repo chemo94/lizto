@@ -10,6 +10,9 @@
 @section('topbar-actions')
 <div style="display: flex; gap: 8px;">
     @if($store->isRestaurant())
+    <a href="{{ route('seller.pos') }}" class="s-btn s-btn-outline s-btn-sm" style="border-radius: 10px;">
+        <i class="las la-th-large"></i> Cambiar mesa
+    </a>
     <a href="{{ route('seller.pos.kitchen') }}" class="s-btn s-btn-primary s-btn-sm" style="border-radius: 10px;">
         <i class="las la-utensils"></i> Cocina
     </a>
@@ -33,7 +36,7 @@
         <div style="min-width: 0;">
 
             <!-- TIPO DE PEDIDO -->
-            <div style="display: flex; gap: 4px; margin-bottom: 20px; background: var(--s-surface-2); border: 1px solid var(--s-border); border-radius: var(--s-radius); padding: 5px; flex-wrap: wrap;">
+            <div class="pos-type-strip" style="display: flex; gap: 4px; margin-bottom: 20px; background: var(--s-surface-2); border: 1px solid var(--s-border); border-radius: var(--s-radius); padding: 5px; flex-wrap: wrap;">
                 @if($store->isRestaurant())
                 <button class="pos-type-btn active" id="type-dine_in" onclick="setOrderType('dine_in')">
                     <i class="las la-utensils"></i> <span>Mesa</span>
@@ -183,38 +186,27 @@
                 @endforeach
             </div>
 
-            <!-- GRILLA DE PRODUCTOS POR CATEGORÍA -->
-            <div id="products-by-category">
-                @foreach($categories as $cat)
-                @php $catProds = $products->where('store_category_id', $cat->id); @endphp
-                @if($catProds->count())
-                <div class="category-section" id="cat-section-{{ $cat->id }}" style="margin-bottom: 28px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; border-bottom: 1.5px solid var(--s-border); padding-bottom: 8px;">
-                        <h4 style="font-size: 13px; font-weight: 800; color: var(--s-text); text-transform: uppercase; letter-spacing: 0.8px; margin: 0;">{{ $cat->name }}</h4>
-                        <span style="font-size: 11px; color: var(--s-text-3); font-weight: 700; background: var(--s-surface-2); padding: 3px 8px; border-radius: 20px; border: 1px solid var(--s-border);">{{ $catProds->count() }} platos</span>
+            <!-- GRILLA ÚNICA DE PRODUCTOS; LAS CATEGORÍAS SE FILTRAN ARRIBA -->
+            <div id="products-by-category" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:16px">
+                @foreach($products as $p)
+                <div class="pos-prod" data-category="{{ $p->store_category_id }}" onclick="addItem({{ $p->id }})">
+                    <div class="pos-prod-img">
+                        @if($p->image)
+                        <img src="{{ asset('storage/'.$p->image) }}" alt="{{ $p->name }}" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\'las la-utensils\'></i>'">
+                        @else
+                        <i class="las la-utensils"></i>
+                        @endif
                     </div>
-                    
-                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 14px;">
-                        @foreach($catProds as $p)
-                        <div class="pos-prod" onclick="addItem({{ $p->id }})">
-                            <div class="pos-prod-img">
-                                @if($p->image)
-                                <img src="{{ asset('storage/'.$p->image) }}" alt="{{ $p->name }}" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\'las la-utensils\'></i>'">
-                                @else
-                                <i class="las la-utensils"></i>
-                                @endif
-                            </div>
-                            
-                            <div class="pos-prod-info">
-                                <b title="{{ $p->name }}">{{ $p->name }}</b>
-                                <span>S/ {{ number_format($p->finalPrice(), 2) }}</span>
-                            </div>
-                        </div>
-                        @endforeach
+                    <div class="pos-prod-info">
+                        <b title="{{ $p->name }}">{{ $p->name }}</b>
+                        <span>S/ {{ number_format($p->finalPrice(), 2) }}</span>
                     </div>
                 </div>
-                @endif
                 @endforeach
+            </div>
+            <div id="pos-product-pagination" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;padding-top:14px;border-top:1px solid var(--s-border);flex-wrap:wrap">
+                <small id="pos-page-summary" style="color:var(--s-text-3);font-size:10px;font-weight:600"></small>
+                <div id="pos-page-buttons" style="display:flex;align-items:center;gap:5px"></div>
             </div>
 
         </div>
@@ -308,8 +300,8 @@
                 </div>
 
                 <!-- CONTENEDOR ITEMS COMANDA -->
-                <div id="order-items" style="max-height: 400px; overflow-y: auto; margin-bottom: 14px; min-height: 180px; border: 1.5px solid var(--s-border); border-radius: var(--s-radius); padding: 8px; background: #ffffff;">
-                    <div style="text-align: center; color: var(--s-text-3); padding: 48px 12px; font-size: 12px;">
+                <div id="order-items" style="height: clamp(300px, 42vh, 520px); max-height: 520px; overflow-y: auto; margin-bottom: 14px; min-height: 300px; border: 1.5px solid var(--s-border); border-radius: var(--s-radius); padding: 8px; background: #ffffff; scrollbar-gutter: stable;">
+                    <div style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: var(--s-text-3); padding: 48px 12px; font-size: 12px;">
                         <i class="las la-shopping-basket" style="font-size: 32px; display: block; margin-bottom: 8px; color: var(--s-border);"></i>
                         Selecciona productos de la lista
                     </div>
@@ -387,13 +379,13 @@
             @csrf
             <div style="display: flex; flex-direction: column; gap: 12px;">
                 @if($invoiceTypes->count())
-                <select class="s-input" name="series_id" id="charge-series" style="padding: 8px 12px; font-size: 12px; background: var(--s-surface-2);">
-                    <option value="">Nota de Venta (Clientes Varios - Por defecto)</option>
+                <select class="s-input" name="series_id" id="charge-series" style="padding: 8px 12px; font-size: 12px; background: var(--s-surface-2);" onchange="onChargeSeriesChange()">
+                    <option value="" data-code="NV">Nota de Venta (Clientes Varios - Por defecto)</option>
                     @foreach($invoiceTypes as $type)
                     @if(in_array($type->code, ['01', '03', 'NV']))
                     <optgroup label="{{ $type->code }} - {{ $type->name }}">
                         @foreach($type->series as $s)
-                        <option value="{{ $s->id }}">{{ $s->series }} (Siguiente: {{ $s->nextNumber() }})</option>
+                        <option value="{{ $s->id }}" data-code="{{ $type->code }}">{{ $s->series }} (Siguiente: {{ $s->nextNumber() }})</option>
                         @endforeach
                     </optgroup>
                     @endif
@@ -687,6 +679,16 @@
 
 <style>
 /* CSS adicional premium para el POS */
+.pos-page-head{min-height:108px;margin-bottom:14px;padding:18px 20px;border:1px solid var(--s-border);border-radius:14px;background:#fff;box-shadow:var(--s-shadow-sm);display:flex;align-items:center;justify-content:space-between;gap:20px}.pos-page-crumb{font-size:9px;color:#94a3b8;margin-bottom:6px}.pos-page-head h2{font:800 20px 'Plus Jakarta Sans','Inter',sans-serif;color:#172033;letter-spacing:-.45px;margin:0 0 3px;display:flex;align-items:center;gap:10px}.pos-page-head h2 span{width:35px;height:35px;border-radius:10px;background:linear-gradient(135deg,#fb923c,#f4512c);display:grid;place-items:center;color:#fff;box-shadow:0 7px 16px rgba(249,115,22,.22)}.pos-page-head p{margin:0 0 0 45px;color:#8b98aa;font-size:10px}.pos-head-stats{display:flex;gap:8px}.pos-head-stats>div{min-width:86px;padding:10px 13px;border-radius:11px;background:#f8fafc;border:1px solid var(--s-border);text-align:center}.pos-head-stats b{display:block;font-size:16px;color:#172033;line-height:1.1}.pos-head-stats small{font-size:8px;color:#94a3b8}.pos-layout-grid>div:first-child{background:#fff;border:1px solid var(--s-border);border-radius:14px;padding:16px;box-shadow:var(--s-shadow-sm)}.pos-right-sticky>.s-card{border-radius:14px!important;box-shadow:var(--s-shadow-sm)!important}.pos-prod{border-width:1px;border-radius:12px}.pos-prod:hover{transform:translateY(-2px)}.pos-prod-info span{color:#f97316}.pos-type-btn.active{background:#f97316;box-shadow:0 7px 16px rgba(249,115,22,.2)}.pos-cat-tab.active{border-color:#f97316!important;background:#fff3ea!important;color:#ea580c!important}.pos-zone-tab.active{border-color:#f97316!important;background:#f97316!important}.pos-table-btn.active{border-color:#f97316;background:#fff3ea;color:#ea580c}.pos-layout-grid{gap:14px}.pos-right-sticky{gap:14px}
+@media(max-width:767px){.pos-page-head{align-items:flex-start;flex-direction:column}.pos-head-stats{width:100%;overflow-x:auto}.pos-head-stats>div{flex:1}.pos-page-head p{margin-left:0}}
+.pos-type-strip{-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
+@media(max-width:767px){
+    .pos-type-strip{flex-wrap:nowrap!important;overflow-x:auto;overflow-y:hidden;max-width:100%;padding-bottom:8px!important;overscroll-behavior-x:contain;scroll-snap-type:x proximity}
+    .pos-type-strip .pos-type-btn{flex:0 0 auto;min-width:max-content;white-space:nowrap;scroll-snap-align:start}
+    .pos-type-strip>div{flex:0 0 1px}
+    .pos-type-strip::-webkit-scrollbar{height:4px}
+    .pos-type-strip::-webkit-scrollbar-thumb{background:var(--s-border);border-radius:4px}
+}
 .pos-table-btn {
     display: flex;
     flex-direction: column;
@@ -825,7 +827,7 @@
 }
 .pos-prod-img {
     width: 100%; 
-    height: 95px; 
+    height: 118px;
     background: var(--s-surface-2); 
     display: flex; 
     align-items: center; 
@@ -844,11 +846,11 @@
     color: var(--s-text-3);
 }
 .pos-prod-info {
-    padding: 10px 12px;
+    padding: 12px 14px;
 }
 .pos-prod-info b {
     display: block; 
-    font-size: 12px; 
+    font-size: 13px;
     font-weight: 700; 
     color: var(--s-text); 
     white-space: nowrap; 
@@ -856,7 +858,7 @@
     text-overflow: ellipsis;
 }
 .pos-prod-info span {
-    font-size: 13px; 
+    font-size: 14px;
     font-weight: 800; 
     color: var(--s-accent-dark); 
     display: block; 
@@ -1082,6 +1084,24 @@
     background: var(--s-accent-light) !important;
     color: var(--s-accent-dark) !important;
 }
+/* Modo táctil: objetivos amplios y respuesta inmediata */
+@media (hover: none), (pointer: coarse) {
+    .pos-type-btn { min-height:50px; padding:12px 14px; font-size:13px; touch-action:manipulation; }
+    .pos-cat-tab { min-height:46px; padding:11px 18px; font-size:13px; touch-action:manipulation; }
+    .pos-zone-tab { min-height:44px; padding:9px 16px; touch-action:manipulation; }
+    .pos-table-btn { min-width:108px!important; min-height:74px; padding:10px 12px; touch-action:manipulation; }
+    .pos-prod { min-height:190px; touch-action:manipulation; user-select:none; -webkit-user-select:none; }
+    .pos-prod:hover { transform:none; box-shadow:var(--s-shadow-sm); }
+    .pos-prod:active { transform:scale(.97); border-color:var(--s-accent)!important; background:var(--s-accent-light); }
+    .pos-prod-img { height:128px; }
+    #product-search { min-height:52px; font-size:16px!important; }
+    #clear-search { width:44px; height:44px; right:5px!important; }
+    #order-items { overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
+    #btn-submit { min-height:54px; font-size:15px!important; touch-action:manipulation; }
+    #pos-page-buttons .s-btn { min-width:44px!important; min-height:44px!important; }
+    .p-var,.p-addon,.pay-method-card,.pending-payment-item { min-height:50px; touch-action:manipulation; }
+    button,select,input,textarea { touch-action:manipulation; }
+}
 .pos-zone-tab {
     flex-shrink: 0;
     padding: 6px 14px;
@@ -1148,13 +1168,14 @@ function initDeliveryAutocomplete() {
 @push('script')
 <script>
 var ALL_PRODUCTS = {!! $productsJson ?: '{}' !!};
-var cart = [], orderType = '{{ $store->isRestaurant() ? 'dine_in' : 'takeaway' }}', selTable = null, deliveryFee = 0, dLat = null, dLng = null;
+var cart = [], orderType = @json($orderType ?? ($store->isRestaurant() ? 'dine_in' : 'takeaway')), selTable = null, deliveryFee = 0, dLat = null, dLng = null;
 var activeOrderId = null, activeOrderItems = [];
 
 // Auto-seleccionar mesa por URL param
 (function(){
     var params = new URLSearchParams(window.location.search);
-    var tid = params.get('table');
+    var tid = @json($selectedTableId ?? null) || params.get('table');
+    setOrderType(orderType);
     if(tid){
         selTable = tid;
         setTimeout(function(){ selectTable(tid); }, 300);
@@ -1373,7 +1394,7 @@ function renderItems(){
     }
     
     if(!cart.length && !activeOrderItems.length){
-        html = '<div style="text-align:center;color:var(--s-text-3);padding:48px 12px;font-size:12px">' +
+        html = '<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--s-text-3);padding:48px 12px;font-size:12px">' +
             '<i class="las la-shopping-basket" style="font-size:32px;display:block;margin-bottom:8px;color:var(--s-border);"></i>' +
             'Selecciona productos de la lista' +
             '</div>';
@@ -1385,24 +1406,24 @@ function renderItems(){
             html += '<div class="order-item-row" style="padding: 8px 6px; border-bottom:1px dashed var(--s-border); display:block;' + (it.is_courtesy ? 'background:rgba(168,85,247,0.04);' : '') + '">' +
                 '<div style="display:flex; justify-content:space-between; align-items:center;">' +
                     '<div style="display:flex; align-items:center; gap:4px; flex-wrap:wrap; max-width:80%;">' +
-                        '<button type="button" onclick="updateQty(' + i + ', -1)" style="width:24px; height:24px; border-radius:50%; border:1.5px solid var(--s-border); background:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; color:var(--s-text-2); padding:0; cursor:pointer; min-width:24px; min-height:24px; transition:all 0.15s;" onmouseover="this.style.borderColor=\'var(--s-accent)\'" onmouseout="this.style.borderColor=\'var(--s-border)\'">-</button>' +
+                        '<button type="button" onclick="updateQty(' + i + ', -1)" style="width:38px; height:38px; border-radius:10px; border:1.5px solid var(--s-border); background:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:18px; font-weight:800; color:var(--s-text-2); padding:0; cursor:pointer; min-width:38px; min-height:38px; transition:all 0.15s; touch-action:manipulation;">−</button>' +
                         '<span style="font-size:12px; font-weight:800; color:var(--s-text); min-width:14px; text-align:center;">' + it.qty + '</span>' +
-                        '<button type="button" onclick="updateQty(' + i + ', 1)" style="width:24px; height:24px; border-radius:50%; border:1.5px solid var(--s-border); background:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; color:var(--s-text-2); padding:0; cursor:pointer; min-width:24px; min-height:24px; transition:all 0.15s; margin-right:4px;" onmouseover="this.style.borderColor=\'var(--s-accent)\'" onmouseout="this.style.borderColor=\'var(--s-border)\'">+</button>' +
+                        '<button type="button" onclick="updateQty(' + i + ', 1)" style="width:38px; height:38px; border-radius:10px; border:1.5px solid var(--s-border); background:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:18px; font-weight:800; color:var(--s-text-2); padding:0; cursor:pointer; min-width:38px; min-height:38px; transition:all 0.15s; margin-right:4px; touch-action:manipulation;">+</button>' +
                         '<span style="font-weight:600; color:var(--s-text);">' + it.name + '</span>' + courtesyBadge +
-                        '<button onclick="toggleCartItemTakeaway(' + i + ')" style="padding: 1px 4px; font-size:9px; border-radius:4px; font-weight:800; cursor:pointer; margin-left:6px; border:1px solid; transition:0.15s; ' + takeawayBtnClass + '" title="Alternar Para Llevar">' +
+                        '<button onclick="toggleCartItemTakeaway(' + i + ')" style="min-height:34px;padding:6px 9px;font-size:9px;border-radius:8px;font-weight:800;cursor:pointer;margin-left:6px;border:1px solid;transition:0.15s;touch-action:manipulation;' + takeawayBtnClass + '" title="Alternar Para Llevar">' +
                             '<i class="las la-shopping-bag"></i> Llevar' +
                         '</button>' +
-                        '<button onclick="toggleCartItemCourtesy(' + i + ')" style="padding: 1px 4px; font-size:9px; border-radius:4px; font-weight:800; cursor:pointer; margin-left:2px; border:1px solid; transition:0.15s; ' + (it.is_courtesy ? 'background:#a855f7; color:#fff; border-color:#a855f7;' : 'background:var(--s-surface-2); border-color:var(--s-border); color:var(--s-text-2);') + '" title="Alternar Cortesía">' +
+                        '<button onclick="toggleCartItemCourtesy(' + i + ')" style="min-height:34px;padding:6px 9px;font-size:9px;border-radius:8px;font-weight:800;cursor:pointer;margin-left:2px;border:1px solid;transition:0.15s;touch-action:manipulation;' + (it.is_courtesy ? 'background:#a855f7; color:#fff; border-color:#a855f7;' : 'background:var(--s-surface-2); border-color:var(--s-border); color:var(--s-text-2);') + '" title="Alternar Cortesía">' +
                             '<i class="las la-gift"></i> Cortesía' +
                         '</button>' +
-                        '<button onclick="toggleCartItemTupper(' + i + ')" style="padding: 1px 4px; font-size:9px; border-radius:4px; font-weight:800; cursor:pointer; margin-left:2px; border:1px solid; transition:0.15s; ' + (it.has_tupper ? 'background:#10b981; color:#fff; border-color:#10b981;' : 'background:var(--s-surface-2); border-color:var(--s-border); color:var(--s-text-2);') + '" title="Alternar Tupper">' +
+                        '<button onclick="toggleCartItemTupper(' + i + ')" style="min-height:34px;padding:6px 9px;font-size:9px;border-radius:8px;font-weight:800;cursor:pointer;margin-left:2px;border:1px solid;transition:0.15s;touch-action:manipulation;' + (it.has_tupper ? 'background:#10b981; color:#fff; border-color:#10b981;' : 'background:var(--s-surface-2); border-color:var(--s-border); color:var(--s-text-2);') + '" title="Alternar Tupper">' +
                             '<i class="las la-box"></i> Tupper' +
                         '</button>' +
                     '</div>' +
-                    '<div style="display:flex; align-items:center; gap:6px;"><span style="' + (it.is_courtesy ? 'color:#a855f7;font-weight:700;' : '') + '">' + (it.is_courtesy ? 'S/ 0.00' : 'S/ ' + itemPrice.toFixed(2)) + '</span><button onclick="removeItem(' + i + ')" style="background:none; border:none; color:var(--s-danger); padding:4px; font-size:14px; cursor:pointer;">✕</button></div>' +
+                    '<div style="display:flex;align-items:center;gap:6px;"><span style="' + (it.is_courtesy ? 'color:#a855f7;font-weight:700;' : '') + '">' + (it.is_courtesy ? 'S/ 0.00' : 'S/ ' + itemPrice.toFixed(2)) + '</span><button onclick="removeItem(' + i + ')" style="width:38px;height:38px;background:#fef2f2;border:1px solid #fecaca;border-radius:9px;color:var(--s-danger);padding:0;font-size:15px;cursor:pointer;touch-action:manipulation;">✕</button></div>' +
                 '</div>' +
                 '<div style="margin-top: 6px; display: flex; gap: 4px; align-items: center;">' +
-                    '<input type="text" placeholder="Especificaciones / Nota del plato..." value="' + (it.notes || '') + '" oninput="updateCartItemNote(' + i + ', this.value)" style="flex: 1; font-size: 10.5px; padding: 4px 8px; border: 1.5px solid var(--s-border); border-radius: 8px; background: var(--s-surface-2); color: var(--s-text); font-style: italic;">' +
+                    '<input type="text" placeholder="Especificaciones / Nota del plato..." value="' + (it.notes || '') + '" oninput="updateCartItemNote(' + i + ', this.value)" style="flex:1;min-height:40px;font-size:11px;padding:8px 10px;border:1.5px solid var(--s-border);border-radius:8px;background:var(--s-surface-2);color:var(--s-text);font-style:italic;">' +
                 '</div>' +
                 '</div>';
         });
@@ -1462,10 +1483,15 @@ function openModal(p){
     var vl = document.getElementById('pm-var-list'), vc = document.getElementById('pm-var-section');
     if(p.variations.length){
         vc.style.display = 'block';
-        p.variations.forEach(function(v){
+        p.variations.forEach(function(v, idx){
             var lbl = document.createElement('label');
-            lbl.className = 'p-var';
-            lbl.innerHTML = '<span>' + v.name + '</span><span style="color:var(--s-accent-dark);font-weight:750;margin-left:auto">+S/ ' + v.price.toFixed(2) + '</span>';
+            lbl.className = 'p-var' + (idx === 0 ? ' selected' : '');
+            var priceText = 'S/ ' + v.price.toFixed(2);
+            var diff = v.price - p.price;
+            if (Math.abs(diff) > 0.001) {
+                priceText += ' (' + (diff > 0 ? '+S/ ' : '-S/ ') + Math.abs(diff).toFixed(2) + ')';
+            }
+            lbl.innerHTML = '<span>' + v.name + '</span><span style="color:var(--s-accent-dark);font-weight:750;margin-left:auto">' + priceText + '</span>';
             lbl.addEventListener('click', function(e){
                 e.preventDefault();
                 vl.querySelectorAll('.p-var').forEach(function(x){ x.classList.remove('selected'); });
@@ -1474,7 +1500,11 @@ function openModal(p){
                 pmUpd();
             });
             vl.appendChild(lbl);
+            if (idx === 0) {
+                window._pmVar = {name: v.name, price: v.price};
+            }
         });
+        pmUpd();
     }else{
         vc.style.display = 'none';
         window._pmVar = null;
@@ -1505,8 +1535,8 @@ function openModal(p){
 }
 
 function pmUpd(){
-    var t = window._pm.price;
-    if(window._pmVar) t += window._pmVar.price;
+    var basePrice = (window._pmVar && window._pmVar.price > 0) ? window._pmVar.price : window._pm.price;
+    var t = basePrice;
     window._pmAddons.forEach(function(a){ t += a.price; });
     if (document.getElementById('pm-tupper') && document.getElementById('pm-tupper').checked) {
         t += 1.00;
@@ -1515,9 +1545,13 @@ function pmUpd(){
 }
 
 function pmConfirm(){
-    var p = window._pm, t = p.price, n = p.name;
+    var p = window._pm, n = p.name;
+    if(p.variations.length && !window._pmVar){
+        alert('Por favor selecciona una variación');
+        return;
+    }
+    var t = (window._pmVar && window._pmVar.price > 0) ? window._pmVar.price : p.price;
     if(window._pmVar){
-        t += window._pmVar.price;
         n += ' (' + window._pmVar.name + ')';
     }
     window._pmAddons.forEach(function(a){
@@ -1556,52 +1590,92 @@ function filterTables(area){
     });
 }
 
+var POS_PRODUCTS_PER_PAGE = 28;
+var posProductPage = 1;
+var posActiveCategory = 'all';
+var posProductQuery = '';
+
 function switchCategory(catId){
     var searchInput = document.getElementById('product-search');
     if (searchInput) searchInput.value = '';
-    filterProducts('');
+    posProductQuery = '';
+    posActiveCategory = String(catId);
+    posProductPage = 1;
+    var clearBtn = document.getElementById('clear-search');
+    if (clearBtn) clearBtn.style.display = 'none';
 
     document.querySelectorAll('.pos-cat-tab').forEach(function(btn){
         btn.classList.remove('active');
     });
     var activeTab = (catId === 'all') ? document.getElementById('cat-tab-all') : document.getElementById('cat-tab-' + catId);
     if(activeTab) activeTab.classList.add('active');
-
-    document.querySelectorAll('.category-section').forEach(function(section){
-        section.style.display = (catId === 'all' || section.id === 'cat-section-' + catId) ? '' : 'none';
-    });
+    renderPosProductPage();
 }
 
 function filterProducts(query){
     query = query.toLowerCase().trim();
+    posProductQuery = query;
+    posProductPage = 1;
     var clearBtn = document.getElementById('clear-search');
     clearBtn.style.display = query ? 'block' : 'none';
 
     if (query) {
+        posActiveCategory = 'all';
         document.querySelectorAll('.pos-cat-tab').forEach(function(btn){
             btn.classList.remove('active');
         });
         var activeTab = document.getElementById('cat-tab-all');
         if(activeTab) activeTab.classList.add('active');
     }
+    renderPosProductPage();
+}
 
-    document.querySelectorAll('.pos-prod').forEach(function(prod) {
+function getFilteredPosProducts(){
+    return Array.from(document.querySelectorAll('.pos-prod')).filter(function(prod) {
+        var categoryId = prod.dataset.category || '';
         var name = (prod.querySelector('b')?.textContent || '').toLowerCase();
         var price = (prod.querySelector('.pos-prod-info span')?.textContent || '').toLowerCase();
         var pid = prod.getAttribute('onclick')?.match(/\d+/)?.[0] || '';
         var p = ALL_PRODUCTS[pid];
         var barcode = p ? (p.barcode || '').toLowerCase() : '';
-        var match = !query || name.includes(query) || price.includes(query) || barcode.includes(query);
-        prod.style.display = match ? '' : 'none';
-    });
-
-    document.querySelectorAll('.category-section').forEach(function(section) {
-        if (!query) { section.style.display = ''; return; }
-        var visible = false;
-        section.querySelectorAll('.pos-prod').forEach(function(p) { if (p.style.display !== 'none') visible = true; });
-        section.style.display = visible ? '' : 'none';
+        var matchesQuery = !posProductQuery || name.includes(posProductQuery) || price.includes(posProductQuery) || barcode.includes(posProductQuery);
+        var matchesCategory = posActiveCategory === 'all' || categoryId === posActiveCategory;
+        return matchesQuery && matchesCategory;
     });
 }
+
+function renderPosProductPage(){
+    var matches = getFilteredPosProducts();
+    var totalPages = Math.max(1, Math.ceil(matches.length / POS_PRODUCTS_PER_PAGE));
+    if (posProductPage > totalPages) posProductPage = totalPages;
+    var start = (posProductPage - 1) * POS_PRODUCTS_PER_PAGE;
+    var visibleProducts = new Set(matches.slice(start, start + POS_PRODUCTS_PER_PAGE));
+    document.querySelectorAll('.pos-prod').forEach(function(prod){
+        prod.style.display = visibleProducts.has(prod) ? '' : 'none';
+    });
+    var summary = document.getElementById('pos-page-summary');
+    if (summary) summary.textContent = matches.length ? 'Mostrando ' + (start + 1) + '–' + Math.min(start + POS_PRODUCTS_PER_PAGE, matches.length) + ' de ' + matches.length + ' productos' : 'No se encontraron productos';
+    var buttons = document.getElementById('pos-page-buttons');
+    if (!buttons) return;
+    buttons.innerHTML = '';
+    function addPageButton(label, page, active, disabled){
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 's-btn s-btn-xs ' + (active ? 's-btn-primary' : 's-btn-outline');
+        button.style.cssText = 'min-width:31px;height:31px;justify-content:center;padding:0 8px;border-radius:8px';
+        button.innerHTML = label;
+        button.disabled = disabled;
+        button.onclick = function(){ posProductPage = page; renderPosProductPage(); document.getElementById('products-by-category')?.scrollIntoView({behavior:'smooth',block:'start'}); };
+        buttons.appendChild(button);
+    }
+    addPageButton('<i class="las la-angle-left"></i>', Math.max(1, posProductPage - 1), false, posProductPage === 1);
+    var first = Math.max(1, posProductPage - 2), last = Math.min(totalPages, first + 4);
+    first = Math.max(1, last - 4);
+    for (var page = first; page <= last; page++) addPageButton(String(page), page, page === posProductPage, false);
+    addPageButton('<i class="las la-angle-right"></i>', Math.min(totalPages, posProductPage + 1), false, posProductPage === totalPages);
+}
+
+document.addEventListener('DOMContentLoaded', renderPosProductPage);
 
 // Barcode scanner detection: rapid input + Enter
 (function(){
@@ -1959,7 +2033,33 @@ function openChargeModal(id, orderNo, total, customer, table){
     const detailedOption = document.querySelector('input[name="detail_mode"][value="detailed"]');
     if (detailedOption) detailedOption.checked = true;
     toggleChargeConsumptionDescription();
+    onChargeSeriesChange();
     document.getElementById('charge-modal').style.display = 'flex';
+}
+
+function onChargeSeriesChange() {
+    const seriesSelect = document.getElementById('charge-series');
+    if (!seriesSelect) return;
+    const selectedOption = seriesSelect.options[seriesSelect.selectedIndex];
+    const docCode = selectedOption ? (selectedOption.getAttribute('data-code') || '') : '';
+    const tipoDocSelect = document.getElementById('charge-tipo-doc');
+    const numDocInput = document.getElementById('charge-num-doc');
+    if (!tipoDocSelect || !numDocInput) return;
+
+    if (docCode === '01') {
+        tipoDocSelect.value = '6';
+        numDocInput.placeholder = 'N° RUC cliente (11 dígitos - obligatorio)';
+        numDocInput.required = true;
+    } else if (docCode === '03') {
+        tipoDocSelect.value = '1';
+        numDocInput.placeholder = 'N° DNI cliente (8 dígitos - opcional)';
+        numDocInput.required = false;
+    } else {
+        tipoDocSelect.value = '1';
+        numDocInput.placeholder = 'N° Documento cliente (opcional)';
+        numDocInput.required = false;
+    }
+    clearChargeDocResult();
 }
 
 function closeChargeModal(){

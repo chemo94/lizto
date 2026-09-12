@@ -300,9 +300,9 @@ class SellerPanelController extends GetxController {
     return null;
   }
 
-  Future<bool> payBillingOrder(int id, String method, {String? docType, String? docNum, String? name, String detailMode = 'detailed', String? consumptionDescription}) async {
+  Future<bool> payBillingOrder(int id, String method, {String? docType, String? docNum, String? name, String? address, String detailMode = 'detailed', String? consumptionDescription}) async {
     try {
-      ResponseModel r = await repo.payOrder(id, method, docType: docType, docNum: docNum, name: name, detailMode: detailMode, consumptionDescription: consumptionDescription);
+      ResponseModel r = await repo.payOrder(id, method, docType: docType, docNum: docNum, name: name, address: address, detailMode: detailMode, consumptionDescription: consumptionDescription);
       var json = r.responseJson;
       if (r.statusCode == 200 && (json['status'] == 'success' || json['status'] == true)) {
         return true;
@@ -316,9 +316,9 @@ class SellerPanelController extends GetxController {
     }
   }
 
-  Future<bool> generateInvoice(int id, int seriesId, String method, {String? docType, String? docNum, String? name, String detailMode = 'detailed', String? consumptionDescription}) async {
+  Future<bool> generateInvoice(int id, int seriesId, String method, {String? docType, String? docNum, String? name, String? address, String detailMode = 'detailed', String? consumptionDescription}) async {
     try {
-      ResponseModel r = await repo.generateInvoice(id, seriesId, method, docType: docType, docNum: docNum, name: name, detailMode: detailMode, consumptionDescription: consumptionDescription);
+      ResponseModel r = await repo.generateInvoice(id, seriesId, method, docType: docType, docNum: docNum, name: name, address: address, detailMode: detailMode, consumptionDescription: consumptionDescription);
       var json = r.responseJson;
       if (r.statusCode == 200 && (json['status'] == 'success' || json['status'] == true)) {
         return true;

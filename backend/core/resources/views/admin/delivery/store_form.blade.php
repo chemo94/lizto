@@ -17,7 +17,7 @@
 </script>
 <script src="https://maps.googleapis.com/maps/api/js?key={{ gs('google_maps_api') }}&libraries=places&callback=initMapAutocomplete" async defer></script>
 @endif
-<div class="row"><div class="col-lg-8"><div class="card">
+<div class="row"><div class="col-12"><div class="card">
 <div class="card-header"><h5>{{ $pageTitle }}</h5></div>
 <div class="card-body">
 <form method="POST" action="{{ route('admin.delivery.store.save', $store->id ?? null) }}" enctype="multipart/form-data" novalidate>

@@ -10,11 +10,9 @@ import 'package:liztogo/data/controller/delivery/delivery_controller.dart';
 import 'package:liztogo/data/controller/delivery/notification_inbox_controller.dart';
 import 'package:liztogo/data/controller/delivery/user_address_controller.dart';
 import 'package:liztogo/data/model/delivery/delivery_models.dart';
-import 'package:liztogo/data/model/global/response_model/response_model.dart';
 import 'package:liztogo/data/services/api_client.dart';
 import 'package:liztogo/presentation/components/image/my_network_image_widget.dart';
 import 'package:liztogo/presentation/components/shimmer_loaders.dart';
-import 'package:liztogo/presentation/screens/delivery/favor_home_screen.dart';
 import 'package:liztogo/presentation/screens/delivery/notification_inbox_screen.dart';
 import 'package:liztogo/presentation/screens/delivery/service_home_screen.dart';
 import 'package:liztogo/presentation/screens/delivery/store_screen.dart';
@@ -30,6 +28,8 @@ import 'package:liztogo/presentation/screens/delivery/all_stores_screen.dart';
 import 'package:liztogo/presentation/screens/delivery/stories_viewer_screen.dart';
 import 'package:liztogo/data/controller/home/home_controller.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+
+import '../../../data/model/global/response_model/response_model.dart';
 
 // ─── Category accent colors (Rappi-style pastels) ───
 const List<Color> _catColors = [
@@ -226,18 +226,19 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen> {
 
   Widget _buildWelcomeHeader(DeliveryController c) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        height: 56,
+        height: 58,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: const Color(0xFFF7F8F7),
           borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: const Color(0xFFE9EDEA)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
+              color: Colors.black.withValues(alpha: 0.025),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -261,7 +262,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen> {
                 },
                 onSubmitted: (v) => c.loadNearbyStores(query: v.trim()),
                 decoration: InputDecoration(
-                  hintText: 'Buscar en Lizto...',
+                  hintText: '¿Qué necesitas hoy?',
                   hintStyle: TextStyle(
                     color: Colors.grey.shade400,
                     fontSize: 15,
@@ -313,7 +314,7 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen> {
   @override
   Widget build(BuildContext context) => GetBuilder<DeliveryController>(
         builder: (c) => Scaffold(
-          backgroundColor: const Color(0xFFFFFBF7),
+          backgroundColor: const Color(0xFFFFFFFF),
           bottomNavigationBar: c.hasItemsInCart ? FloatingCartBar(controller: c) : null,
           body: Column(
             children: [
@@ -332,15 +333,14 @@ class _DeliveryHomeScreenState extends State<DeliveryHomeScreen> {
                       SliverToBoxAdapter(
                         child: _buildWelcomeHeader(c),
                       ),
-                      SliverToBoxAdapter(
-                        child: _StoriesBar(controller: c),
-                      ),
                       if (c.isLoading && c.generalCategories.isEmpty)
                         const SliverToBoxAdapter(child: ShimmerGridLoader(itemCount: 6))
                       else ...[
-                        _PromoSlider(controller: c),
                         _CategoriesRow(controller: c),
+                        _PromoSlider(controller: c),
+                        SliverToBoxAdapter(child: _HomeStoriesSection(controller: c)),
                         ..._buildPremiumSections(c),
+                        SliverToBoxAdapter(child: _FavoriteStoresRow(controller: c)),
                         _NearbyStores(controller: c),
                         SliverToBoxAdapter(child: SizedBox(height: widget.dashBoardScaffoldKey == null ? (c.hasItemsInCart ? 120 : 24) : (c.hasItemsInCart ? 160 : 100))),
                       ],
@@ -408,7 +408,7 @@ class _HeaderBar extends StatelessWidget {
     final top = MediaQuery.of(ctx).padding.top;
     final ctrl = controller;
     return Container(
-      padding: EdgeInsets.fromLTRB(16, top + 12, 16, 8),
+      padding: EdgeInsets.fromLTRB(20, top + 10, 16, 6),
       color: Colors.transparent,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -434,34 +434,23 @@ class _HeaderBar extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.location_on_rounded,
-                    size: 24,
-                    color: MyColor.primaryColor,
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: const BoxDecoration(color: Color(0xFFE8F7E8), shape: BoxShape.circle),
+                    child: const Icon(Icons.location_on_rounded, size: 20, color: MyColor.primaryColor),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 9),
                   Expanded(
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Flexible(
-                          child: Text(
-                            ctrl.currentDeliveryAddress.isEmpty ? 'Seleccionar dirección...' : ctrl.currentDeliveryAddress,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: boldDefault.copyWith(
-                              color: MyColor.primaryTextColor,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          size: 20,
-                          color: MyColor.primaryTextColor,
-                        ),
+                        Text('ENTREGAR EN', style: boldDefault.copyWith(fontSize: 10, letterSpacing: .7, color: MyColor.bodyMutedTextColor)),
+                        Row(children: [
+                          Flexible(child: Text(ctrl.currentDeliveryAddress.isEmpty ? 'Selecciona tu dirección' : ctrl.currentDeliveryAddress, maxLines: 1, overflow: TextOverflow.ellipsis, style: boldDefault.copyWith(color: MyColor.primaryTextColor, fontSize: 16, fontWeight: FontWeight.w700))),
+                          const Icon(Icons.keyboard_arrow_down_rounded, size: 19, color: MyColor.primaryTextColor),
+                        ]),
                       ],
                     ),
                   ),
@@ -478,10 +467,11 @@ class _HeaderBar extends StatelessWidget {
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    const Icon(
-                      Icons.notifications_none_rounded,
-                      color: Colors.black,
-                      size: 28,
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: const BoxDecoration(color: Color(0xFFF5F6F5), shape: BoxShape.circle),
+                      child: const Icon(Icons.notifications_none_rounded, color: MyColor.primaryTextColor, size: 24),
                     ),
                     if (n > 0)
                       Positioned(
@@ -532,7 +522,7 @@ class _PromoSliderState extends State<_PromoSlider> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(viewportFraction: 0.9);
+    _pageController = PageController(viewportFraction: 0.92);
     _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
       if (_pageController.hasClients) {
         final homeCtrl = Get.find<HomeController>();
@@ -561,17 +551,18 @@ class _PromoSliderState extends State<_PromoSlider> {
     final dynamicBanners = homeController.deliveryBannersList;
     final bannerImagePath = homeController.bannerImagePath;
     final count = dynamicBanners.length;
-    // La promoción se administra desde backend; nunca inventamos campañas
-    // locales cuando no existan publicaciones para este cliente.
+
+    // La promoción es contenido administrado. Si no hay publicaciones en API,
+    // no se muestran campañas locales ficticias.
     if (count == 0) return const SliverToBoxAdapter(child: SizedBox.shrink());
 
     return SliverToBoxAdapter(
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 12, bottom: 12),
+            padding: const EdgeInsets.only(top: 18, bottom: 12),
             child: SizedBox(
-              height: 140,
+              height: 210,
               child: PageView.builder(
                 controller: _pageController,
                 onPageChanged: (index) {
@@ -612,7 +603,7 @@ class _PromoSliderState extends State<_PromoSlider> {
                             child: MyImageWidget(
                               imageUrl: imageUrl,
                               width: double.infinity,
-                              height: 140,
+                              height: 210,
                               radius: 24,
                               boxFit: BoxFit.cover,
                             ),
@@ -675,7 +666,7 @@ class _PromoSliderState extends State<_PromoSlider> {
                                       case _BannerAction.promos:
                                         Get.to(() => const AllCategoriesScreen());
                                       case _BannerAction.favor:
-                                        Get.to(() => const FavorHomeScreen());
+                                        Get.offAllNamed('/dashboard_screen', arguments: 1);
                                       case _BannerAction.stores:
                                         Get.to(() => const AllStoresScreen());
                                       case _BannerAction.courier:
@@ -725,11 +716,11 @@ class _PromoSliderState extends State<_PromoSlider> {
               return AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 margin: const EdgeInsets.symmetric(horizontal: 3),
-                height: 3,
-                width: active ? 32 : 18,
+                height: 9,
+                width: 9,
                 decoration: BoxDecoration(
-                  color: active ? Colors.black : Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(1.5),
+                  color: active ? Colors.black : const Color(0xFFAEB7C3),
+                  shape: BoxShape.circle,
                 ),
               );
             }),
@@ -759,72 +750,121 @@ class _CategoriesRow extends StatelessWidget {
   Widget build(BuildContext ctx) {
     final cats = controller.generalCategories;
     if (cats.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+    final visibleCats = cats.take(7).toList();
+    final featured = visibleCats.take(2).toList();
+    final shortcuts = visibleCats.skip(2).toList();
     return SliverToBoxAdapter(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Padding(
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-            child: Row(children: [
-              Expanded(child: Text('Categorías', style: boldExtraLarge.copyWith(fontSize: 20))),
-              GestureDetector(onTap: () => Get.to(() => const AllCategoriesScreen()), child: Text('Ver todo', style: semiBoldSmall.copyWith(color: MyColor.primaryColor, fontWeight: FontWeight.w600))),
-            ])).animatedEntrance(),
-        const SizedBox(height: 16),
-        SizedBox(
-            height: 115,
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+          child: Row(children: [
+            Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Explora cerca de ti', style: boldExtraLarge.copyWith(fontSize: 21)),
+              const SizedBox(height: 2),
+              Text('Todo lo que necesitas, en un solo lugar', style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor)),
+            ])),
+            GestureDetector(
+              onTap: () => Get.to(() => const AllCategoriesScreen()),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(color: const Color(0xFFE8F7E8), borderRadius: BorderRadius.circular(18)),
+                child: Text('Ver todo', style: boldDefault.copyWith(color: MyColor.primaryColor, fontSize: 12)),
+              ),
+            ),
+          ]),
+        ).animatedEntrance(),
+        const SizedBox(height: 14),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: List.generate(featured.length, (i) => Expanded(child: Padding(padding: EdgeInsets.only(right: i == 0 && featured.length > 1 ? 12 : 0), child: _MarketplaceCategoryTile(controller: controller, category: featured[i], index: i).animatedStagger(index: i)))),
+          ),
+        ),
+        if (shortcuts.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 100,
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
-              itemCount: cats.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 14),
-              itemBuilder: (_, i) {
-                final cat = cats[i];
-                final isFavor = cat.isFavorCategory;
-                return GestureDetector(
-                  onTap: () {
-                    if (isFavor) {
-                      Get.to(() => const FavorHomeScreen());
-                    } else {
-                      Get.to(() => ServiceHomeScreen(categoryId: cat.id ?? 0, categoryName: cat.name ?? '', categoryImageUrl: '${controller.categoryImagePath}/${cat.image}'));
-                    }
-                  },
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 72,
-                        height: 72,
-                        decoration: BoxDecoration(
-                          color: MyColor.primaryColor,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
-                        ),
-                        padding: const EdgeInsets.all(12),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: MyImageWidget(
-                            imageUrl: '${controller.categoryImagePath}/${cat.image}',
-                            boxFit: BoxFit.contain,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        cat.name?.tr ?? '',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: boldDefault.copyWith(
-                          fontSize: 12,
-                          color: MyColor.primaryTextColor.withValues(alpha: 0.9),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ).animatedStagger(index: i);
-              },
-            )),
+              itemCount: shortcuts.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 11),
+              itemBuilder: (_, i) => _MarketplaceCategoryTile(controller: controller, category: shortcuts[i], index: i + 2, compact: true).animatedStagger(index: i + 2),
+            ),
+          ),
+        ],
       ]),
     );
+  }
+}
+
+class _MarketplaceCategoryTile extends StatelessWidget {
+  final DeliveryController controller;
+  final dynamic category;
+  final int index;
+  final bool compact;
+  const _MarketplaceCategoryTile({required this.controller, required this.category, required this.index, this.compact = false});
+
+  static const _backgrounds = [Color(0xFFFFF1E8), Color(0xFFE9F8E5), Color(0xFFEAF2FF), Color(0xFFFFF6D9), Color(0xFFF3ECFF), Color(0xFFE5F8F7)];
+
+  @override
+  Widget build(BuildContext context) {
+    final isFavor = category.isFavorCategory == true;
+    return GestureDetector(
+      onTap: () => isFavor ? Get.offAllNamed('/dashboard_screen', arguments: 1) : Get.to(() => ServiceHomeScreen(categoryId: category.id ?? 0, categoryName: category.name ?? '', categoryImageUrl: '${controller.categoryImagePath}/${category.image}')),
+      child: Container(
+        width: compact ? 94 : null,
+        height: compact ? 100 : 152,
+        padding: compact ? const EdgeInsets.fromLTRB(10, 8, 10, 7) : const EdgeInsets.fromLTRB(14, 13, 9, 11),
+        decoration: BoxDecoration(color: _backgrounds[index % _backgrounds.length], borderRadius: BorderRadius.circular(22)),
+        child: compact
+            ? Column(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                SizedBox(width: 47, height: 47, child: MyImageWidget(imageUrl: '${controller.categoryImagePath}/${category.image}', boxFit: BoxFit.contain)),
+                Text(category.name?.toString() ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: boldDefault.copyWith(fontSize: 11, color: MyColor.primaryTextColor)),
+              ])
+            : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(child: Align(alignment: Alignment.topRight, child: SizedBox(width: 76, height: 76, child: MyImageWidget(imageUrl: '${controller.categoryImagePath}/${category.image}', boxFit: BoxFit.contain)))),
+                Text(category.name?.toString() ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: boldLarge.copyWith(fontSize: 18, color: MyColor.primaryTextColor)),
+                const SizedBox(height: 2),
+                Text(index == 0 ? 'Pide ahora' : 'Ver tiendas', style: regularSmall.copyWith(fontSize: 11, color: MyColor.bodyMutedTextColor)),
+              ]),
+      ),
+    );
+  }
+}
+
+class _MarketplaceValueStrip extends StatelessWidget {
+  const _MarketplaceValueStrip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF123D2A),
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Row(children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: const BoxDecoration(color: Color(0xFFB9F547), shape: BoxShape.circle),
+            child: const Icon(Icons.bolt_rounded, color: Color(0xFF123D2A), size: 24),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Tu barrio, a un toque', style: boldDefault.copyWith(color: Colors.white, fontSize: 15)),
+            const SizedBox(height: 2),
+            Text('Comida, súper, farmacia y mucho más.', style: regularSmall.copyWith(color: Colors.white.withValues(alpha: .74), fontSize: 12)),
+          ])),
+        ]),
+      ),
+    ).animatedEntrance(delay: const Duration(milliseconds: 100));
   }
 }
 
@@ -842,13 +882,21 @@ class _PremiumRow extends StatelessWidget {
   @override
   Widget build(BuildContext ctx) {
     final isProduct = type == 'product';
-    return Padding(
-        padding: const EdgeInsets.only(top: 28),
+    return Container(
+        margin: const EdgeInsets.only(top: 34),
+        padding: EdgeInsets.only(top: isProduct ? 22 : 0, bottom: isProduct ? 20 : 0),
+        color: isProduct ? const Color(0xFFEAF8E8) : Colors.transparent,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                Container(width: 4, height: 28, margin: const EdgeInsets.only(right: 10), decoration: BoxDecoration(color: MyColor.primaryColor, borderRadius: BorderRadius.circular(4))),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  margin: const EdgeInsets.only(right: 9),
+                  decoration: BoxDecoration(color: isProduct ? const Color(0xFF1D6B38) : const Color(0xFFFFF1E8), shape: BoxShape.circle),
+                  child: Icon(isProduct ? Icons.bolt_rounded : Icons.storefront_outlined, size: 18, color: isProduct ? Colors.white : MyColor.primaryColor),
+                ),
                 Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(title, style: boldLarge.copyWith(fontSize: 18)),
@@ -856,12 +904,12 @@ class _PremiumRow extends StatelessWidget {
                 ])),
                 GestureDetector(
                   onTap: () => Get.to(() => PremiumSectionDetailScreen(keyName: keyName, title: title, subtitle: subtitle, type: type, dataList: items, accentColor: _accent)),
-                  child: Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6), decoration: BoxDecoration(color: MyColor.primaryColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)), child: Text('Ver más', style: boldDefault.copyWith(color: MyColor.primaryColor, fontSize: 12))),
+                  child: Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9), decoration: BoxDecoration(color: isProduct ? Colors.white : const Color(0xFFF1F3F2), borderRadius: BorderRadius.circular(22)), child: Text('Ver más', style: boldDefault.copyWith(color: MyColor.primaryTextColor, fontSize: 13))),
                 ),
               ])).animatedEntrance(),
           const SizedBox(height: 14),
           SizedBox(
-              height: isProduct ? 245 : 225,
+              height: isProduct ? 256 : 230,
               child: ListView.separated(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 scrollDirection: Axis.horizontal,
@@ -892,14 +940,13 @@ class _PremiumRow extends StatelessWidget {
                         }
                       },
                       child: Container(
-                        width: 180,
+                        width: 168,
                         decoration: BoxDecoration(
                           color: MyColor.colorWhite,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 6))],
+                          borderRadius: BorderRadius.circular(18),
                         ),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(18),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
@@ -907,8 +954,8 @@ class _PremiumRow extends StatelessWidget {
                               Stack(
                                 children: [
                                   ClipRRect(
-                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                                    child: MyImageWidget(imageUrl: '${controller.productImagePath}/${prod.image}', height: 130, width: double.infinity, boxFit: BoxFit.cover),
+                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                                    child: MyImageWidget(imageUrl: '${controller.productImagePath}/${prod.image}', height: 126, width: double.infinity, boxFit: BoxFit.cover),
                                   ),
                                   // Heart favorite button floating top-right
                                   Positioned(
@@ -1013,13 +1060,9 @@ class _PremiumRow extends StatelessWidget {
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
                                         const Spacer(),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                          decoration: BoxDecoration(color: const Color(0xFF0F172B), borderRadius: BorderRadius.circular(12)),
-                                          child: Text(
-                                            'S/ ${(hasDisc ? prod.discountPrice! : (prod.price ?? 0)).toStringAsFixed(2)}',
-                                            style: boldDefault.copyWith(color: Colors.white, fontSize: 11),
-                                          ),
+                                        Text(
+                                          'S/ ${(hasDisc ? prod.discountPrice! : (prod.price ?? 0)).toStringAsFixed(2)}',
+                                          style: boldLarge.copyWith(color: MyColor.primaryTextColor, fontSize: 15),
                                         ),
                                       ],
                                     ),
@@ -1042,23 +1085,32 @@ class _PremiumRow extends StatelessWidget {
                     return GestureDetector(
                       onTap: () => Get.to(() => StoreScreen(storeId: store.id ?? 0)),
                       child: Container(
-                        width: MediaQuery.of(ctx).size.width * 0.65,
-                        decoration: BoxDecoration(
-                          color: MyColor.colorWhite,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 6))],
-                        ),
+                        width: MediaQuery.of(ctx).size.width * 0.64,
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(18),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Stack(
                                 children: [
                                   ClipRRect(
-                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                                    child: MyImageWidget(imageUrl: store.coverImage != null ? '${controller.storeCoverPath}/${store.coverImage}' : '${controller.storeImagePath}/${store.image}', height: 110, width: double.infinity, boxFit: BoxFit.cover),
+                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                                    child: ColorFiltered(
+                                      colorFilter: store.isOpenNow ? const ColorFilter.mode(Colors.transparent, BlendMode.srcOver) : const ColorFilter.matrix(<double>[0.2126, 0.7152, 0.0722, 0, 0, 0.2126, 0.7152, 0.0722, 0, 0, 0.2126, 0.7152, 0.0722, 0, 0, 0, 0, 0, 1, 0]),
+                                      child: MyImageWidget(imageUrl: store.coverImage != null ? '${controller.storeCoverPath}/${store.coverImage}' : '${controller.storeImagePath}/${store.image}', height: 142, width: double.infinity, boxFit: BoxFit.cover),
+                                    ),
                                   ),
+                                  if (!store.isOpenNow) const Positioned.fill(child: ColoredBox(color: Color(0x66000000))),
+                                  if (!store.isOpenNow)
+                                    Positioned(
+                                      top: 8,
+                                      left: 8,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(color: const Color(0xFF4B5563), borderRadius: BorderRadius.circular(10)),
+                                        child: Text('Cerrado', style: boldDefault.copyWith(color: Colors.white, fontSize: 10)),
+                                      ),
+                                    ),
                                   // Heart favorite button floating top-right
                                   Positioned(
                                     top: 8,
@@ -1106,40 +1158,23 @@ class _PremiumRow extends StatelessWidget {
                                 ],
                               ),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                padding: const EdgeInsets.fromLTRB(2, 10, 2, 2),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(store.name ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: boldDefault.copyWith(fontSize: 14, color: MyColor.primaryTextColor)),
-                                    const SizedBox(height: 2),
+                                    Text(store.name ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: boldLarge.copyWith(fontSize: 17, color: MyColor.primaryTextColor)),
+                                    const SizedBox(height: 4),
                                     Row(
                                       children: [
-                                        Expanded(child: Text(store.address ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor, fontSize: 11))),
+                                        Icon(Icons.bolt_rounded, size: 16, color: MyColor.primaryColor),
+                                        const SizedBox(width: 2),
+                                        Text('${(store.id ?? 5) % 15 + 15} min', style: regularSmall.copyWith(color: MyColor.bodyTextColor, fontSize: 12)),
+                                        const SizedBox(width: 10),
+                                        Text(store.deliveryFee == 0 ? 'Envío gratis' : 'S/ ${(store.deliveryFee ?? 0).toStringAsFixed(0)}', style: regularSmall.copyWith(color: MyColor.bodyTextColor, fontSize: 12)),
+                                        const Spacer(),
                                         Icon(Icons.star_rounded, size: 12, color: Colors.amber.shade700),
                                         const SizedBox(width: 2),
                                         Text(store.rating?.toStringAsFixed(1) ?? '0', style: boldDefault.copyWith(fontSize: 11, color: MyColor.primaryTextColor)),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            store.deliveryFee == 0 ? 'Envío gratis' : 'Envío S/ ${(store.deliveryFee ?? 0).toStringAsFixed(0)}',
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: regularSmall.copyWith(color: MyColor.greenSuccessColor, fontSize: 11),
-                                          ),
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                          decoration: BoxDecoration(color: const Color(0xFF0F172B), borderRadius: BorderRadius.circular(12)),
-                                          child: Text(
-                                            'Pedir',
-                                            style: boldDefault.copyWith(color: Colors.white, fontSize: 11),
-                                          ),
-                                        ),
                                       ],
                                     ),
                                   ],
@@ -1157,6 +1192,105 @@ class _PremiumRow extends StatelessWidget {
   }
 }
 
+class _HomeStoriesSection extends StatelessWidget {
+  final DeliveryController controller;
+  const _HomeStoriesSection({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    if (controller.stories.isEmpty && !controller.isLoadingStories) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 30),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(children: [
+            const Icon(Icons.auto_awesome_rounded, color: Color(0xFFFFA000), size: 22),
+            const SizedBox(width: 8),
+            Text('Novedades de tiendas', style: boldExtraLarge.copyWith(fontSize: 20)),
+          ]),
+        ),
+        const SizedBox(height: 10),
+        _StoriesBar(controller: controller),
+      ]),
+    );
+  }
+}
+
+class _FavoriteStoresRow extends StatelessWidget {
+  final DeliveryController controller;
+  const _FavoriteStoresRow({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final stores = controller.favoriteStores;
+    if (stores.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 34),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(children: [
+            const Icon(Icons.favorite_rounded, color: Color(0xFFFF4F5E), size: 22),
+            const SizedBox(width: 8),
+            Expanded(child: Text('Tus tiendas favoritas', style: boldExtraLarge.copyWith(fontSize: 20))),
+            GestureDetector(
+              onTap: () => Get.to(() => const AllStoresScreen()),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 9),
+                decoration: BoxDecoration(color: const Color(0xFFF1F3F2), borderRadius: BorderRadius.circular(22)),
+                child: Text('Ver más', style: boldDefault.copyWith(fontSize: 13, color: MyColor.primaryTextColor)),
+              ),
+            ),
+          ]),
+        ),
+        const SizedBox(height: 15),
+        SizedBox(
+          height: 210,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            itemCount: stores.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 14),
+            itemBuilder: (_, i) {
+              final store = stores[i];
+              return GestureDetector(
+                onTap: () => Get.to(() => StoreScreen(storeId: store.id ?? 0)),
+                child: SizedBox(
+                  width: 205,
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(18),
+                      child: MyImageWidget(
+                        imageUrl: store.coverImage != null ? '${controller.storeCoverPath}/${store.coverImage}' : '${controller.storeImagePath}/${store.image}',
+                        width: double.infinity,
+                        height: 132,
+                        boxFit: BoxFit.cover,
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    Text(store.name ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: boldLarge.copyWith(fontSize: 16)),
+                    const SizedBox(height: 4),
+                    Row(children: [
+                      Icon(Icons.bolt_rounded, size: 16, color: MyColor.primaryColor),
+                      Text('${(store.id ?? 5) % 15 + 15} min', style: regularSmall.copyWith(fontSize: 12, color: MyColor.bodyTextColor)),
+                      const SizedBox(width: 8),
+                      Icon(Icons.star_rounded, size: 15, color: Colors.amber.shade700),
+                      const SizedBox(width: 2),
+                      Text(store.rating?.toStringAsFixed(1) ?? '0', style: boldDefault.copyWith(fontSize: 12)),
+                    ]),
+                  ]),
+                ),
+              );
+            },
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
 // ═══════════════════ NEARBY STORES ═══════════════════════════════════════════
 
 class _NearbyStores extends StatelessWidget {
@@ -1169,36 +1303,38 @@ class _NearbyStores extends StatelessWidget {
     if (stores.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.only(top: 28),
+        padding: const EdgeInsets.only(top: 34),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(children: [
-                Container(width: 4, height: 28, margin: const EdgeInsets.only(right: 10), decoration: BoxDecoration(color: MyColor.primaryColor, borderRadius: BorderRadius.circular(4))),
-                Expanded(child: Text('Cerca de ti', style: boldExtraLarge.copyWith(fontSize: 20))),
+                Container(width: 32, height: 32, margin: const EdgeInsets.only(right: 9), decoration: const BoxDecoration(color: Color(0xFFEAF2FF), shape: BoxShape.circle), child: const Icon(Icons.near_me_outlined, size: 18, color: MyColor.primaryColor)),
+                Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Tiendas cerca de ti', style: boldExtraLarge.copyWith(fontSize: 20)),
+                  const SizedBox(height: 2),
+                  Text('Descubre negocios de tu zona', style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor)),
+                ])),
+                GestureDetector(
+                  onTap: () => Get.to(() => const AllStoresScreen()),
+                  child: Container(width: 38, height: 38, decoration: const BoxDecoration(color: Color(0xFFF1F3F2), shape: BoxShape.circle), child: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: MyColor.primaryTextColor)),
+                ),
               ])).animatedEntrance(),
           const SizedBox(height: 14),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
+          Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
+            child: Column(
               children: List.generate(stores.length, (i) {
                 final s = stores[i];
                 final isFavorite = controller.isStoreFavorite(s.id ?? 0);
                 return Padding(
-                  padding: const EdgeInsets.only(right: 14),
+                  padding: const EdgeInsets.only(bottom: 24),
                   child: GestureDetector(
                     onTap: () => Get.to(() => StoreScreen(storeId: s.id ?? 0)),
                     child: Container(
-                      width: MediaQuery.of(ctx).size.width * 0.65,
-                      decoration: BoxDecoration(
-                        color: MyColor.colorWhite,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 6))],
-                      ),
+                      width: double.infinity,
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: BorderRadius.circular(18),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
@@ -1206,9 +1342,23 @@ class _NearbyStores extends StatelessWidget {
                             Stack(
                               children: [
                                 ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                                  child: MyImageWidget(imageUrl: s.coverImage != null ? '${controller.storeCoverPath}/${s.coverImage}' : '${controller.storeImagePath}/${s.image}', height: 110, width: double.infinity, boxFit: BoxFit.cover),
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                                  child: ColorFiltered(
+                                    colorFilter: s.isOpenNow ? const ColorFilter.mode(Colors.transparent, BlendMode.srcOver) : const ColorFilter.matrix(<double>[0.2126, 0.7152, 0.0722, 0, 0, 0.2126, 0.7152, 0.0722, 0, 0, 0.2126, 0.7152, 0.0722, 0, 0, 0, 0, 0, 1, 0]),
+                                    child: MyImageWidget(imageUrl: s.coverImage != null ? '${controller.storeCoverPath}/${s.coverImage}' : '${controller.storeImagePath}/${s.image}', height: 205, width: double.infinity, boxFit: BoxFit.cover),
+                                  ),
                                 ),
+                                if (!s.isOpenNow) const Positioned.fill(child: ColoredBox(color: Color(0x66000000))),
+                                if (!s.isOpenNow)
+                                  Positioned(
+                                    top: 8,
+                                    left: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(color: const Color(0xFF4B5563), borderRadius: BorderRadius.circular(10)),
+                                      child: Text('Cerrado', style: boldDefault.copyWith(color: Colors.white, fontSize: 10)),
+                                    ),
+                                  ),
                                 // Heart favorite button floating top-right
                                 Positioned(
                                   top: 8,
@@ -1256,41 +1406,24 @@ class _NearbyStores extends StatelessWidget {
                               ],
                             ),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              padding: const EdgeInsets.fromLTRB(2, 12, 2, 3),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(s.name ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: boldDefault.copyWith(fontSize: 14, color: MyColor.primaryTextColor)),
-                                  const SizedBox(height: 2),
+                                  Text(s.name ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: boldExtraLarge.copyWith(fontSize: 20, color: MyColor.primaryTextColor)),
+                                  const SizedBox(height: 4),
                                   Row(
                                     children: [
-                                      Expanded(child: Text(s.address ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor, fontSize: 11))),
+                                      Icon(Icons.bolt_rounded, size: 16, color: MyColor.primaryColor),
+                                      const SizedBox(width: 2),
+                                      Text('${(s.id ?? 5) % 15 + 15} min', style: regularSmall.copyWith(color: MyColor.bodyTextColor, fontSize: 12)),
+                                      const SizedBox(width: 10),
+                                      Text(s.deliveryFee == 0 ? 'Envío gratis' : 'S/ ${(s.deliveryFee ?? 0).toStringAsFixed(0)}', style: regularSmall.copyWith(color: MyColor.bodyTextColor, fontSize: 12)),
+                                      const Spacer(),
                                       Icon(Icons.star_rounded, size: 12, color: Colors.amber.shade700),
                                       const SizedBox(width: 2),
                                       Text(s.rating?.toStringAsFixed(1) ?? '0', style: boldDefault.copyWith(fontSize: 11, color: MyColor.primaryTextColor)),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          s.deliveryFee == 0 ? 'Envío gratis' : 'Envío S/ ${(s.deliveryFee ?? 0).toStringAsFixed(0)}',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: regularSmall.copyWith(color: MyColor.greenSuccessColor, fontSize: 11),
-                                        ),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                        decoration: BoxDecoration(color: const Color(0xFF0F172B), borderRadius: BorderRadius.circular(12)),
-                                        child: Text(
-                                          'Pedir',
-                                          style: boldDefault.copyWith(color: Colors.white, fontSize: 11),
-                                        ),
-                                      ),
                                     ],
                                   ),
                                 ],
@@ -1452,16 +1585,15 @@ class _StoriesBar extends StatelessWidget {
         itemCount: controller.stories.length,
         itemBuilder: (context, index) {
           final store = controller.stories[index];
-          final storeId = store['store_id'] as int;
+          final storeId = store['store_id'] is int ? store['store_id'] as int : int.tryParse(store['store_id']?.toString() ?? '');
           final storeName = store['store_name']?.toString() ?? '';
           final storeImg = store['store_image']?.toString() ?? '';
           final unseenCount = store['unseen_count'] as int? ?? 0;
           final previewImage = store['preview_image']?.toString() ?? '';
 
-          final mediaUrl = previewImage.isNotEmpty
-              ? '${controller.storyBasePath}$previewImage'
-              : '${UrlContainer.domainUrl}/assets/images/store/$storeImg';
+          final mediaUrl = previewImage.isNotEmpty ? '${controller.storyBasePath}$previewImage' : '${UrlContainer.domainUrl}/assets/images/store/$storeImg';
 
+          if (storeId == null) return const SizedBox.shrink();
           return GestureDetector(
             onTap: () async {
               ResponseModel r = await controller.deliveryRepo.apiClient.request(
@@ -1497,9 +1629,7 @@ class _StoriesBar extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
-                        colors: unseenCount > 0
-                            ? [const Color(0xFFFF4B2B), const Color(0xFFFF416C)]
-                            : [Colors.grey.shade300, Colors.grey.shade400],
+                        colors: unseenCount > 0 ? [const Color(0xFFFF4B2B), const Color(0xFFFF416C)] : [Colors.grey.shade300, Colors.grey.shade400],
                       ),
                     ),
                     child: Container(

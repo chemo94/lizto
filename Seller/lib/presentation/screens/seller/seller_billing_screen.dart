@@ -458,6 +458,7 @@ class _SellerBillingScreenState extends State<SellerBillingScreen> with SingleTi
     String detailMode = 'detailed';
     final docNumCtrl = TextEditingController();
     final nameCtrl = TextEditingController(text: order.customerName);
+    final addressCtrl = TextEditingController();
     final consumptionDescriptionCtrl = TextEditingController(text: 'Consumo');
 
     final invoiceTypes = c.billingData?.invoiceTypes ?? [];
@@ -476,6 +477,7 @@ class _SellerBillingScreenState extends State<SellerBillingScreen> with SingleTi
                   if (res != null && res['nombre'] != null) {
                     setModalState(() {
                       nameCtrl.text = res['nombre'].toString();
+                      addressCtrl.text = res['direccion']?.toString() ?? '';
                     });
                   }
                 });
@@ -668,6 +670,17 @@ class _SellerBillingScreenState extends State<SellerBillingScreen> with SingleTi
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                             ),
                           ),
+                          const SizedBox(height: 12),
+                          Text('Dirección del Cliente', style: boldDefault),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: addressCtrl,
+                            maxLines: 2,
+                            decoration: InputDecoration(
+                              hintText: 'Dirección fiscal o domicilio',
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
                         ],
                         const SizedBox(height: 24),
                         SizedBox(
@@ -676,6 +689,7 @@ class _SellerBillingScreenState extends State<SellerBillingScreen> with SingleTi
                             onPressed: () async {
                               final docNum = docNumCtrl.text.trim();
                               final name = nameCtrl.text.trim();
+                              final address = addressCtrl.text.trim();
                               final consumptionDescription = consumptionDescriptionCtrl.text.trim();
 
                               // Strict validation if a document number was entered
@@ -733,6 +747,7 @@ class _SellerBillingScreenState extends State<SellerBillingScreen> with SingleTi
                                   docType: docType,
                                   docNum: docNum,
                                   name: name,
+                                  address: address,
                                   detailMode: detailMode,
                                   consumptionDescription: detailMode == 'consumption' ? consumptionDescription : null,
                                 );
@@ -743,6 +758,7 @@ class _SellerBillingScreenState extends State<SellerBillingScreen> with SingleTi
                                   docType: docType,
                                   docNum: docNum,
                                   name: name,
+                                  address: address,
                                   detailMode: detailMode,
                                   consumptionDescription: detailMode == 'consumption' ? consumptionDescription : null,
                                 );

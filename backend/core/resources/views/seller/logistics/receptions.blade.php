@@ -6,8 +6,9 @@
 
 @section('seller-content')
 <div class="s-content">
+    <section class="module-hero receiving"><div><div class="module-crumb"><i class="las la-home"></i> Inicio &nbsp;/&nbsp; Logística &nbsp;/&nbsp; Recepciones</div><h2><i class="las la-dolly-flatbed"></i> Recepción de Mercadería</h2><p>Confirma ingresos, documentos y almacenes de destino.</p></div><div class="module-hero-stats"><div><b>{{ $receptions->total() }}</b><small>Recepciones</small></div><div><b>{{ count($pendingOC) }}</b><small>Por recibir</small></div><div><b>{{ $receptions->count() }}</b><small>En esta página</small></div></div></section>
 
-    <div class="s-card" style="margin-bottom:20px">
+    <div class="s-card seller-work-card" style="margin-bottom:14px">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:15px">
             <div>
                 <h3 class="s-card-title" style="margin:0"><i class="las la-plus-circle"></i> Nueva Recepción de Mercadería</h3>
@@ -42,7 +43,7 @@
     </div>
 
     <!-- LISTADO -->
-    <div class="s-card">
+    <div class="s-card seller-work-card">
         <h3 class="s-card-title"><i class="las la-history"></i> Historial de Recepciones</h3>
         <div class="s-table-responsive">
             <table class="s-table">

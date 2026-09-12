@@ -29,12 +29,18 @@ class _FavorReviewScreenState extends State<FavorReviewScreen> {
 
   String get _label {
     switch (_rating.round()) {
-      case 1: return 'Muy mala';
-      case 2: return 'Mala';
-      case 3: return 'Regular';
-      case 4: return 'Buena';
-      case 5: return 'Excelente';
-      default: return '';
+      case 1:
+        return 'Muy mala';
+      case 2:
+        return 'Mala';
+      case 3:
+        return 'Regular';
+      case 4:
+        return 'Buena';
+      case 5:
+        return 'Excelente';
+      default:
+        return '';
     }
   }
 
@@ -76,7 +82,10 @@ class _FavorReviewScreenState extends State<FavorReviewScreen> {
               SizedBox(height: Dimensions.space16),
               RatingBar.builder(
                 initialRating: _rating,
-                minRating: 1, direction: Axis.horizontal, itemCount: 5, itemSize: 42,
+                minRating: 1,
+                direction: Axis.horizontal,
+                itemCount: 5,
+                itemSize: 42,
                 itemPadding: EdgeInsets.symmetric(horizontal: 4),
                 itemBuilder: (_, __) => Icon(Icons.star_rounded, color: const Color(0xFFF59E0B)),
                 onRatingUpdate: (r) => setState(() => _rating = r),
@@ -105,8 +114,7 @@ class _FavorReviewScreenState extends State<FavorReviewScreen> {
               );
               if (ok && mounted) {
                 Get.back();
-                Get.snackbar('Gracias', 'Tu calificación ha sido enviada',
-                    backgroundColor: const Color(0xFF10B981), colorText: MyColor.colorWhite);
+                Get.snackbar('Gracias', 'Tu calificación ha sido enviada', backgroundColor: const Color(0xFF10B981), colorText: MyColor.colorWhite);
               }
             },
             isOutlined: false,

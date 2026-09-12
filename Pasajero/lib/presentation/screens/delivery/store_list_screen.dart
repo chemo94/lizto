@@ -54,8 +54,7 @@ class _StoreListScreenState extends State<StoreListScreen> {
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.arrow_back_ios_new_rounded,
-                      color: MyColor.primaryTextColor, size: 18),
+                  child: const Icon(Icons.arrow_back_ios_new_rounded, color: MyColor.primaryTextColor, size: 18),
                 ),
               ),
             ),
@@ -107,12 +106,16 @@ class _StoreListScreenState extends State<StoreListScreen> {
             // ── Cover Banner ──
             Stack(
               children: [
-                MyImageWidget(
-                  imageUrl: store.coverImage != null ? '${controller.storeCoverPath}/${store.coverImage}' : '${controller.storeImagePath}/${store.image}',
-                  height: 130,
-                  width: double.infinity,
-                  boxFit: BoxFit.cover,
+                ColorFiltered(
+                  colorFilter: store.isOpenNow ? const ColorFilter.mode(Colors.transparent, BlendMode.srcOver) : const ColorFilter.matrix(<double>[0.2126, 0.7152, 0.0722, 0, 0, 0.2126, 0.7152, 0.0722, 0, 0, 0.2126, 0.7152, 0.0722, 0, 0, 0, 0, 0, 1, 0]),
+                  child: MyImageWidget(
+                    imageUrl: store.coverImage != null ? '${controller.storeCoverPath}/${store.coverImage}' : '${controller.storeImagePath}/${store.image}',
+                    height: 130,
+                    width: double.infinity,
+                    boxFit: BoxFit.cover,
+                  ),
                 ),
+                if (!store.isOpenNow) const Positioned.fill(child: ColoredBox(color: Color(0x66000000))),
                 // Heart favorite button floating top-right
                 Positioned(
                   top: 8,
@@ -221,21 +224,19 @@ class _StoreListScreenState extends State<StoreListScreen> {
                           runSpacing: Dimensions.space6,
                           children: [
                             _tag(Icons.delivery_dining, store.deliveryFee == 0 ? 'Envío gratis' : 'Envío S/ ${(store.deliveryFee ?? 0).toStringAsFixed(1)}'),
-                            if (store.preparationTime != null)
-                              _tag(Icons.timer_outlined, '${store.preparationTime} min'),
-                            if (store.distanceFormatted != null)
-                              _tag(Icons.near_me_rounded, store.distanceFormatted),
+                            if (store.preparationTime != null) _tag(Icons.timer_outlined, '${store.preparationTime} min'),
+                            if (store.distanceFormatted != null) _tag(Icons.near_me_rounded, store.distanceFormatted),
                           ],
                         ),
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0F172B),
+                          color: store.isOpenNow ? const Color(0xFF0F172B) : Colors.grey.shade400,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          'Pedir',
+                          store.isOpenNow ? 'Pedir' : 'Cerrado',
                           style: boldDefault.copyWith(color: Colors.white, fontSize: 11),
                         ),
                       ),

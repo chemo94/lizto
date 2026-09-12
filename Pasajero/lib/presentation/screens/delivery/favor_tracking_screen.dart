@@ -14,8 +14,6 @@ import 'package:liztogo/data/services/pusher_service.dart';
 import 'package:liztogo/environment.dart';
 import 'package:liztogo/presentation/screens/delivery/favor_chat_screen.dart';
 import 'package:liztogo/presentation/screens/delivery/favor_review_screen.dart';
-import 'package:liztogo/presentation/screens/delivery/substitution_review_screen.dart';
-import 'package:liztogo/presentation/screens/delivery/receipt_review_screen.dart';
 import 'package:liztogo/data/model/delivery/shopping_models.dart';
 import 'package:liztogo/data/repo/delivery/shopping_repo.dart';
 
@@ -83,92 +81,10 @@ class _FavorTrackingScreenState extends State<FavorTrackingScreen> {
     if (event.channelName != _favorChannel) return;
     try {
       final data = jsonDecode(event.data);
-      if (event.eventName == 'shopping_item_updated') {
+      if (event.eventName == 'shopping_item_updated' || event.eventName == 'shopping_substitution_proposed' || event.eventName == 'shopping_receipt_uploaded') {
         _loadShoppingStatus();
-      } else if (event.eventName == 'shopping_substitution_proposed') {
-        _loadShoppingStatus();
-        // Show notification banner
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(data['message']?.toString() ?? 'Sustituto propuesto'),
-              backgroundColor: Colors.orange,
-              duration: const Duration(seconds: 5),
-              action: SnackBarAction(
-                label: 'Revisar',
-                textColor: Colors.white,
-                onPressed: () => _openSubstitutionReview(),
-              ),
-            ),
-          );
-        }
-      } else if (event.eventName == 'shopping_receipt_uploaded') {
-        _loadShoppingStatus();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(data['message']?.toString() ?? 'Comprobante subido'),
-              backgroundColor: MyColor.primaryColor,
-              duration: const Duration(seconds: 5),
-              action: SnackBarAction(
-                label: 'Revisar',
-                textColor: Colors.white,
-                onPressed: () => _openReceiptReview(),
-              ),
-            ),
-          );
-        }
       }
     } catch (_) {}
-  }
-
-  Future<void> _loadShoppingStatus() async {
-    try {
-      final repo = ShoppingRepo(apiClient: Get.find<ApiClient>());
-      final res = await repo.getShoppingStatus(widget.favorId);
-      if (res.statusCode == 200 && res.responseJson != null) {
-        final data = res.responseJson['data'];
-        if (data != null && mounted) {
-          setState(() {
-            _shoppingStatus = data['shopping_status']?.toString();
-            _shoppingProgress = ((data['progress'] as num?)?.toDouble() ?? 0) / 100;
-            _needsSubstitutionApproval = data['needs_approval'] == true;
-            _actualTotal = data['actual_total'] != null ? double.tryParse(data['actual_total'].toString()) : null;
-            _receiptUrl = data['receipt_url']?.toString();
-            _storePhotoUrl = data['store_photo_url']?.toString();
-            if (data['budget'] != null) _shoppingBudget = ShoppingBudget.fromJson(data['budget']);
-            if (data['items'] != null) {
-              _pendingSubstitutions = (data['items'] as List)
-                  .map((e) => ShoppingListItem.fromJson(e))
-                  .where((item) => item.needsApproval)
-                  .toList();
-            }
-            _receiptUploaded = _shoppingStatus == 'purchased';
-          });
-        }
-      }
-    } catch (_) {}
-  }
-
-  void _openSubstitutionReview() {
-    if (_pendingSubstitutions.isNotEmpty) {
-      Get.to(() => SubstitutionReviewScreen(
-        favorId: widget.favorId,
-        pendingItems: _pendingSubstitutions,
-      ));
-    }
-  }
-
-  void _openReceiptReview() {
-    if (_actualTotal != null) {
-      Get.to(() => ReceiptReviewScreen(
-        favorId: widget.favorId,
-        actualTotal: _actualTotal!,
-        receiptUrl: _receiptUrl,
-        storePhotoUrl: _storePhotoUrl,
-        budget: _shoppingBudget,
-      ));
-    }
   }
 
   void _onJobEvent(PusherEvent event) {
@@ -199,6 +115,31 @@ class _FavorTrackingScreenState extends State<FavorTrackingScreen> {
     } catch (_) {}
   }
 
+  Future<void> _loadShoppingStatus() async {
+    try {
+      final repo = ShoppingRepo(apiClient: Get.find<ApiClient>());
+      final res = await repo.getShoppingStatus(widget.favorId);
+      if (res.statusCode == 200 && res.responseJson != null) {
+        final data = res.responseJson['data'];
+        if (data != null && mounted) {
+          setState(() {
+            _shoppingStatus = data['shopping_status']?.toString();
+            _shoppingProgress = ((data['progress'] as num?)?.toDouble() ?? 0) / 100;
+            _needsSubstitutionApproval = data['needs_approval'] == true;
+            _actualTotal = data['actual_total'] != null ? double.tryParse(data['actual_total'].toString()) : null;
+            _receiptUrl = data['receipt_url']?.toString();
+            _storePhotoUrl = data['store_photo_url']?.toString();
+            if (data['budget'] != null) _shoppingBudget = ShoppingBudget.fromJson(data['budget']);
+            if (data['items'] != null) {
+              _pendingSubstitutions = (data['items'] as List).map((e) => ShoppingListItem.fromJson(e)).where((item) => item.needsApproval).toList();
+            }
+            _receiptUploaded = _shoppingStatus == 'purchased';
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
   @override
   void dispose() {
     PusherManager().removeListener(_onJobEvent);
@@ -213,8 +154,7 @@ class _FavorTrackingScreenState extends State<FavorTrackingScreen> {
     if (favor == null || _mapController == null) return;
     final courierLat = favor.courier?.latitude;
     final courierLng = favor.courier?.longitude;
-    bool courierMoved = (courierLat != null && courierLng != null) &&
-        (_lastCourierPos == null || _lastCourierPos!.latitude != courierLat || _lastCourierPos!.longitude != courierLng);
+    bool courierMoved = (courierLat != null && courierLng != null) && (_lastCourierPos == null || _lastCourierPos!.latitude != courierLat || _lastCourierPos!.longitude != courierLng);
     if (courierMoved) _lastCourierPos = LatLng(courierLat!, courierLng!);
     bool changed = _lastFavorId != favor.id || _lastStatus != favor.status || courierMoved;
     _lastFavorId = favor.id;
@@ -346,10 +286,10 @@ class _FavorTrackingScreenState extends State<FavorTrackingScreen> {
                                   width: double.infinity,
                                   child: ElevatedButton.icon(
                                     onPressed: () => Get.to(() => FavorReviewScreen(
-                                      favorId: favor.id ?? 0,
-                                      orderNo: favor.orderNo ?? '',
-                                      courierName: favor.courier?.fullName,
-                                    )),
+                                          favorId: favor.id ?? 0,
+                                          orderNo: favor.orderNo ?? '',
+                                          courierName: favor.courier?.fullName,
+                                        )),
                                     icon: Icon(Icons.star_rounded, color: const Color(0xFFF59E0B)),
                                     label: Text('Calificar servicio', style: boldDefault.copyWith(color: MyColor.colorWhite)),
                                     style: ElevatedButton.styleFrom(
@@ -479,8 +419,7 @@ class _FavorTrackingScreenState extends State<FavorTrackingScreen> {
                   SizedBox(width: 2),
                   Text(courier.rating!.toStringAsFixed(1), style: regularSmall.copyWith(color: const Color(0xFFF59E0B))),
                 ]),
-              if (courier.distanceKm != null)
-                Text('A ${courier.distanceKm!.toStringAsFixed(1)} km', style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor)),
+              if (courier.distanceKm != null) Text('A ${courier.distanceKm!.toStringAsFixed(1)} km', style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor)),
             ]),
           ),
           Container(
@@ -498,12 +437,8 @@ class _FavorTrackingScreenState extends State<FavorTrackingScreen> {
 
   Widget _buildStatusTimeline(FavorModel favor) {
     final isShopping = _isShoppingType(favor);
-    final statuses = isShopping
-        ? ['accepted', 'on_way_to_pickup', 'at_pickup', 'shopping', 'awaiting_approval', 'purchasing', 'purchased', 'on_way_to_delivery', 'delivered']
-        : ['pending', 'searching_courier', 'accepted', 'on_way_to_pickup', 'at_pickup', 'on_way_to_delivery', 'delivered'];
-    final labels = isShopping
-        ? ['Aceptado', 'Yendo a tienda', 'En tienda', 'Comprando', 'Esperando aprobación', 'Comprando', 'Comprado', 'Entregando', 'Entregado']
-        : ['Pendiente', 'Buscando', 'Aceptado', 'Recogiendo', 'Recogido', 'Entregando', 'Entregado'];
+    final statuses = isShopping ? ['accepted', 'on_way_to_pickup', 'at_pickup', 'shopping', 'awaiting_approval', 'purchasing', 'purchased', 'on_way_to_delivery', 'delivered'] : ['pending', 'searching_courier', 'accepted', 'on_way_to_pickup', 'at_pickup', 'on_way_to_delivery', 'delivered'];
+    final labels = isShopping ? ['Aceptado', 'Yendo a tienda', 'En tienda', 'Comprando', 'Esperando aprobación', 'Comprando', 'Comprado', 'Entregando', 'Entregado'] : ['Pendiente', 'Buscando', 'Aceptado', 'Recogiendo', 'Recogido', 'Entregando', 'Entregado'];
     final currentIdx = statuses.indexOf(favor.status ?? 'pending');
 
     return Container(
@@ -528,18 +463,16 @@ class _FavorTrackingScreenState extends State<FavorTrackingScreen> {
                 Column(
                   children: [
                     Container(
-                      width: 24, height: 24,
+                      width: 24,
+                      height: 24,
                       decoration: BoxDecoration(
                         color: done ? color : Colors.transparent,
                         border: Border.all(color: color, width: 2),
                         shape: BoxShape.circle,
                       ),
-                      child: done
-                          ? Icon(Icons.check_rounded, size: 16, color: MyColor.colorWhite)
-                          : null,
+                      child: done ? Icon(Icons.check_rounded, size: 16, color: MyColor.colorWhite) : null,
                     ),
-                    if (i < statuses.length - 1)
-                      Container(width: 2, height: 30, color: done ? color : MyColor.borderColor),
+                    if (i < statuses.length - 1) Container(width: 2, height: 30, color: done ? color : MyColor.borderColor),
                   ],
                 ),
                 SizedBox(width: Dimensions.space12),
@@ -573,8 +506,7 @@ class _FavorTrackingScreenState extends State<FavorTrackingScreen> {
         _row('Entrega', favor.deliveryAddress ?? ''),
         if (favor.estimatedAmount != null) _row('Monto est.', 'S/ ${favor.estimatedAmount!.toStringAsFixed(2)}'),
         if (favor.deliveryFee != null) _row('Delivery', 'S/ ${favor.deliveryFee!.toStringAsFixed(2)}'),
-        if (favor.total != null)
-          _row('Total', 'S/ ${favor.total!.toStringAsFixed(2)}', bold: true, color: MyColor.primaryColor),
+        if (favor.total != null) _row('Total', 'S/ ${favor.total!.toStringAsFixed(2)}', bold: true, color: MyColor.primaryColor),
         if (favor.recipientName != null) _row('Recibe', '${favor.recipientName}${favor.recipientPhone != null ? " - ${favor.recipientPhone}" : ""}'),
       ]),
     );
@@ -605,8 +537,7 @@ class _FavorTrackingScreenState extends State<FavorTrackingScreen> {
         Get.back();
         bool ok = await c.cancelFavor(favorId);
         if (ok) {
-          Get.snackbar('Cancelado', 'Servicio cancelado correctamente',
-              backgroundColor: MyColor.primaryColor, colorText: MyColor.colorWhite);
+          Get.snackbar('Cancelado', 'Servicio cancelado correctamente', backgroundColor: MyColor.primaryColor, colorText: MyColor.colorWhite);
           Get.back();
         }
       },
@@ -616,8 +547,10 @@ class _FavorTrackingScreenState extends State<FavorTrackingScreen> {
   Future<void> _loadRealRoute(double fromLat, double fromLng, double toLat, double toLng) async {
     _routeLoaded = true;
     final result = await DirectionsService.getDirections(
-      originLat: fromLat, originLng: fromLng,
-      destLat: toLat, destLng: toLng,
+      originLat: fromLat,
+      originLng: fromLng,
+      destLat: toLat,
+      destLng: toLng,
       apiKey: Environment.mapKey,
     );
     if (result != null && mounted) {
@@ -688,8 +621,7 @@ class _FavorTrackingScreenState extends State<FavorTrackingScreen> {
                             Text('${bid.courierDistanceKm!.toStringAsFixed(1)} km', style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor)),
                           ],
                         ]),
-                      if (bid.message != null)
-                        Text(bid.message!, style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      if (bid.message != null) Text(bid.message!, style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor), maxLines: 1, overflow: TextOverflow.ellipsis),
                     ]),
                   ),
                   Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -699,8 +631,7 @@ class _FavorTrackingScreenState extends State<FavorTrackingScreen> {
                       onPressed: () async {
                         bool ok = await (c as FavorController).acceptBid(favor.id ?? 0, bid.id ?? 0);
                         if (ok) {
-                          Get.snackbar('Aceptado', 'Repartidor asignado correctamente',
-                              backgroundColor: const Color(0xFF10B981), colorText: MyColor.colorWhite);
+                          Get.snackbar('Aceptado', 'Repartidor asignado correctamente', backgroundColor: const Color(0xFF10B981), colorText: MyColor.colorWhite);
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -714,14 +645,14 @@ class _FavorTrackingScreenState extends State<FavorTrackingScreen> {
                     ),
                   ]),
                 ]),
-               )),
+              )),
         ]);
       },
     );
   }
 
   bool _isShoppingType(FavorModel favor) {
-    return favor.type?.toLowerCase() == 'buy' || _shoppingStatus != null;
+    return favor.type?.toLowerCase() == 'buy';
   }
 
   Widget _buildShoppingProgressCard(FavorModel favor) {
@@ -729,7 +660,7 @@ class _FavorTrackingScreenState extends State<FavorTrackingScreen> {
       'preparing': 'Preparando lista...',
       'submitted': 'Lista enviada',
       'shopping': 'En proceso de compra...',
-      'awaiting_approval': 'Esperando tu aprobación',
+      'awaiting_approval': 'Esperando aprobación del cliente',
       'purchasing': 'Comprando productos...',
       'purchased': 'Compra completada',
       'delivering': 'Entregando...',
@@ -750,7 +681,6 @@ class _FavorTrackingScreenState extends State<FavorTrackingScreen> {
           Text('Compra en tienda', style: boldDefault),
         ]),
         SizedBox(height: Dimensions.space12),
-        // Progress bar
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Text(statusLabels[_shoppingStatus] ?? 'Estado desconocido', style: regularSmall),
@@ -768,7 +698,6 @@ class _FavorTrackingScreenState extends State<FavorTrackingScreen> {
           ),
         ]),
         SizedBox(height: Dimensions.space12),
-        // Budget info
         if (_shoppingBudget != null) ...[
           Row(children: [
             Icon(Icons.account_balance_wallet_rounded, size: 14, color: MyColor.bodyMutedTextColor),
@@ -777,7 +706,6 @@ class _FavorTrackingScreenState extends State<FavorTrackingScreen> {
           ]),
           SizedBox(height: Dimensions.space4),
         ],
-        // Actual total if available
         if (_actualTotal != null) ...[
           Row(children: [
             Icon(Icons.receipt_rounded, size: 14, color: MyColor.bodyMutedTextColor),
@@ -786,12 +714,11 @@ class _FavorTrackingScreenState extends State<FavorTrackingScreen> {
           ]),
           SizedBox(height: Dimensions.space8),
         ],
-        // Action buttons
         if (_needsSubstitutionApproval) ...[
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: _openSubstitutionReview,
+              onPressed: () => _openSubstitutionReview(),
               icon: Icon(Icons.swap_horiz_rounded, size: 18),
               label: Text('Revisar sustitutos (${_pendingSubstitutions.length})', style: regularSmall.copyWith(color: MyColor.colorWhite)),
               style: ElevatedButton.styleFrom(
@@ -807,7 +734,7 @@ class _FavorTrackingScreenState extends State<FavorTrackingScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: _openReceiptReview,
+              onPressed: () => _openReceiptReview(),
               icon: Icon(Icons.receipt_long_rounded, size: 18),
               label: Text('Revisar comprobante', style: regularSmall.copyWith(color: MyColor.colorWhite)),
               style: ElevatedButton.styleFrom(
@@ -821,4 +748,141 @@ class _FavorTrackingScreenState extends State<FavorTrackingScreen> {
       ]),
     );
   }
+
+  void _openSubstitutionReview() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.92,
+        expand: false,
+        builder: (ctx, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: EdgeInsets.all(Dimensions.space12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Icon(Icons.swap_horiz_rounded, color: Colors.orange, size: 22),
+                SizedBox(width: Dimensions.space8),
+                Text('Revisar sustitutos', style: boldDefault),
+                const Spacer(),
+                IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close)),
+              ]),
+              SizedBox(height: Dimensions.space8),
+              Expanded(
+                child: _pendingSubstitutions.isEmpty
+                    ? Center(child: Text('No hay sustitutos pendientes de revisión.', style: regularSmall))
+                    : ListView.separated(
+                        controller: scrollController,
+                        itemCount: _pendingSubstitutions.length,
+                        separatorBuilder: (_, __) => Divider(color: MyColor.borderColor),
+                        itemBuilder: (_, i) {
+                          final item = _pendingSubstitutions[i];
+                          return Padding(
+                            padding: EdgeInsets.symmetric(vertical: Dimensions.space8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(item.name ?? 'Producto', style: boldDefault),
+                                SizedBox(height: Dimensions.space4),
+                                Row(children: [
+                                  Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.orange),
+                                  SizedBox(width: Dimensions.space4),
+                                  Expanded(
+                                    child: Text(
+                                      '${item.substituteName ?? "—"} · S/ ${item.substitutePrice?.toStringAsFixed(2) ?? "?"}',
+                                      style: regularSmall.copyWith(fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ]),
+                                if (item.substituteNotes != null && item.substituteNotes!.isNotEmpty) ...[
+                                  SizedBox(height: Dimensions.space4),
+                                  Text(item.substituteNotes!, style: regularSmall.copyWith(color: Colors.black54)),
+                                ],
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openReceiptReview() {
+    final hasReceipt = _receiptUrl != null && _receiptUrl!.isNotEmpty;
+    final hasStorePhoto = _storePhotoUrl != null && _storePhotoUrl!.isNotEmpty;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: EdgeInsets.all(Dimensions.space12),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Icon(Icons.receipt_long_rounded, color: MyColor.primaryColor, size: 22),
+                SizedBox(width: Dimensions.space8),
+                Text('Comprobante de compra', style: boldDefault),
+                const Spacer(),
+                IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close)),
+              ]),
+              SizedBox(height: Dimensions.space8),
+              if (_actualTotal != null) ...[
+                Text('Total: S/ ${_actualTotal!.toStringAsFixed(2)}', style: boldDefault.copyWith(color: MyColor.primaryColor)),
+                SizedBox(height: Dimensions.space12),
+              ],
+              if (hasReceipt) ...[
+                Text('Comprobante', style: regularSmall.copyWith(color: Colors.black54)),
+                SizedBox(height: Dimensions.space4),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(_receiptUrl!, fit: BoxFit.contain, errorBuilder: (_, __, ___) => _imgError()),
+                ),
+                SizedBox(height: Dimensions.space12),
+              ],
+              if (hasStorePhoto) ...[
+                Text('Foto en tienda', style: regularSmall.copyWith(color: Colors.black54)),
+                SizedBox(height: Dimensions.space4),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(_storePhotoUrl!, fit: BoxFit.contain, errorBuilder: (_, __, ___) => _imgError()),
+                ),
+                SizedBox(height: Dimensions.space12),
+              ],
+              if (!hasReceipt && !hasStorePhoto)
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: Dimensions.space12),
+                  child: Center(child: Text('No hay comprobante disponible.', style: regularSmall)),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _imgError() => Container(
+        height: 120,
+        alignment: Alignment.center,
+        color: MyColor.borderColor.withValues(alpha: 0.2),
+        child: Icon(Icons.broken_image_rounded, color: Colors.black38, size: 36),
+      );
 }

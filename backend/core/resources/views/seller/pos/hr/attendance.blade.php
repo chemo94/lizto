@@ -5,11 +5,23 @@
 @endsection
 
 @section('seller-content')
-<div class="s-content">
-    <div style="display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start;">
+<div class="s-content seller-responsive-page">
+    <section class="module-hero attendance">
+        <div>
+            <div class="module-crumb"><i class="las la-home"></i> Seller / RR.HH / Asistencia</div>
+            <h2>Control de asistencia</h2>
+            <p>Registra entradas, salidas y jornada diaria de todo el equipo.</p>
+        </div>
+        <div class="module-hero-stats">
+            <div><b>{{ $staff->count() }}</b><small>Personal</small></div>
+            <div><b>{{ $attendances->where('status', 'present')->count() }}</b><small>Presentes</small></div>
+            <div><b>{{ $attendances->whereNotNull('clock_out')->count() }}</b><small>Salidas</small></div>
+        </div>
+    </section>
+    <div class="hr-workspace" style="display: grid; grid-template-columns: 360px 1fr; gap: 14px; align-items: start;">
         
         <!-- PANEL DE MARCACIÓN RÁPIDA (DNI/RUC) -->
-        <div class="s-card" style="border: 1px solid var(--s-primary-light); background: linear-gradient(145deg, var(--s-bg-card), var(--s-bg-light));">
+        <div class="s-card seller-work-card" style="border: 1px solid var(--s-primary-light); background: linear-gradient(145deg, var(--s-bg-card), var(--s-bg-light));">
             <h3 style="margin-bottom: 15px; font-weight: 700; font-size: 16px; color: var(--s-text-primary); display: flex; align-items: center; gap: 8px;">
                 <i class="las la-clock" style="color: var(--s-primary); font-size: 24px;"></i> Marcación de Entrada/Salida
             </h3>
@@ -38,7 +50,7 @@
         </div>
 
         <!-- LISTADO Y CONTROL DE ASISTENCIA DIARIA -->
-        <div class="s-card">
+        <div class="s-card seller-work-card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
                 <h3 style="margin: 0; font-weight: 700; font-size: 16px; color: var(--s-text-primary); display: flex; align-items: center; gap: 8px;">
                     <i class="las la-user-check" style="color: var(--s-primary); font-size: 20px;"></i> Asistencia por Fecha

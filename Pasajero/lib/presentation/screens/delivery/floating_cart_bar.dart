@@ -28,7 +28,7 @@ class _FloatingCartBarState extends State<FloatingCartBar> with SingleTickerProv
     super.initState();
     _cartAnimCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 350));
     _cartScaleAnim = CurvedAnimation(parent: _cartAnimCtrl, curve: Curves.elasticOut);
-    
+
     if (widget.controller.hasItemsInCart) {
       _lastCartCount = widget.controller.cartCount;
       _cartAnimCtrl.forward();
@@ -85,7 +85,7 @@ class _FloatingCartBarState extends State<FloatingCartBar> with SingleTickerProv
                   onTap: () async {
                     StoreModel? store = controller.selectedStore;
                     final firstItem = controller.cartItems.firstOrNull;
-                    
+
                     if (firstItem != null) {
                       if (store == null || store.id != firstItem.product.storeId) {
                         if (firstItem.store != null) {

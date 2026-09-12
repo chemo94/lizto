@@ -16,7 +16,7 @@ class SmsEmailVerificationRepo {
     bool isEmail = true,
     bool isTFA = false,
   }) async {
-    final map = {'code': code};
+    final map = isEmail ? {'code': code} : {'firebase_id_token': code};
     String url = '${UrlContainer.baseUrl}${isEmail ? UrlContainer.verifyEmailEndPoint : UrlContainer.verifySmsEndPoint}';
 
     ResponseModel responseModel = await apiClient.request(
@@ -28,7 +28,7 @@ class SmsEmailVerificationRepo {
     return responseModel;
   }
 
-  Future<bool> sendAuthorizationRequest() async {
+  Future<ResponseModel> sendAuthorizationRequest() async {
     String url = '${UrlContainer.baseUrl}${UrlContainer.authorizationCodeEndPoint}';
     ResponseModel response = await apiClient.request(
       url,
@@ -37,20 +37,7 @@ class SmsEmailVerificationRepo {
       passHeader: true,
     );
 
-    if (response.statusCode == 200) {
-      AuthorizationResponseModel model = AuthorizationResponseModel.fromJson((response.responseJson));
-      if (model.status == 'error') {
-        CustomSnackBar.error(
-          errorList: model.message ?? [MyStrings.somethingWentWrong],
-        );
-        return false;
-      }
-
-      return true;
-    } else {
-      CustomSnackBar.error(errorList: [response.message]);
-      return false;
-    }
+    return response;
   }
 
   Future<bool> resendVerifyCode({required bool isEmail}) async {

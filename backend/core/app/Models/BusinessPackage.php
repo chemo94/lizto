@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class BusinessPackage extends Model
 {
+    public const MODE_RESTAURANT = 'restaurant';
+    public const MODE_DELIVERY_ONLY = 'delivery_only';
     protected $guarded = ['id'];
 
     protected $casts = [

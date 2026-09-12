@@ -40,8 +40,8 @@ class CourierJobController extends Controller
         $radius = (float) ($request->radius ?? gs('delivery_coverage_radius') ?? 8);
 
         $deliveryQuery = DeliveryOrder::whereNull('driver_id')
-            ->where('status', 'ready')
-            ->with('store', 'user');
+            ->whereIn('status', ['confirmed', 'preparing', 'ready'])
+            ->with('store', 'user', 'items.variation', 'items.addons');
 
         $favorQuery = Favor::where('status', 'searching_courier')
             ->where(function ($query) use ($driver) {
@@ -54,13 +54,15 @@ class CourierJobController extends Controller
             ->with('user');
 
         if ($lat && $lng) {
-            $haversine = "(6371 * acos(cos(radians($lat)) * cos(radians(latitude)) * cos(radians(longitude) - radians($lng)) + sin(radians($lat)) * sin(radians(latitude))))";
+            $deliveryHaversine = "(6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude))))";
+            $favorHaversine = "(6371 * acos(cos(radians(?)) * cos(radians(pickup_lat)) * cos(radians(pickup_lng) - radians(?)) + sin(radians(?)) * sin(radians(pickup_lat))))";
 
-            $deliveryQuery->whereHas('store', function ($q) use ($haversine, $radius) {
-                $q->whereRaw("$haversine <= $radius");
+            $deliveryQuery->whereHas('store', function ($q) use ($deliveryHaversine, $lat, $lng, $radius) {
+                $q->whereRaw("$deliveryHaversine <= ?", [(float) $lat, (float) $lng, (float) $lat, $radius]);
             });
 
-            $favorQuery->whereRaw("$haversine <= $radius");
+            $favorQuery->whereNotNull('pickup_lat')->whereNotNull('pickup_lng')
+                ->whereRaw("$favorHaversine <= ?", [(float) $lat, (float) $lng, (float) $lat, $radius]);
         }
 
         $deliveryJobs = $deliveryQuery->get()->map(fn($o) => $this->formatJob($o, 'delivery'));
@@ -125,13 +127,32 @@ class CourierJobController extends Controller
         $type = $request->type;
 
         if ($type === 'favor') {
-            $job = Favor::where('courier_id', $driver->id)->with('user', 'messages')->findOrFail($id);
+            $job = Favor::where(function ($query) use ($driver) {
+                    $query->where('courier_id', $driver->id)
+                        ->orWhere(function ($available) use ($driver) {
+                            $available->where('status', 'searching_courier')
+                                ->where(function ($assignment) use ($driver) {
+                                    $assignment->whereNull('courier_id')
+                                        ->orWhere('courier_id', $driver->id);
+                                });
+                        });
+                })
+                ->with('user', 'messages')
+                ->findOrFail($id);
             return apiResponse('job_detail', 'success', ['Detalle del pedido'], [
                 'job' => $this->formatFavorJob($job),
             ]);
         }
 
-        $job = DeliveryOrder::where('driver_id', $driver->id)->with('store', 'user', 'items')->findOrFail($id);
+        $job = DeliveryOrder::where(function ($query) use ($driver) {
+                $query->where('driver_id', $driver->id)
+                    ->orWhere(function ($available) {
+                        $available->whereNull('driver_id')
+                            ->whereIn('status', ['confirmed', 'preparing', 'ready']);
+                    });
+            })
+            ->with('store', 'user', 'items.variation', 'items.addons')
+            ->findOrFail($id);
         return apiResponse('job_detail', 'success', ['Detalle del pedido'], [
             'job' => $this->formatJob($job, 'delivery'),
         ]);
@@ -174,13 +195,17 @@ class CourierJobController extends Controller
                     'courier_assigned_at' => now(),
                     'dispatch_timeout_at' => null,
                 ]);
+                \App\Services\CourierOfferTracker::respond($driver, $job, 'accepted');
                 FcmService::sendToAllCouriers(
                     'Envío tomado',
                     'Un repartidor aceptó el envío #' . $job->order_no,
                     ['type' => 'favor_taken', 'favor_id' => (string) $job->id]
                 );
+                $job = $job->fresh(['courier', 'seller']);
+                event(new FavorStatusUpdated($job));
+                $this->sendStatusPush($job, 'favor', 'accepted');
                 return apiResponse('job_accepted', 'success', ['Envío aceptado directamente'], [
-                    'job' => $this->formatFavorJob($job->fresh()),
+                    'job' => $this->formatFavorJob($job),
                 ]);
             }
 
@@ -193,13 +218,15 @@ class CourierJobController extends Controller
             return apiResponse('bid_placed', 'success', ['Oferta enviada'], ['bid' => $bid]);
         }
 
-        // Only accept if status is 'ready'
-        $job = DeliveryOrder::where('status', 'ready')->whereNull('driver_id')->findOrFail($id);
+        // The courier search starts as soon as the seller confirms the order.
+        $job = DeliveryOrder::whereIn('status', ['confirmed', 'preparing', 'ready'])
+            ->whereNull('driver_id')->findOrFail($id);
         $job->update([
             'driver_id'          => $driver->id,
             'status'             => 'on_way',
             'driver_assigned_at' => now(),
         ]);
+        \App\Services\CourierOfferTracker::respond($driver, $job, 'accepted');
 
         event(new DeliveryOrderStatusUpdated($job->fresh('store', 'user')));
         FcmService::sendToUser($job->user, 'Repartidor asignado', 'Tu pedido #' . $job->order_no . ' será entregado pronto', ['order_id' => (string) $job->id, 'order_no' => $job->order_no, 'type' => 'driver_assigned']);
@@ -209,6 +236,32 @@ class CourierJobController extends Controller
 
         return apiResponse('job_accepted', 'success', ['Pedido aceptado'], [
             'job' => $this->formatJob($job->fresh('store', 'user'), 'delivery'),
+        ]);
+    }
+
+    public function rejectJob(Request $request, $id)
+    {
+        $driver = $this->driver();
+        $type = $request->input('type', 'delivery');
+        $job = $type === 'favor'
+            ? Favor::where('status', 'searching_courier')->findOrFail($id)
+            : DeliveryOrder::where('status', 'ready')->findOrFail($id);
+
+        \App\Services\CourierOfferTracker::respond($driver, $job, 'rejected');
+
+        if ($type === 'favor' && (int) $job->courier_id === (int) $driver->id) {
+            $mode = (string) $job->dispatch_mode;
+            $job->update(['courier_id' => null, 'dispatch_timeout_at' => now()]);
+
+            if (str_starts_with($mode, 'admin_')) {
+                \App\Services\AdminDeliveryRequestDispatchService::targetNextCourier($job->fresh());
+            } elseif (str_starts_with($mode, 'seller_')) {
+                \App\Services\SellerFavorDispatchService::dispatchNext($job->fresh());
+            }
+        }
+
+        return apiResponse('job_rejected', 'success', [
+            'Solicitud rechazada correctamente. Esto no se considera una falta.',
         ]);
     }
 
@@ -274,31 +327,38 @@ class CourierJobController extends Controller
             }
 
             $commission = DeliveryCommission::where('status', 1)->first();
-            $baseDeliveryPercent = $commission?->delivery_percent ?? 20;
-            $baseFavorPercent = $commission?->favor_percent ?? 20;
-            $minCommission = $commission?->min_commission ?? 1;
-
-            $basePercent = $type === 'favor' ? $baseFavorPercent : $baseDeliveryPercent;
-            $dynamicTier = DeliveryFinancialLedger::getDriverDynamicCommissionPercent($driver->id, (float) $basePercent);
-            $commissionPercent = $dynamicTier['effective_percent'];
-
             if ($type === 'favor') {
                 $deliveryFee = $job->total ?? 0;
-                $commissionAmount = max($deliveryFee * $commissionPercent / 100, $minCommission);
             } else {
                 $deliveryFee = $job->delivery_fee ?? 0;
-                $commissionAmount = max($deliveryFee * $commissionPercent / 100, $minCommission);
             }
+            $earningIdentity = [
+                'courier_id' => $driver->id,
+                'job_type' => $type === 'favor' ? Favor::class : DeliveryOrder::class,
+                'job_id' => $job->id,
+            ];
+            $existingEarning = CourierEarning::where($earningIdentity)->first();
+            $commissionQuote = DeliveryFinancialLedger::driverCommissionQuote(
+                $driver,
+                (float) $deliveryFee,
+                $type,
+                $commission,
+                !$existingEarning
+            );
+            $commissionAmount = $existingEarning
+                ? (float) $existingEarning->commission
+                : $commissionQuote['amount'];
 
             // Update earning record
-            $courierEarning = CourierEarning::firstOrCreate([
-                'courier_id'  => $driver->id,
-                'job_type'    => $type === 'favor' ? Favor::class : DeliveryOrder::class,
-                'job_id'      => $job->id,
-            ], [
+            $courierEarning = CourierEarning::firstOrCreate($earningIdentity, [
                 // La comisión se descuenta de la recarga/wallet, no de la ganancia generada.
                 'amount'      => $deliveryFee,
                 'commission'  => $commissionAmount,
+                'commission_tier' => $commissionQuote['tier_name'],
+                'commission_base_percent' => $commissionQuote['base_percent'],
+                'commission_effective_percent' => $commissionQuote['effective_percent'],
+                'commission_minimum' => $commissionQuote['minimum'],
+                'completed_jobs_snapshot' => $commissionQuote['total_completed_jobs'],
                 'description' => $type === 'favor' ? 'Entrega de favor' : 'Entrega de pedido #' . $job->order_no,
             ]);
 
@@ -411,6 +471,12 @@ class CourierJobController extends Controller
             ]);
             $penalty = $this->registerCancellation($driver->id, $job->id, 'favor', $request->reason_code, $request->reason_detail);
             event(new FavorStatusUpdated($job->fresh()));
+            $this->sendFavorSellerPush(
+                $job->fresh('seller'),
+                'Buscando otro repartidor',
+                'El repartidor liberó la solicitud #' . $job->order_no . '. Ya estamos buscando un reemplazo.',
+                'searching_courier'
+            );
             FcmService::sendToAllCouriers('Nuevo favor disponible', 'Un repartidor canceló. El favor está disponible nuevamente.', ['job_id' => (string) $job->id, 'job_type' => 'favor']);
         } else {
             $job = DeliveryOrder::where('driver_id', $driver->id)
@@ -855,8 +921,9 @@ class CourierJobController extends Controller
             })->values();
 
         $commission = DeliveryCommission::where('status', 1)->first();
-        $baseCommissionPercent = (float) ($commission?->delivery_percent ?? 20);
+        $baseCommissionPercent = (float) ($commission?->delivery_percent ?? 10);
         $tierInfo = DeliveryFinancialLedger::getDriverDynamicCommissionPercent($driver->id, $baseCommissionPercent);
+        $offerMetrics = DeliveryFinancialLedger::driverOfferMetrics($driver->id);
 
         return apiResponse('earnings', 'success', ['Ganancias'], [
             'today_earnings'       => $today,
@@ -874,9 +941,13 @@ class CourierJobController extends Controller
             'tier_name'            => $tierInfo['tier_name'],
             'tier_badge'           => $tierInfo['tier_badge'],
             'effective_percent'    => $tierInfo['effective_percent'],
+            'base_commission_percent' => $baseCommissionPercent,
+            'minimum_commission'   => (float) ($commission?->min_commission ?? 1),
             'total_weekly_jobs'    => $tierInfo['total_weekly_jobs'],
+            'total_completed_jobs' => $tierInfo['total_completed_jobs'],
             'next_tier_needed'     => $tierInfo['next_tier_needed'],
             'next_tier_name'       => $tierInfo['next_tier_name'],
+            'offer_metrics'        => $offerMetrics,
         ]);
     }
 
@@ -901,8 +972,8 @@ class CourierJobController extends Controller
             'id'              => $order->id,
             'type'            => $type,
             'order_no'        => $order->order_no,
-            'customer_name'   => $order->user?->fullname,
-            'customer_phone'  => $order->user?->mobile,
+            'customer_name'   => $order->contact_name ?: $order->user?->fullname,
+            'customer_phone'  => $order->contact_phone ?: $order->user?->mobile,
             'pickup_address'  => $order->store?->address,
             'pickup_lat'      => $order->store?->latitude,
             'pickup_lng'      => $order->store?->longitude,
@@ -910,11 +981,29 @@ class CourierJobController extends Controller
             'delivery_lat'    => $order->delivery_lat,
             'delivery_lng'    => $order->delivery_lng,
             'amount'          => $order->total,
+            'subtotal'        => $order->subtotal,
             'delivery_fee'    => $order->delivery_fee,
+            'tip'             => $order->tip,
             'total_earning'   => $order->delivery_fee ?? 0,
             'status'          => $order->status,
             'store_name'      => $order->store?->name,
             'description'     => $order->notes,
+            'items'           => $order->items->map(fn ($item) => [
+                'id' => $item->id,
+                'product_id' => $item->product_id,
+                'name' => $item->product_name,
+                'quantity' => (int) $item->quantity,
+                'unit_price' => (float) $item->unit_price,
+                'total_price' => (float) $item->total_price,
+                'variation' => $item->variation ? [
+                    'name' => $item->variation->variation_name,
+                    'price' => (float) $item->variation->variation_price,
+                ] : null,
+                'addons' => $item->addons->map(fn ($addon) => [
+                    'name' => $addon->addon_name,
+                    'price' => (float) $addon->addon_price,
+                ])->values(),
+            ])->values(),
             'payment_method_code' => (string) ($order->payment_method_code ?? '0'),
             'payment_method_name' => $paymentName,
             'payment_status'  => (int) $order->payment_status,
@@ -928,7 +1017,8 @@ class CourierJobController extends Controller
 
     private function formatFavorJob($favor)
     {
-        $fee = $favor->delivery_fee ?? $favor->total ?? 0;
+        $baseDeliveryFee = (float) ($favor->delivery_fee ?? 0);
+        $fee = (float) ($favor->total ?? $baseDeliveryFee);
 
         $distanceKm = null;
         if ($favor->pickup_lat && $favor->pickup_lng && $favor->delivery_lat && $favor->delivery_lng) {
@@ -944,8 +1034,8 @@ class CourierJobController extends Controller
             'id'              => $favor->id,
             'type'            => 'favor',
             'order_no'        => $favor->order_no,
-            'customer_name'   => $favor->user?->fullname,
-            'customer_phone'  => $favor->user?->mobile,
+            'customer_name'   => $favor->recipient_name ?? $favor->user?->fullname ?? 'Cliente',
+            'customer_phone'  => $favor->recipient_phone ?? $favor->user?->mobile,
             'pickup_address'  => $favor->pickup_address,
             'pickup_lat'      => $favor->pickup_lat,
             'pickup_lng'      => $favor->pickup_lng,
@@ -955,9 +1045,12 @@ class CourierJobController extends Controller
             'stops'           => $favor->stops,
             'distance_km'     => $distanceKm,
             'amount'          => $favor->estimated_amount,
-            'delivery_fee'    => $favor->delivery_fee,
+            'delivery_fee'    => $fee,
+            'base_delivery_fee' => $baseDeliveryFee,
+            'additional_charge' => (float) ($favor->estimated_amount ?? 0),
             'total_earning'   => $fee,
             'status'          => $favor->status,
+            'store_name'      => $favor->store_name ?? $favor->seller?->name ?? 'Punto de recojo',
             'description'     => $favor->description,
             'payment_method_code'  => $favor->payment_method_code,
             'payment_method_name'  => $favor->payment_method_name,
@@ -1017,7 +1110,6 @@ class CourierJobController extends Controller
 
     private function sendStatusPush($job, $type, $status)
     {
-        if (!$job->user) return;
         $statusMessages = [
             'delivery' => [
                 'on_way'       => ['Repartidor en camino', 'Tu pedido está en camino'],
@@ -1046,14 +1138,33 @@ class CourierJobController extends Controller
         ];
 
         if ($type === 'favor') {
-            FcmService::sendToUser($job->user, $messages[0], $messages[1], $data);
+            if ($job->user) {
+                FcmService::sendToUser($job->user, $messages[0], $messages[1], $data);
+            }
+            $this->sendFavorSellerPush($job, $messages[0], $messages[1], $status);
         } else {
+            if (!$job->user) return;
             FcmService::sendToUser($job->user, $messages[0], $messages[1], $data);
             if ($job->store && $job->store->seller) {
                 $sellerData = array_merge($data, ['order_id' => (string) $job->id]);
                 FcmService::sendToSeller($job->store->seller, $messages[0], 'Pedido #' . $job->order_no . ': ' . $messages[1], $sellerData);
             }
         }
+    }
+
+    private function sendFavorSellerPush($job, string $title, string $body, string $status): void
+    {
+        $seller = $job->relationLoaded('seller') ? $job->seller : $job->seller()->first();
+        if (!$seller) return;
+
+        FcmService::sendToSeller($seller, $title, 'Solicitud #' . $job->order_no . ': ' . $body, [
+            'type' => 'favor_status_updated',
+            'job_type' => 'favor',
+            'favor_id' => (string) $job->id,
+            'job_id' => (string) $job->id,
+            'order_no' => $job->order_no ?? '',
+            'status' => $status,
+        ]);
     }
 
     public function walletTransactions()

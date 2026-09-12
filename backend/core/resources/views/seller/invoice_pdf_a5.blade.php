@@ -65,6 +65,12 @@
     </style>
 </head>
 <body>
+    @include('seller.partials.credit_note_result')
+    @if($invoice->original_invoice_id)
+    @php $affected = \App\Models\SunatInvoice::find($invoice->original_invoice_id); @endphp
+    <p>Comprobante afectado: {{ $affected?->serie }}-{{ $affected?->correlativo }} ({{ $invoice->note_affected_type === '03' ? 'Boleta' : 'Factura' }})<br>
+    Motivo {{ $invoice->note_motivo }}: {{ $invoice->note_description }}</p>
+    @endif
 
     <!-- Header Section -->
     <table class="header-table">
@@ -145,7 +151,7 @@
         </tr>
         <tr>
             <td class="label">Dirección:</td>
-            <td class="value">-</td>
+            <td class="value">{{ $customerAddress ?: '—' }}</td>
             <td class="label">Moneda:</td>
             <td class="value">{{ ($invoice->moneda ?? 'PEN') === 'PEN' ? 'SOLES (PEN)' : (($invoice->moneda ?? 'PEN') === 'USD' ? 'DÓLARES (USD)' : ($invoice->moneda ?? 'PEN')) }}</td>
         </tr>
@@ -173,12 +179,25 @@
             </tr>
         </thead>
         <tbody>
-            @if($invoice->isConsumptionSummary())
+            @if($invoice->isConsumptionSummary() && !$invoice->original_invoice_id)
+                @php
+                    $isExonerado = ($invoice->total_exonerada > 0) || (($invoice->total_gravada ?? 0) == 0 && ($invoice->total_inafecta ?? 0) == 0 && ($invoice->total_igv ?? 0) == 0);
+                    $isInafecto  = ($invoice->total_inafecta > 0);
+                    $isGravado   = !$isExonerado && !$isInafecto;
+                    
+                    $afectLabel = $isExonerado ? 'Exonerado' : ($isInafecto ? 'Inafecto' : 'Gravado');
+                    $vUnit  = $isGravado ? round($invoice->total / 1.18, 2) : $invoice->total;
+                    $vVenta = $vUnit;
+                @endphp
                 <tr>
-                    <td class="align-center">1.00</td><td class="align-center">NIU</td><td class="align-center">—</td>
+                    <td class="align-center">1.00</td>
+                    <td class="align-center">NIU</td>
+                    <td class="align-center">—</td>
                     <td class="align-left">{{ $invoice->consumption_description ?: 'Consumo' }}</td>
-                    <td class="align-center">{{ $invoice->total_exonerada > 0 ? 'Exonerado' : ($invoice->total_inafecta > 0 ? 'Inafecto' : 'Gravado') }}</td>
-                    <td class="align-right">{{ number_format($invoice->total, 2) }}</td><td class="align-center">—</td><td class="align-right">{{ number_format($invoice->total, 2) }}</td>
+                    <td class="align-center">{{ $afectLabel }}</td>
+                    <td class="align-right">{{ number_format($vUnit, 2) }}</td>
+                    <td class="align-center">—</td>
+                    <td class="align-right">{{ number_format($vVenta, 2) }}</td>
                 </tr>
             @elseif(!empty($itemDetails) && count($itemDetails))
                 @foreach($itemDetails as $detail)
@@ -186,7 +205,10 @@
                         $taxType = $detail['tax_type'];
                         $afectLabel = $taxType === 'exonerado' ? 'Exonerado' : ($taxType === 'inafecto' ? 'Inafecto' : 'Gravado');
                         
-                        if ($taxType === 'exonerado' || $taxType === 'inafecto') {
+                        if (isset($detail['xml_unit_value'])) {
+                            $vUnit = $detail['xml_unit_value'];
+                            $vVenta = $detail['xml_line_value'];
+                        } elseif ($taxType === 'exonerado' || $taxType === 'inafecto') {
                             $vUnit = $detail['unit_price'];
                             $vVenta = $detail['unit_price'] * $detail['quantity'];
                         } else {
@@ -209,10 +231,13 @@
                 @foreach($invoice->order->items as $item)
                     @php
                         $product = $item->product;
-                        $taxType = $product ? $product->tax_type : 'gravado';
+                        $taxType = $item->tax_type ?? ($product?->tax_type ?? 'gravado');
                         $afectLabel = $taxType === 'exonerado' ? 'Exonerado' : ($taxType === 'inafecto' ? 'Inafecto' : 'Gravado');
                         
-                        if ($taxType === 'exonerado' || $taxType === 'inafecto') {
+                        if (isset($detail['xml_unit_value'])) {
+                            $vUnit = $detail['xml_unit_value'];
+                            $vVenta = $detail['xml_line_value'];
+                        } elseif ($taxType === 'exonerado' || $taxType === 'inafecto') {
                             $vUnit = $item->unit_price;
                             $vVenta = $item->unit_price * $item->quantity;
                         } else {
@@ -249,70 +274,49 @@
             </td>
             <td style="width: 40%; vertical-align: top;">
                 @php
-                    $totGravada = 0;
-                    $totExonerada = 0;
-                    $totInafecta = 0;
-                    $totIgv = 0;
+                    $totGravada = (double)($invoice->total_gravada ?? 0);
+                    $totExonerada = (double)($invoice->total_exonerada ?? 0);
+                    $totInafecta = (double)($invoice->total_inafecta ?? 0);
+                    $totIgv = (double)($invoice->total_igv ?? 0);
+                    $totTotal = (double)($invoice->total ?? 0);
                     
-                    if ($invoice->order && $invoice->order->items->count()) {
-                        foreach ($invoice->order->items as $item) {
-                            $product = $item->product;
-                            $taxType = $product ? $product->tax_type : 'gravado';
-                            $lineTotal = round($item->unit_price * $item->quantity, 2);
-                            
-                            if ($taxType === 'exonerado') {
-                                $totExonerada += $lineTotal;
-                            } elseif ($taxType === 'inafecto') {
-                                $totInafecta += $lineTotal;
-                            } else {
-                                $lineVal = round($lineTotal / 1.18, 2);
-                                $lineIgv = round($lineVal * 0.18, 2);
-                                $lineSum = round($lineVal + $lineIgv, 2);
-                                if ($lineSum !== $lineTotal) {
-                                    $diff = round($lineTotal - $lineSum, 2);
-                                    $lineIgv = round($lineIgv + $diff, 2);
-                                }
-                                $totGravada += $lineVal;
-                                $totIgv += $lineIgv;
-                            }
-                        }
-                    } else {
-                        $totGravada = (double)($invoice->total_gravada ?? 0);
-                        $totIgv = (double)($invoice->total_igv ?? 0);
-                        if ($totGravada == 0) {
-                            $totExonerada = (double)($invoice->total ?? 0);
+                    // Fallback para comprobantes antiguos sin columnas de desglose
+                    if ($totGravada == 0 && $totExonerada == 0 && $totInafecta == 0 && $totTotal > 0) {
+                        if ($totIgv > 0) {
+                            $totGravada = round($totTotal - $totIgv, 2);
+                        } else {
+                            $totExonerada = $totTotal;
                         }
                     }
-                    $totTotal = (double)($invoice->total ?? 0);
                 @endphp
                 <table class="totals-table">
                     @if($totGravada > 0)
                         <tr>
                             <td class="align-left">Op. Gravada</td>
-                            <td class="align-right">S/ {{ number_format($totGravada, 2) }}</td>
+                            <td class="align-right">{{ $invoice->moneda === 'PEN' ? 'S/' : $invoice->moneda }} {{ number_format($totGravada, 2) }}</td>
                         </tr>
                     @endif
                     @if($totExonerada > 0)
                         <tr>
                             <td class="align-left">Op. Exonerada</td>
-                            <td class="align-right">S/ {{ number_format($totExonerada, 2) }}</td>
+                            <td class="align-right">{{ $invoice->moneda === 'PEN' ? 'S/' : $invoice->moneda }} {{ number_format($totExonerada, 2) }}</td>
                         </tr>
                     @endif
                     @if($totInafecta > 0)
                         <tr>
                             <td class="align-left">Op. Inafecta</td>
-                            <td class="align-right">S/ {{ number_format($totInafecta, 2) }}</td>
+                            <td class="align-right">{{ $invoice->moneda === 'PEN' ? 'S/' : $invoice->moneda }} {{ number_format($totInafecta, 2) }}</td>
                         </tr>
                     @endif
                     @if($totIgv > 0)
                         <tr>
                             <td class="align-left">IGV (18%)</td>
-                            <td class="align-right">S/ {{ number_format($totIgv, 2) }}</td>
+                            <td class="align-right">{{ $invoice->moneda === 'PEN' ? 'S/' : $invoice->moneda }} {{ number_format($totIgv, 2) }}</td>
                         </tr>
                     @endif
                     <tr class="total-row">
                         <td class="align-left" style="border-top-left-radius: 4px; border-bottom-left-radius: 4px;">TOTAL</td>
-                        <td class="align-right" style="border-top-right-radius: 4px; border-bottom-right-radius: 4px;">S/ {{ number_format($totTotal, 2) }}</td>
+                        <td class="align-right" style="border-top-right-radius: 4px; border-bottom-right-radius: 4px;">{{ $invoice->moneda === 'PEN' ? 'S/' : $invoice->moneda }} {{ number_format($totTotal, 2) }}</td>
                     </tr>
                 </table>
             </td>
