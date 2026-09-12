@@ -47,17 +47,19 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>This App needs access to your camera to take profile photos, verify identity, and capture trip-related images.</string>
+	<string>Lizto Repartidor requiere acceso a tu cámara para tomar tu foto de perfil, verificar tu identidad vehicular y capturar fotos de comprobantes o entrega de pedidos.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Esta app usa tu ubicación en segundo plano para compartir tu posición con los clientes, actualizar el progreso de entregas y recibir pedidos cercanos incluso cuando la app no está en primer plano.</string>
+	<string>Lizto Repartidor usa tu ubicación en segundo plano para compartir tu posición con los clientes en tiempo real, actualizar el progreso de entregas y recibir pedidos cercanos incluso cuando la app no está en primer plano.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Esta app usa tu ubicación para mostrar pedidos cercanos, navegar hacia recogidas y entregas, y rastrear tu progreso.</string>
+	<string>Lizto Repartidor usa tu ubicación para mostrarte pedidos cercanos disponibles, guiarte hacia los comercios y clientes, y registrar el progreso de la entrega.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Lizto Repartidor utiliza tu ubicación continua para permitir el rastreo de entregas activas y garantizar que los pedidos lleguen al cliente a tiempo.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>This App uses the microphone for in-app voice communication and support during rides.</string>
+	<string>Lizto Repartidor requiere acceso al micrófono para comunicación de audio y mensajes de voz con los clientes o soporte durante la entrega.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>This App needs permission to save photos and documents related to your trips to your photo library.</string>
+	<string>Lizto Repartidor solicita permiso para guardar fotos de comprobantes y reportes de entregas en tu galería si decides descargarlos.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>This App needs access to your photo library to upload profile pictures, documents, and trip-related images.</string>
+	<string>Lizto Repartidor necesita acceso a tu galería para que puedas subir tu foto de perfil, documentos vehiculares y comprobantes de entrega de pedidos.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>

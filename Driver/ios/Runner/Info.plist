@@ -4,25 +4,27 @@
 <dict>
 	<!-- Custom Permission Messages for Driver App -->
 	<key>NSCameraUsageDescription</key>
-	<string>This App needs access to your camera to take profile photos, verify identity, and capture trip-related images.</string>
+	<string>Lizto Conductor requiere acceso a tu cámara para tomar tu foto de perfil, verificar tu identidad vehicular y capturar fotos de documentos o incidencias.</string>
 
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>This App needs access to your photo library to upload profile pictures, documents, and trip-related images.</string>
+	<string>Lizto Conductor necesita acceso a tu galería para subir tu foto de perfil, documentos del vehículo y comprobantes.</string>
 
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>This App needs permission to save photos and documents related to your trips to your photo library.</string>
+	<string>Lizto Conductor solicita permiso para guardar recibos y comprobantes de viajes en tu galería si decides descargarlos.</string>
 
 	<key>NSMicrophoneUsageDescription</key>
-	<string>This App uses the microphone for in-app voice communication and support during rides.</string>
+	<string>Lizto Conductor requiere acceso al micrófono para comunicación de audio y mensajes de voz con los pasajeros durante el servicio.</string>
 
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>This App uses your location in the background to update trip progress, match you with nearby ride requests, and ensure accurate navigation and fare calculation even when the app is not in the foreground.</string>
+	<string>Lizto Conductor utiliza tu ubicación en segundo plano para recibir solicitudes de viajes cercanos, navegar rutas y calcular distancias y tarifas con precisión, incluso cuando la app está minimizada.</string>
 
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>his App uses your location to show nearby ride requests, navigate to pickup and drop-off points, and calculate trip distance and fare.</string>
+	<string>Lizto Conductor utiliza tu ubicación para mostrar viajes cercanos, guiar la navegación al punto de recogida y destino, y calcular la tarifa del viaje.</string>
+
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Lizto Conductor utiliza tu ubicación continua para garantizar el seguimiento del viaje y tu seguridad durante todo el trayecto.</string>
 	
-	
-	<!-- For Backhground locations -->
+	<!-- For Background locations and tasks -->
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>com.pravera.flutter_foreground_task.refresh</string>
@@ -30,6 +32,8 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>
+		<string>location</string>
+		<string>processing</string>
 		<string>remote-notification</string>
 	</array>
 
