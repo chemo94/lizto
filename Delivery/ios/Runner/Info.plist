@@ -43,11 +43,11 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Lizto Delivery utiliza la cámara para que puedas tomar fotos, como tu foto de perfil o imágenes que necesites enviar dentro de la aplicación.</string>
+	<string>Lizto Delivery utiliza la cámara para que puedas tomar fotos, como tu foto de perfil o imágenes de comprobantes dentro de la aplicación.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Lizto Delivery utiliza tu ubicación para encontrar mototaxis cercanos, calcular la ruta del viaje y conectarte con conductores disponibles cerca de tu punto de recogida.</string>
+	<string>Lizto Delivery utiliza tu ubicación para mostrarte restaurantes y comercios cercanos, calcular los costos de entrega y asegurar que tus pedidos lleguen a tu dirección exacta.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Lizto Delivery solicita permiso para guardar imágenes o comprobantes del viaje en tu galería si decides descargarlos.</string>
+	<string>Lizto Delivery solicita permiso para guardar imágenes o comprobantes de tus pedidos en tu galería si decides descargarlos.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Lizto Delivery necesita acceso a tu galería para que puedas seleccionar y subir fotos, como tu foto de perfil o comprobantes dentro de la aplicación.</string>
 	<key>NSMicrophoneUsageDescription</key>

@@ -268,10 +268,15 @@ class PushNotificationService {
     String currentToken = '';
     try {
       if (Platform.isIOS) {
-        // Wait a tiny bit for APNS to register or check if token is available
-        final apnsToken = await firebaseMessaging.getAPNSToken();
+        String? apnsToken = await firebaseMessaging.getAPNSToken();
+        int attempts = 0;
+        while (apnsToken == null && attempts < 3) {
+          attempts++;
+          await Future.delayed(const Duration(milliseconds: 1000));
+          apnsToken = await firebaseMessaging.getAPNSToken();
+        }
         if (apnsToken == null) {
-          printX("⚠️ APNS token is not ready yet, skipping FCM token fetch.");
+          printX("⚠️ [iOS] APNS token aún no disponible. Se enviará token FCM vía onTokenRefresh.");
           return false;
         }
       }

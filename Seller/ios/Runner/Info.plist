@@ -43,13 +43,13 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Lizto Restaurante utiliza la cámara para que puedas tomar fotos, como tu foto de perfil o imágenes que necesites enviar dentro de la aplicación.</string>
+	<string>Lizto Restaurante utiliza la cámara para tomar fotos de tus productos, platillos, logo del negocio o documentos de verificación.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Lizto Restaurante utiliza tu ubicación para encontrar mototaxis cercanos, calcular la ruta del viaje y conectarte con conductores disponibles cerca de tu punto de recogida.</string>
+	<string>Lizto Restaurante utiliza tu ubicación para fijar la dirección comercial de tu negocio en el mapa y facilitar la asignación de pedidos y entregas con repartidores y clientes cercanos.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Lizto Restaurante solicita permiso para guardar imágenes o comprobantes del viaje en tu galería si decides descargarlos.</string>
+	<string>Lizto Restaurante solicita permiso para guardar comprobantes de venta, reportes y boletas o facturas en tu galería si decides descargarlos.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Lizto Restaurante necesita acceso a tu galería para que puedas seleccionar y subir fotos, como tu foto de perfil o comprobantes dentro de la aplicación.</string>
+	<string>Lizto Restaurante necesita acceso a tu galería para que puedas seleccionar y subir imágenes de tus productos, catálogo, logo de la tienda y comprobantes fiscales.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>

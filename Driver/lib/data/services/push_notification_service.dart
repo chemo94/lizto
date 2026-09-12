@@ -249,7 +249,25 @@ class PushNotificationService {
         ) ??
         '';
 
-    String currentToken = (await firebaseMessaging.getToken()) ?? '';
+    String currentToken = '';
+    try {
+      if (Platform.isIOS) {
+        String? apnsToken = await firebaseMessaging.getAPNSToken();
+        int attempts = 0;
+        while (apnsToken == null && attempts < 3) {
+          attempts++;
+          await Future.delayed(const Duration(milliseconds: 1000));
+          apnsToken = await firebaseMessaging.getAPNSToken();
+        }
+        if (apnsToken == null) {
+          printX("⚠️ [iOS] APNS token aún no disponible. Se enviará token FCM vía onTokenRefresh.");
+          return false;
+        }
+      }
+      currentToken = (await firebaseMessaging.getToken()) ?? '';
+    } catch (e) {
+      printX("⚠️ Error al obtener token FCM en iOS: $e");
+    }
 
     bool success = currentToken.isNotEmpty;
     if (currentToken.isNotEmpty && (force || currentToken != cachedToken)) {

@@ -24,10 +24,12 @@ class DownloadService {
     required String fileName,
   }) async {
 
-    await [
-      Permission.storage,
-      Permission.mediaLibrary,
-    ].request();
+    if (Platform.isAndroid) {
+      final status = await Permission.storage.status;
+      if (!status.isGranted) {
+        await Permission.storage.request();
+      }
+    }
 
     print("🔵 URL: $url");
 
