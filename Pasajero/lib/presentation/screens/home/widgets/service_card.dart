@@ -25,7 +25,7 @@ class ServiceCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () async {
-        await controller.selectService(service, shouldLoadFare: true);
+        await controller.selectService(service, shouldLoadFare: false);
       },
       child: Container(
         width: 104,

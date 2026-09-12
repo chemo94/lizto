@@ -383,7 +383,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           controller.updateIsServiceShake(false);
                           Get.toNamed(RouteHelper.locationPickUpScreen, arguments: [1])?.then((v) {
                             if (controller.selectedLocations.length > 1) {
-                              controller.getRideFare();
+                              controller.getRideFare(defaultToCheapest: true);
                               final dest = controller.selectedLocations[1];
                               final lat = dest.latitude;
                               final lng = dest.longitude;

@@ -56,14 +56,44 @@ class AdminDeliveryRequestDispatchService
             ->values()
             ->all();
 
-        $courier = Driver::query()
-            ->where('status', Status::ENABLE)
-            ->where('online_status', 1)
-            ->whereIn('service_type', ['delivery', 'both'])
-            ->whereHas('wallet', fn ($query) => $query->where('balance', '>', 0))
-            ->when($attemptedIds, fn ($query) => $query->whereNotIn('id', $attemptedIds))
-            ->orderBy('id')
-            ->first();
+        $courier = null;
+
+        // 1. Try finding nearest courier via Uber H3 + Redis spatial indexing
+        if ($favor->pickup_lat && $favor->pickup_lng) {
+            $nearbyCouriers = \App\Services\H3\DriverGeoRedisService::findNearbyCouriers(
+                (float) $favor->pickup_lat,
+                (float) $favor->pickup_lng,
+                radiusKm: (float) (gs('delivery_coverage_radius') ?? 10),
+                excludeDriverIds: $attemptedIds,
+                limit: 5
+            );
+
+            if ($nearbyCouriers->isNotEmpty()) {
+                $candidateIds = $nearbyCouriers->pluck('id')->all();
+                $courier = Driver::query()
+                    ->whereIn('id', $candidateIds)
+                    ->where('status', Status::ENABLE)
+                    ->where('online_status', 1)
+                    ->whereHas('wallet', fn ($query) => $query->where('balance', '>', 0))
+                    ->get()
+                    ->sortBy(function ($d) use ($candidateIds) {
+                        return array_search($d->id, $candidateIds);
+                    })
+                    ->first();
+            }
+        }
+
+        // 2. Fallback to standard query if no nearby courier found in range
+        if (!$courier) {
+            $courier = Driver::query()
+                ->where('status', Status::ENABLE)
+                ->where('online_status', 1)
+                ->whereIn('service_type', ['delivery', 'both'])
+                ->whereHas('wallet', fn ($query) => $query->where('balance', '>', 0))
+                ->when($attemptedIds, fn ($query) => $query->whereNotIn('id', $attemptedIds))
+                ->orderBy('id')
+                ->first();
+        }
 
         if (!$courier) {
             // Start a new round if every currently available courier was consulted.

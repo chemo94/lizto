@@ -506,6 +506,9 @@ class SunatService
 
     public function sendNote(PosOrder $order, PosInvoiceSeries $series, string $tipoNota, string $descripcion, ?SunatInvoice $existingInvoice = null, ?string $affectedTipoDoc = null)
     {
+        if ($existingInvoice?->original_invoice_id) {
+            return app(CreditNoteCancellation::class)->submit($existingInvoice);
+        }
         $this->initSee();
 
         $correlativo = $existingInvoice ? (int) $existingInvoice->correlativo : (int) $series->current_number;
@@ -833,8 +836,57 @@ class SunatService
         return \App\Models\SunatInvoice::create($data);
     }
 
+    public function buildVoidedXml(SunatInvoice $source, int $number, string $reason, \DateTimeInterface $date): string
+    {
+        $this->initSee();
+        $doc = new \DOMDocument();
+        $xml = (string)$source->xml_content;
+        if (!$xml || preg_match('/<!DOCTYPE|<!ENTITY/i', $xml) || !@$doc->loadXML($xml, LIBXML_NONET)) {
+            throw new \RuntimeException('Se requiere el XML original de la factura.');
+        }
+        $xp = new \DOMXPath($doc);
+        $xp->registerNamespace('cbc', CreditNoteXml::CBC);
+        $xp->registerNamespace('cac', CreditNoteXml::CAC);
+        $value = fn($path) => trim($xp->evaluate('string(/*/'.$path.')'));
+        $id = explode('-', $value('cbc:ID'));
+        if (count($id) !== 2 || $id[0] !== $source->serie || (int)$id[1] !== (int)$source->correlativo
+            || $value('cbc:InvoiceTypeCode') !== '01'
+            || $value('cbc:IssueDate') !== $source->fecha_emision->format('Y-m-d')
+            || $value('cac:AccountingSupplierParty/cac:Party/cac:PartyIdentification/cbc:ID') !== $this->docNumber) {
+            throw new \RuntimeException('Los datos de la factura no coinciden con su XML original.');
+        }
+        $detail = (new VoidedDetail())->setTipoDoc('01')->setSerie($id[0])->setCorrelativo($id[1])->setDesMotivoBaja(trim($reason));
+        $voided = (new Voided())->setCorrelativo((string)$number)
+            ->setFecGeneracion(new \DateTime($value('cbc:IssueDate')))
+            ->setFecComunicacion(\DateTime::createFromInterface($date))->setCompany($this->company)->setDetails([$detail]);
+        return $this->see->getXmlSigned($voided);
+    }
+
+    public function transmitVoidedXml(SunatInvoice $ra): array
+    {
+        $this->initSee();
+        $result = $this->see->sendXml(Voided::class, $this->docNumber.'-'.$ra->serie.'-'.$ra->correlativo, $ra->xml_content);
+        if (!$result || !$result->isSuccess() || !$result->getTicket()) {
+            throw new \RuntimeException($result?->getError()?->getMessage() ?? 'SUNAT no devolvió un ticket; se conserva esta comunicación para revisión o reintento.');
+        }
+        return ['ticket'=>$result->getTicket(), 'cdr_status'=>'pending', 'errors'=>null,
+            'sunat_response'=>json_encode(['ticket'=>$result->getTicket()])];
+    }
+
+    public function consultVoidedTicket(string $ticket): array
+    {
+        $result = $this->getStatus($ticket);
+        if ((string)$result->getCode() === '98') return ['cdr_status'=>'pending', 'errors'=>null];
+        $cdr = $result->getCdrResponse();
+        if (!$cdr) throw new \RuntimeException($result->getError()?->getMessage() ?? 'CDR de baja aún no disponible.');
+        return ['cdr_status'=>$result->isSuccess() && (string)$result->getCode() === '0' && (string)$cdr->getCode() === '0' ? 'accepted' : 'rejected',
+            'cdr_response'=>json_encode(['code'=>$cdr->getCode(), 'description'=>$cdr->getDescription(),
+                'notes'=>$cdr->getNotes() ?? [], 'archivedCdr'=>base64_encode($result->getCdrZip() ?? '')], JSON_UNESCAPED_UNICODE), 'errors'=>null];
+    }
+
     public function getStatus(string $ticket)
     {
+        $this->initSee();
         return $this->see->getStatus($ticket);
     }    public function getCdrResult(string $tipoDoc, string $serie, int $correlativo): ?array
     {
@@ -846,7 +898,7 @@ class SunatService
 
         $wsdl = \Greenter\Ws\Services\SunatEndpoints::FE_CONSULTA_CDR . '?wsdl';
         $client = new \Greenter\Ws\Services\SoapClient($wsdl);
-        $client->setCredentials($ruc . $this->solUser, $this->solPass);
+        $client->setCredentials(str_starts_with($this->solUser, $ruc) ? $this->solUser : $ruc . $this->solUser, $this->solPass);
 
         $service = new \Greenter\Ws\Services\ConsultCdrService();
         $service->setClient($client);
@@ -854,6 +906,7 @@ class SunatService
         $result = $service->getStatusCdr($ruc, $tipoDoc, $serie, $correlativo);
         $cdr = $result->getCdrResponse();
 
+        if (!$result->isSuccess()) return ['status'=>'error', 'message'=>$result->getError()?->getMessage() ?? 'No se pudo consultar el CDR'];
         if ($cdr === null) {
             return ['status' => 'not_found', 'message' => 'CDR aun no disponible en SUNAT'];
         }
@@ -868,6 +921,27 @@ class SunatService
         }
 
         return ['status' => 'error', 'message' => $result->getError()->getMessage() ?? 'Error desconocido'];
+    }
+
+    public function signCreditNote(string $xml): string
+    {
+        $this->initSee();
+        return $this->see->getFactory()->getSigner()->signXml($xml);
+    }
+
+    public function transmitCreditNote(string $xml, string $series, int $number): array
+    {
+        $this->initSee();
+        $result = $this->see->sendXml(Note::class, $this->docNumber.'-07-'.$series.'-'.$number, $xml);
+        if (!$result || !$result->isSuccess()) {
+            return ['cdr_status'=>SunatInvoice::STATUS_ERROR, 'errors'=>json_encode([['code'=>$result?->getError()?->getCode(), 'message'=>$result?->getError()?->getMessage() ?? 'Sin respuesta de SUNAT']], JSON_UNESCAPED_UNICODE)];
+        }
+        $cdr=$result->getCdrResponse();
+        return [
+            'cdr_status'=>(string)$cdr->getCode() === '0' ? SunatInvoice::STATUS_ACCEPTED : SunatInvoice::STATUS_REJECTED,
+            'cdr_response'=>json_encode(['code'=>$cdr->getCode(),'description'=>$cdr->getDescription(),'notes'=>$cdr->getNotes() ?? [],'archivedCdr'=>base64_encode($result->getCdrZip() ?? '')], JSON_UNESCAPED_UNICODE),
+            'sunat_response'=>json_encode(['code'=>$cdr->getCode()]), 'errors'=>null,
+        ];
     }
 
     private function getTipoDoc(PosInvoiceSeries $series): string

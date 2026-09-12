@@ -520,5 +520,40 @@ Route::namespace('Api\Seller')->prefix('seller')->name('seller.')->group(functio
             Route::get('{id}/bids', 'bids');
             Route::post('{favorId}/bids/{bidId}/accept', 'acceptBid');
         });
+
+            // Seller Inventory & Gastronomy Modules
+            Route::controller('\App\Http\Controllers\Api\Seller\InventoryApiController')->prefix('inventory')->group(function () {
+                Route::get('metadata', 'metadata');
+
+                // Insumos & Stock
+                Route::get('items', 'items');
+                Route::post('items/store', 'itemStore');
+                Route::post('items/update/{id}', 'itemUpdate');
+                Route::post('items/delete/{id}', 'itemDelete');
+                Route::post('stock-adjust', 'stockAdjust');
+
+                // Recetas & Producción
+                Route::get('recipes', 'recipes');
+                Route::post('recipes/store', 'recipeStore');
+                Route::post('recipes/delete/{id}', 'recipeDelete');
+                Route::post('recipes/production', 'recipeProduction');
+                Route::post('recipes/production/void/{id}', 'recipeProductionVoid');
+
+                // Compras
+                Route::get('purchases', 'purchases');
+                Route::post('purchases/store', 'purchaseStore');
+
+                // Mermas
+                Route::get('wastes', 'wastes');
+                Route::post('wastes/store', 'wasteStore');
+
+                // Kardex
+                Route::get('kardex', 'kardex');
+
+                // Proveedores
+                Route::get('suppliers', 'suppliers');
+                Route::post('suppliers/store', 'supplierStore');
+                Route::post('suppliers/delete/{id}', 'supplierDelete');
+            });
     });
 });

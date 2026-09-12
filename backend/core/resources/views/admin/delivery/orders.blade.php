@@ -6,8 +6,8 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">{{ $pageTitle }}</h5>
                 <form method="GET" class="d-flex gap-2">
-                    <input type="text" name="search" class="form-control form-control-sm" placeholder="Buscar #pedido..." value="{{ request('search') }}">
-                    <select name="status" class="form-select form-select-sm" style="width:auto">
+                    <input type="text" name="search" class="form-control form-control-sm" aria-label="Buscar pedido" placeholder="Buscar #pedido..." value="{{ request('search') }}">
+                    <select name="status" aria-label="Estado del pedido" class="form-select form-select-sm" style="width:auto">
                         <option value="">Todos</option>
                         <option value="pending" {{ request('status')=='pending'?'selected':'' }}>Pendiente</option>
                         <option value="confirmed" {{ request('status')=='confirmed'?'selected':'' }}>Confirmado</option>
@@ -17,7 +17,7 @@
                         <option value="delivered" {{ request('status')=='delivered'?'selected':'' }}>Entregado</option>
                         <option value="cancelled" {{ request('status')=='cancelled'?'selected':'' }}>Cancelado</option>
                     </select>
-                    <button type="submit" class="btn btn--primary btn-sm"><i class="las la-search"></i></button>
+                    <button type="submit" aria-label="Filtrar pedidos" class="btn btn--primary btn-sm"><i class="las la-search"></i></button>
                 </form>
             </div>
             <div class="card-body p-0">

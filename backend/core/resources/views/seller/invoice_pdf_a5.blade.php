@@ -65,6 +65,12 @@
     </style>
 </head>
 <body>
+    @include('seller.partials.credit_note_result')
+    @if($invoice->original_invoice_id)
+    @php $affected = \App\Models\SunatInvoice::find($invoice->original_invoice_id); @endphp
+    <p>Comprobante afectado: {{ $affected?->serie }}-{{ $affected?->correlativo }} ({{ $invoice->note_affected_type === '03' ? 'Boleta' : 'Factura' }})<br>
+    Motivo {{ $invoice->note_motivo }}: {{ $invoice->note_description }}</p>
+    @endif
 
     <!-- Header Section -->
     <table class="header-table">
@@ -173,7 +179,7 @@
             </tr>
         </thead>
         <tbody>
-            @if($invoice->isConsumptionSummary())
+            @if($invoice->isConsumptionSummary() && !$invoice->original_invoice_id)
                 @php
                     $isExonerado = ($invoice->total_exonerada > 0) || (($invoice->total_gravada ?? 0) == 0 && ($invoice->total_inafecta ?? 0) == 0 && ($invoice->total_igv ?? 0) == 0);
                     $isInafecto  = ($invoice->total_inafecta > 0);
@@ -199,7 +205,10 @@
                         $taxType = $detail['tax_type'];
                         $afectLabel = $taxType === 'exonerado' ? 'Exonerado' : ($taxType === 'inafecto' ? 'Inafecto' : 'Gravado');
                         
-                        if ($taxType === 'exonerado' || $taxType === 'inafecto') {
+                        if (isset($detail['xml_unit_value'])) {
+                            $vUnit = $detail['xml_unit_value'];
+                            $vVenta = $detail['xml_line_value'];
+                        } elseif ($taxType === 'exonerado' || $taxType === 'inafecto') {
                             $vUnit = $detail['unit_price'];
                             $vVenta = $detail['unit_price'] * $detail['quantity'];
                         } else {
@@ -225,7 +234,10 @@
                         $taxType = $item->tax_type ?? ($product?->tax_type ?? 'gravado');
                         $afectLabel = $taxType === 'exonerado' ? 'Exonerado' : ($taxType === 'inafecto' ? 'Inafecto' : 'Gravado');
                         
-                        if ($taxType === 'exonerado' || $taxType === 'inafecto') {
+                        if (isset($detail['xml_unit_value'])) {
+                            $vUnit = $detail['xml_unit_value'];
+                            $vVenta = $detail['xml_line_value'];
+                        } elseif ($taxType === 'exonerado' || $taxType === 'inafecto') {
                             $vUnit = $item->unit_price;
                             $vVenta = $item->unit_price * $item->quantity;
                         } else {
@@ -281,30 +293,30 @@
                     @if($totGravada > 0)
                         <tr>
                             <td class="align-left">Op. Gravada</td>
-                            <td class="align-right">S/ {{ number_format($totGravada, 2) }}</td>
+                            <td class="align-right">{{ $invoice->moneda === 'PEN' ? 'S/' : $invoice->moneda }} {{ number_format($totGravada, 2) }}</td>
                         </tr>
                     @endif
                     @if($totExonerada > 0)
                         <tr>
                             <td class="align-left">Op. Exonerada</td>
-                            <td class="align-right">S/ {{ number_format($totExonerada, 2) }}</td>
+                            <td class="align-right">{{ $invoice->moneda === 'PEN' ? 'S/' : $invoice->moneda }} {{ number_format($totExonerada, 2) }}</td>
                         </tr>
                     @endif
                     @if($totInafecta > 0)
                         <tr>
                             <td class="align-left">Op. Inafecta</td>
-                            <td class="align-right">S/ {{ number_format($totInafecta, 2) }}</td>
+                            <td class="align-right">{{ $invoice->moneda === 'PEN' ? 'S/' : $invoice->moneda }} {{ number_format($totInafecta, 2) }}</td>
                         </tr>
                     @endif
                     @if($totIgv > 0)
                         <tr>
                             <td class="align-left">IGV (18%)</td>
-                            <td class="align-right">S/ {{ number_format($totIgv, 2) }}</td>
+                            <td class="align-right">{{ $invoice->moneda === 'PEN' ? 'S/' : $invoice->moneda }} {{ number_format($totIgv, 2) }}</td>
                         </tr>
                     @endif
                     <tr class="total-row">
                         <td class="align-left" style="border-top-left-radius: 4px; border-bottom-left-radius: 4px;">TOTAL</td>
-                        <td class="align-right" style="border-top-right-radius: 4px; border-bottom-right-radius: 4px;">S/ {{ number_format($totTotal, 2) }}</td>
+                        <td class="align-right" style="border-top-right-radius: 4px; border-bottom-right-radius: 4px;">{{ $invoice->moneda === 'PEN' ? 'S/' : $invoice->moneda }} {{ number_format($totTotal, 2) }}</td>
                     </tr>
                 </table>
             </td>

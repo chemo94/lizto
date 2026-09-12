@@ -4153,6 +4153,162 @@ class SellerPosController extends Controller
         exit;
     }
 
+    public function exportProductsStock(Request $request)
+    {
+        $seller = $this->seller();
+        $store = $this->store();
+        if (!$store) {
+            return back()->with('error', 'No tienes una tienda activa.');
+        }
+
+        $query = Product::where('store_id', $store->id)
+            ->with(['category', 'variations', 'addons', 'invProductItems.item'])
+            ->when($request->filled('search'), fn($q) => $q->where('name', 'like', '%' . $request->search . '%'))
+            ->when($request->status === 'active', fn($q) => $q->where('status', 1))
+            ->when($request->status === 'inactive', fn($q) => $q->where('status', 0))
+            ->when($request->filled('category'), fn($q) => $q->where('store_category_id', $request->category))
+            ->orderBy('store_category_id')->orderBy('sort_order')->orderBy('name');
+
+        $products = $query->get();
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Stock de Productos');
+
+        // Header Title
+        $storeName = $store->name ?? 'Mi Negocio';
+        $sheet->mergeCells('A1:O1')->setCellValue('A1', 'REPORTE DE INVENTARIO Y STOCK DE PRODUCTOS - ' . mb_strtoupper($storeName));
+        $sheet->mergeCells('A2:O2')->setCellValue('A2', 'Generado: ' . now()->format('d/m/Y H:i:s') . ' | Total Productos: ' . $products->count());
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14)->getColor()->setRGB('1E293B');
+        $sheet->getStyle('A2')->getFont()->setSize(10)->getColor()->setRGB('64748B');
+
+        // Column Headers
+        $headers = [
+            'A4' => 'ID',
+            'B4' => 'Código de Barras',
+            'C4' => 'Categoría',
+            'D4' => 'Nombre del Producto',
+            'E4' => 'Tipo de Inventario',
+            'F4' => 'Precio Venta (S/)',
+            'G4' => 'Precio Oferta (S/)',
+            'H4' => 'Costo (S/)',
+            'I4' => 'Stock Actual',
+            'J4' => 'Unidad',
+            'K4' => 'Stock Mínimo',
+            'L4' => 'Estado Stock',
+            'M4' => 'Variaciones (Precios)',
+            'N4' => 'Extras / Add-ons',
+            'O4' => 'Estado Menú',
+        ];
+
+        foreach ($headers as $cell => $text) {
+            $sheet->setCellValue($cell, $text);
+        }
+
+        // Header style
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EA580C']],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER],
+        ];
+        $sheet->getStyle('A4:O4')->applyFromArray($headerStyle);
+        $sheet->getRowDimension(4)->setRowHeight(28);
+
+        $row = 5;
+        foreach ($products as $p) {
+            $invItem = $p->invProductItems->first()?->item;
+            
+            $stockTypeLabel = match($p->stock_type) {
+                Product::STOCK_PACKAGED => 'Empaquetado (Vitrina)',
+                Product::STOCK_PREPARED => 'Preparado (Cocina/Carta)',
+                default => 'Sin inventario',
+            };
+
+            $stock = $invItem ? (float) $invItem->stock : ($p->stock_type === Product::STOCK_PACKAGED ? 0 : null);
+            $cost = $invItem ? (float) $invItem->cost : 0;
+            $unit = $invItem ? $invItem->unit : 'NIU';
+            $minStock = $invItem ? (float) $invItem->min_stock : null;
+
+            $stockStatus = 'No aplica';
+            if ($p->stock_type === Product::STOCK_PACKAGED) {
+                if ($stock <= 0) {
+                    $stockStatus = 'Agotado';
+                } elseif ($minStock !== null && $stock <= $minStock) {
+                    $stockStatus = 'Bajo Stock';
+                } else {
+                    $stockStatus = 'Normal';
+                }
+            } elseif ($p->stock_type === Product::STOCK_PREPARED) {
+                $stockStatus = 'Preparado al momento';
+            }
+
+            // Variations string
+            $varsStr = $p->variations->map(fn($v) => $v->name . ' (S/ ' . number_format($v->price, 2) . ')')->join(' | ');
+
+            // Addons string
+            $addonsStr = $p->addons->map(fn($a) => $a->name . ' (+S/ ' . number_format($a->price, 2) . ')')->join(' | ');
+
+            $sheet->setCellValue('A' . $row, $p->id);
+            $sheet->setCellValueExplicit('B' . $row, $p->barcode ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue('C' . $row, $p->category?->name ?? 'Sin categoría');
+            $sheet->setCellValue('D' . $row, $p->name);
+            $sheet->setCellValue('E' . $row, $stockTypeLabel);
+            $sheet->setCellValue('F' . $row, (float) $p->price);
+            $sheet->setCellValue('G' . $row, $p->discount_price > 0 ? (float) $p->discount_price : '-');
+            $sheet->setCellValue('H' . $row, $cost);
+            $sheet->setCellValue('I' . $row, $stock !== null ? $stock : '-');
+            $sheet->setCellValue('J' . $row, $unit);
+            $sheet->setCellValue('K' . $row, $minStock !== null ? $minStock : '-');
+            $sheet->setCellValue('L' . $row, $stockStatus);
+            $sheet->setCellValue('M' . $row, $varsStr ?: 'Sin variaciones');
+            $sheet->setCellValue('N' . $row, $addonsStr ?: 'Sin extras');
+            $sheet->setCellValue('O' . $row, $p->status ? 'Disponible' : 'Agotado / Inactivo');
+
+            // Formats
+            $sheet->getStyle('F' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+            $sheet->getStyle('H' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+            if ($p->discount_price > 0) {
+                $sheet->getStyle('G' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+            }
+            if ($stock !== null) {
+                $sheet->getStyle('I' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+            }
+            if ($minStock !== null) {
+                $sheet->getStyle('K' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+            }
+
+            // Colors for stock status
+            if ($stockStatus === 'Agotado') {
+                $sheet->getStyle('L' . $row)->getFont()->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('EF4444'))->setBold(true);
+            } elseif ($stockStatus === 'Bajo Stock') {
+                $sheet->getStyle('L' . $row)->getFont()->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('F59E0B'))->setBold(true);
+            } elseif ($stockStatus === 'Normal') {
+                $sheet->getStyle('L' . $row)->getFont()->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('10B981'))->setBold(true);
+            }
+
+            $row++;
+        }
+
+        // Auto-fit columns
+        foreach (range('A', 'O') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Auto-filter
+        if ($row > 5) {
+            $sheet->setAutoFilter('A4:O' . ($row - 1));
+        }
+
+        $filename = 'stock-productos-' . \Illuminate\Support\Str::slug($storeName) . '-' . date('Y-m-d') . '.xlsx';
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        $writer->save('php://output');
+        exit;
+    }
+
     public function bulkStore(Request $request)
     {
         $store = $this->store();
@@ -5372,7 +5528,13 @@ class SellerPosController extends Controller
         $sunatResponse = $invoice->sunat_response;
         $errors = $invoice->errors;
 
-        return view('seller.invoice_detail', compact('pageTitle', 'seller', 'store', 'activeCompany', 'invoice', 'xmlFormatted', 'cdrData', 'sunatResponse', 'errors'));
+        $creditNoteSeries = PosInvoiceSeries::where('seller_company_id', $invoice->seller_company_id)
+            ->where('active', true)->whereHas('invoiceType', fn($q) => $q->where('code', '07'))
+            ->where('series', 'like', ($invoice->tipo_doc === '03' ? 'BC' : 'FC').'%')->orderBy('series')->get();
+        $cancellationNotes = SunatInvoice::where('original_invoice_id', $invoice->id)->latest('id')->get();
+        $raEligibilityError = app(\App\Services\VoidedCancellation::class)->eligibilityError($invoice);
+
+        return view('seller.invoice_detail', compact('pageTitle', 'seller', 'store', 'activeCompany', 'invoice', 'xmlFormatted', 'cdrData', 'sunatResponse', 'errors', 'creditNoteSeries', 'cancellationNotes', 'raEligibilityError'));
     }
 
     public function invoicePdf($id, $format = 'a4')
@@ -5472,7 +5634,25 @@ class SellerPosController extends Controller
 
         // Resolve unit codes and SUNAT product codes for each item
         $itemDetails = [];
-        if ($invoice->isConsumptionSummary()) {
+        if ($invoice->original_invoice_id && $invoice->xml_content) {
+            $doc = new \DOMDocument();
+            $doc->loadXML($invoice->xml_content, LIBXML_NONET);
+            $xp = new \DOMXPath($doc);
+            $xp->registerNamespace('cac', \App\Services\CreditNoteXml::CAC);
+            $xp->registerNamespace('cbc', \App\Services\CreditNoteXml::CBC);
+            foreach ($xp->query('/*/cac:CreditNoteLine') as $line) {
+                $v = fn($path) => $xp->evaluate('string('.$path.')', $line);
+                $quantity = (float)$v('cbc:CreditedQuantity');
+                $net = (float)$v('cbc:LineExtensionAmount');
+                $tax = (float)$v('cac:TaxTotal/cbc:TaxAmount');
+                $taxCode = $v('cac:TaxTotal/cac:TaxSubtotal/cac:TaxCategory/cbc:TaxExemptionReasonCode');
+                $itemDetails[] = ['quantity'=>$quantity, 'unit_code'=>$v('cbc:CreditedQuantity/@unitCode'),
+                    'sunat_code'=>$v('cac:Item/cac:CommodityClassification/cbc:ItemClassificationCode'),
+                    'name'=>$v('cac:Item/cbc:Description'), 'tax_type'=>$taxCode === '20' ? 'exonerado' : ($taxCode === '30' ? 'inafecto' : 'gravado'),
+                    'unit_price'=>$quantity ? ($net+$tax)/$quantity : 0,
+                    'xml_unit_value'=>(float)$v('cac:Price/cbc:PriceAmount'), 'xml_line_value'=>$net];
+            }
+        } elseif ($invoice->isConsumptionSummary()) {
             $itemDetails[] = [
                 'quantity' => 1,
                 'unit_code' => 'NIU',
@@ -5547,6 +5727,7 @@ class SellerPosController extends Controller
         $ruc = $company?->document_number ?? $this->seller()->document_number ?? '00000000000';
         $tipoDoc = $invoice->tipo_doc ?: '03';
         $baseName = 'R-' . $ruc . '-' . $tipoDoc . '-' . $invoice->serie . '-' . str_pad($invoice->correlativo, 8, '0', STR_PAD_LEFT);
+        if ($tipoDoc === 'RA') $baseName = 'R-'.$ruc.'-'.$invoice->serie.'-'.$invoice->correlativo;
 
         // If cdr_response is stored as actual XML, serve it directly
         if (str_starts_with(trim($cdr), '<')) {
@@ -5580,6 +5761,7 @@ class SellerPosController extends Controller
         $ruc = $company?->document_number ?? $this->seller()->document_number ?? '00000000000';
         $tipoDoc = $invoice->tipo_doc ?: '03';
         $filename = $ruc . '-' . $tipoDoc . '-' . $invoice->serie . '-' . str_pad($invoice->correlativo, 8, '0', STR_PAD_LEFT) . '.xml';
+        if ($tipoDoc === 'RA') $filename = $ruc.'-'.$invoice->serie.'-'.$invoice->correlativo.'.xml';
 
         return response()->make($invoice->xml_content, 200, [
             'Content-Type' => 'application/xml',
@@ -5587,8 +5769,40 @@ class SellerPosController extends Controller
         ]);
     }
 
+    public function invoiceRequestRa(Request $request, $id)
+    {
+        $source = SunatInvoice::where('seller_id', $this->seller()->id)->findOrFail($id);
+        $request->validate(['reason'=>'required|string|max:100', 'not_granted'=>'accepted']);
+        try {
+            $service = app(\App\Services\VoidedCancellation::class);
+            $ra = $service->reserve($source, $request->reason, $request->boolean('not_granted'));
+            $ra = $service->submit($ra);
+            return redirect()->route('seller.invoice.detail', $ra->id)->with(
+                $ra->cdr_status === 'rejected' ? 'error' : 'success',
+                'Comunicación de baja: '.$ra->statusLabel().($ra->cdr_status === 'pending' ? '. Consulta el ticket para conocer el resultado; la factura conserva su estado.' : ''));
+        } catch (\Throwable $e) {
+            return back()->with('error', $e->getMessage())->withInput();
+        }
+    }
+
     public function invoiceVoid(Request $request, $id)
     {
+        $source = SunatInvoice::where('seller_id', $this->seller()->id)->findOrFail($id);
+        if ($source->original_invoice_id) return back()->with('error', 'Esta nota está vinculada a una anulación y no se puede anular desde este flujo.');
+        if (in_array($source->tipo_doc, ['01', '03'])) {
+            $request->validate(['credit_note_series_id'=>'required|integer', 'note_motivo'=>['required', \Illuminate\Validation\Rule::in(array_keys(\App\Services\CreditNoteReasons::LABELS))], 'adjustment'=>'nullable|array', 'reason'=>'required|string|max:250']);
+            try {
+                $service = app(\App\Services\CreditNoteCancellation::class);
+                $note = $service->reserve($source, (int)$request->credit_note_series_id, $request->note_motivo, $request->reason, $request->input('adjustment', []));
+                $note = $service->submit($note);
+                return redirect()->route('seller.invoice.detail', $note->id)->with(
+                    $note->cdr_status === 'accepted' ? 'success' : 'error',
+                    $note->cdr_status === 'accepted' ? 'Nota de crédito aceptada; ajuste aplicado según el motivo.' : 'Nota de crédito '.$note->serie.'-'.$note->correlativo.': '.$note->statusLabel().'. La venta conserva su estado; revisa la respuesta SUNAT.');
+            } catch (\Throwable $e) {
+                return back()->with('error', $e->getMessage())->withInput();
+            }
+        }
+
         $request->validate(['reason' => 'required|string|max:500']);
 
         $seller = $this->seller();
@@ -5756,6 +5970,20 @@ class SellerPosController extends Controller
 
     public function resendToSunat($id)
     {
+        $linked = SunatInvoice::where('seller_id', $this->seller()->id)->findOrFail($id);
+        if ($linked->tipo_doc === 'RA' && $linked->original_invoice_id) {
+            try {
+                $linked = app(\App\Services\VoidedCancellation::class)->submit($linked);
+                return back()->with($linked->cdr_status === 'rejected' ? 'error' : 'success', 'Comunicación de baja: '.$linked->statusLabel());
+            } catch (\Throwable $e) { return back()->with('error', $e->getMessage()); }
+        }
+        if ($linked->original_invoice_id) {
+            try {
+                $linked = app(\App\Services\CreditNoteCancellation::class)->submit($linked);
+                return back()->with($linked->cdr_status === 'accepted' ? 'success' : 'error', 'Nota de crédito: '.$linked->statusLabel());
+            } catch (\Throwable $e) { return back()->with('error', $e->getMessage()); }
+        }
+
         $seller = $this->seller();
         $activeCompany = $this->activeCompany();
         if (!$activeCompany) {

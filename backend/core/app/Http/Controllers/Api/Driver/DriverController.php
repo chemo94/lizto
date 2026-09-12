@@ -95,6 +95,22 @@ class DriverController extends Controller
         }
 
         $driver->save();
+
+        // Sync with Redis H3 real-time index
+        if ($driver->online_status && $driver->current_lat && $driver->current_lot) {
+            \App\Services\H3\DriverGeoRedisService::updateDriverPosition(
+                $driver,
+                (float) $driver->current_lat,
+                (float) $driver->current_lot,
+                bearing: (float) ($driver->bearing ?? 0),
+                serviceType: $driver->service_type,
+                serviceId: $driver->service_id,
+                isOnline: true
+            );
+        } else {
+            \App\Services\H3\DriverGeoRedisService::removeDriver($driver->id);
+        }
+
         $notify[] = $driver->online_status ? 'Estás en línea' : 'Estás fuera de línea';
 
         return apiResponse("online_status", "success", $notify, [
@@ -731,8 +747,23 @@ class DriverController extends Controller
         $user                         = auth()->user();
         $user->current_lat            = $request->current_lat;
         $user->current_lot            = $request->input($lngKey);
+        if ($request->has('bearing')) {
+            $user->bearing = $request->bearing;
+        }
         $user->last_location_fetch_at = now();
         $user->save();
+
+        // Update real-time spatial index in Redis with Uber H3 hexagon
+        $h3Data = \App\Services\H3\DriverGeoRedisService::updateDriverPosition(
+            $user,
+            (float) $request->current_lat,
+            (float) $request->input($lngKey),
+            bearing: $request->has('bearing') ? (float) $request->bearing : null,
+            speed: $request->has('speed') ? (float) $request->speed : null,
+            serviceType: $user->service_type,
+            serviceId: $user->service_id,
+            isOnline: (int) $user->online_status === 1
+        );
 
         //update ride location if has any  active or running ride of this driver
         $ride = Ride::where('driver_id', $user->id)->whereIn('status', [Status::RIDE_RUNNING, Status::RIDE_ACTIVE])->orderBy('id', 'desc')->first();
@@ -772,6 +803,9 @@ class DriverController extends Controller
 
 
         $notify[] = 'Ubicación actualizada con éxito';
-        return apiResponse("location_updated", "success", $notify);
+        return apiResponse("location_updated", "success", $notify, [
+            'h3'      => $h3Data['h3'] ?? null,
+            'h3_res9' => $h3Data['h3_res9'] ?? null,
+        ]);
     }
 }

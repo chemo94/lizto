@@ -43,10 +43,7 @@
 
     var channel = pusher.subscribe('private-admin-notifications');
 
-    // Request Notification Permission on Page Load
-    if (window.Notification && Notification.permission !== "granted" && Notification.permission !== "denied") {
-        Notification.requestPermission();
-    }
+    // Permission is requested only through the explicit notification banner action.
 
     function showNotificationModal(data, title) {
         try {

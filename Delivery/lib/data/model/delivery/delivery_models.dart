@@ -321,7 +321,9 @@ class CartItemModel {
       };
 
   double get unitPrice {
-    double base = product.finalPrice + (selectedVariation?.price ?? 0);
+    double base = (selectedVariation != null && (selectedVariation!.price ?? 0) > 0)
+        ? selectedVariation!.price!
+        : product.finalPrice;
     for (var a in selectedAddons) {
       base += a.price ?? 0;
     }

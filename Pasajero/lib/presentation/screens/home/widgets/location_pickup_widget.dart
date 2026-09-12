@@ -32,7 +32,7 @@ class _LocationPickUpHomeWidgetState extends State<LocationPickUpHomeWidget> {
           widget.controller.updateIsServiceShake(false);
           Get.toNamed(RouteHelper.locationPickUpScreen, arguments: [1])?.then((v) {
             if (widget.controller.selectedLocations.length > 1) {
-              widget.controller.getRideFare();
+              widget.controller.getRideFare(defaultToCheapest: true);
               final dest = widget.controller.selectedLocations[1];
               final lat = dest.latitude;
               final lng = dest.longitude;

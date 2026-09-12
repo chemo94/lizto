@@ -20,7 +20,7 @@
 <div class="s-content">
 <section class="catalog-head">
     <div><div class="crumb"><i class="las la-home"></i> Seller &nbsp;/&nbsp; Restaurante &nbsp;/&nbsp; Menú</div><h2><i class="las la-clipboard-list"></i> Gestión del menú</h2><p>Administra productos, categorías y precios de <b>{{ $store->name }}</b>.</p></div>
-    <div class="catalog-head-actions"><button class="s-btn primary" onclick="openProdModal()"><i class="las la-plus"></i> Añadir producto</button><a class="s-btn" href="{{ route('seller.categories') }}"><i class="las la-folder-plus"></i> Nueva categoría</a></div>
+    <div class="catalog-head-actions"><a class="s-btn" href="{{ route('seller.products.export.stock', request()->query()) }}" title="Exportar inventario y stock a Excel"><i class="las la-file-excel"></i> Exportar Stock</a><button class="s-btn primary" onclick="openProdModal()"><i class="las la-plus"></i> Añadir producto</button><a class="s-btn" href="{{ route('seller.categories') }}"><i class="las la-folder-plus"></i> Nueva categoría</a></div>
 </section>
 <div class="catalog-kpis">
     <div class="catalog-kpi"><i class="las la-clipboard-list" style="background:linear-gradient(135deg,#fbbf24,#f59e0b)"></i><div><b>{{ $totalProducts }}</b><small>Total productos</small></div></div>
@@ -439,21 +439,23 @@
 
                     <hr class="s-divider">
                     <div>
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-                            <label class="s-input-label" style="font-size:12px">Variaciones <span style="color:var(--s-text-3)">(talla, sabor, etc.)</span></label>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                            <label class="s-input-label" style="font-size:12px">Variaciones <span style="color:var(--s-text-3)">(opción única: tamaño, sabor, etc.)</span></label>
                             <button type="button" class="s-btn s-btn-outline s-btn-xs" onclick="addVarRow()">
                                 <i class="las la-plus"></i> Agregar
                             </button>
                         </div>
+                        <p style="font-size:11px;color:var(--s-text-3);margin:0 0 8px">Coloca el <b>precio final total</b> con esta variación (ej: Crocantes 20, BBQ 25). Si cuesta igual que el plato base, ingresa el mismo precio.</p>
                         <div id="var-list" style="display:flex;flex-direction:column;gap:6px"></div>
                     </div>
-                    <div>
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-                            <label class="s-input-label" style="font-size:12px">Extras / Add-ons</label>
+                    <div style="margin-top:10px">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                            <label class="s-input-label" style="font-size:12px">Extras / Add-ons <span style="color:var(--s-text-3)">(opcionales acumulables)</span></label>
                             <button type="button" class="s-btn s-btn-outline s-btn-xs" onclick="addAddonRow()">
                                 <i class="las la-plus"></i> Agregar
                             </button>
                         </div>
+                        <p style="font-size:11px;color:var(--s-text-3);margin:0 0 8px">Coloca el <b>monto adicional</b> que se sumará al plato (ej: +5.00 por papas extras, +2.00 por crema).</p>
                         <div id="addon-list" style="display:flex;flex-direction:column;gap:6px"></div>
                     </div>
                     <button type="submit" class="s-btn s-btn-primary" style="justify-content:center;margin-top:4px">
@@ -622,10 +624,10 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function varRow(i, name, price) {
-    return '<div style="display:flex;gap:6px;align-items:center"><input class="s-input" name="variations['+i+'][name]" value="'+(name||'')+'" placeholder="Nombre variación" style="flex:1"><input class="s-input" name="variations['+i+'][price]" type="number" step="0.01" value="'+(price||'')+'" placeholder="Precio" style="width:90px"><button type="button" onclick="this.parentElement.remove()" class="s-btn s-btn-ghost s-btn-xs" style="color:var(--s-danger)">✕</button></div>';
+    return '<div style="display:flex;gap:6px;align-items:center"><input class="s-input" name="variations['+i+'][name]" value="'+(name||'')+'" placeholder="Nombre variación (ej: Crocantes)" style="flex:1"><input class="s-input" name="variations['+i+'][price]" type="number" step="0.01" value="'+(price||'')+'" placeholder="Precio total S/" title="Precio final del plato con esta variación" style="width:115px"><button type="button" onclick="this.parentElement.remove()" class="s-btn s-btn-ghost s-btn-xs" style="color:var(--s-danger)">✕</button></div>';
 }
 function addonRow(i, name, price) {
-    return '<div style="display:flex;gap:6px;align-items:center"><input class="s-input" name="addons['+i+'][name]" value="'+(name||'')+'" placeholder="Nombre extra" style="flex:1"><input class="s-input" name="addons['+i+'][price]" type="number" step="0.01" value="'+(price||'')+'" placeholder="Precio" style="width:90px"><button type="button" onclick="this.parentElement.remove()" class="s-btn s-btn-ghost s-btn-xs" style="color:var(--s-danger)">✕</button></div>';
+    return '<div style="display:flex;gap:6px;align-items:center"><input class="s-input" name="addons['+i+'][name]" value="'+(name||'')+'" placeholder="Nombre extra (ej: Papas extra)" style="flex:1"><input class="s-input" name="addons['+i+'][price]" type="number" step="0.01" value="'+(price||'')+'" placeholder="+ Adicional S/" title="Monto extra a sumar" style="width:115px"><button type="button" onclick="this.parentElement.remove()" class="s-btn s-btn-ghost s-btn-xs" style="color:var(--s-danger)">✕</button></div>';
 }
 
 function addVarRow() {

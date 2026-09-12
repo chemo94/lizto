@@ -2,12 +2,12 @@
     <div class="dashboard__sidebar-area">
         <div class="dashboard__sidebar-header">
             <a href="{{ route('admin.dashboard') }}" class="dashboard__sidebar-logo">
-                <img class="img-fluid light-show" src="{{ siteLogo() }}">
-                <img class="img-fluid dark-show" src="{{ siteLogo('dark') }}">
+                <img class="img-fluid light-show" src="{{ siteLogo('dark') }}" alt="{{ gs('site_name') }}">
+                <img class="img-fluid dark-show" src="{{ siteLogo() }}" alt="{{ gs('site_name') }}">
             </a>
-            <span class="sidebar-menu__close header-dropdown__icon">
+            <button type="button" aria-label="Cerrar menú" class="sidebar-menu__close header-dropdown__icon">
                 <i class="las la-angle-double-left"></i>
-            </span>
+            </button>
         </div>
         @php
             $routeCount = 0;
@@ -20,7 +20,7 @@
                     @endphp
                     <x-permission_check :permission="array_merge(...$allPermissions)">
                         <li class="dashboard-nav__title">
-                            <span class="dashboard-nav__title-text">{{ __(str_replace('_', ' ', $k)) }}</span>
+                            <span class="dashboard-nav__title-text">{{ ['main'=>'Principal','people'=>'Personas','analysis'=>'Análisis','finance'=>'Finanzas','verification'=>'Verificación','system report'=>'Reportes','system utilities'=>'Herramientas','settings'=>'Configuración','frontend_manager'=>'Sitio web','other'=>'Soporte','delivery'=>'Delivery','reclamaciones'=>'Reclamaciones'][$k] ?? __(str_replace('_', ' ', $k)) }}</span>
                         </li>
                     </x-permission_check>
                     @foreach ($menu as $parentMenu)

@@ -17,7 +17,7 @@
     <div style="background:linear-gradient(135deg, var(--s-primary) 0%, #1e8a3f 100%); border-radius:16px; padding:24px 32px; color:#fff; margin-bottom:24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
         <div>
             <span style="font-size:11px; text-transform:uppercase; letter-spacing:1.5px; opacity:0.85; font-weight:800;">
-                {{ $invoice->tipo_doc === '01' ? 'Factura Electrónica' : ($invoice->tipo_doc === '03' ? 'Boleta Electrónica' : ($invoice->tipo_doc === '07' ? 'Nota de Crédito' : ($invoice->tipo_doc === 'NV' ? 'Nota de Venta' : 'Nota de Débito'))) }}
+                {{ $invoice->tipo_doc === '01' ? 'Factura Electrónica' : ($invoice->tipo_doc === '03' ? 'Boleta Electrónica' : ($invoice->tipo_doc === '07' ? 'Nota de Crédito' : ($invoice->tipo_doc === 'NV' ? 'Nota de Venta' : ($invoice->tipo_doc === 'RA' ? 'Comunicación de baja' : 'Nota de Débito')))) }}
             </span>
             <h2 style="margin:6px 0; font-size:28px; font-weight:900; letter-spacing:-0.5px;">
                 {{ $invoice->serie }}-{{ str_pad($invoice->correlativo, 8, '0', STR_PAD_LEFT) }}
@@ -81,6 +81,7 @@
             </h3>
 
             <div style="display:flex; flex-direction:column; gap:12px;">
+                @if($invoice->tipo_doc !== 'RA')
                 <a href="{{ route('seller.invoice.pdf', [$invoice->id, 'a4']) }}" class="s-btn s-btn-outline" style="justify-content:flex-start; gap:10px; border-radius:10px; padding:12px 16px;">
                     <i class="las la-file-pdf" style="color:#dc2626; font-size:20px;"></i>
                     <div style="text-align:left;"><b style="font-size:14px;">Previsualizar PDF A4</b><br><small style="color:var(--s-text-3); font-size:11px;">Vista previa e impresión formato carta</small></div>
@@ -101,24 +102,32 @@
                     <div style="text-align:left;"><b style="font-size:14px;">Descargar XML</b><br><small style="color:var(--s-text-3); font-size:11px;">Archivo XML firmado enviado a SUNAT</small></div>
                 </a>
 
+                @endif
                 <a href="{{ route('seller.invoice.cdr', $invoice->id) }}" class="s-btn s-btn-outline" style="justify-content:flex-start; gap:10px; border-radius:10px; padding:12px 16px;">
                     <i class="las la-check-double" style="color:#16a34a; font-size:20px;"></i>
                     <div style="text-align:left;"><b style="font-size:14px;">Descargar CDR</b><br><small style="color:var(--s-text-3); font-size:11px;">Constancia de Recepción SUNAT</small></div>
                 </a>
 
-                @if(in_array($invoice->cdr_status, ['accepted', 'pending']))
+                @if(!$invoice->original_invoice_id && ($invoice->cdr_status === 'accepted' || ($invoice->tipo_doc === 'NV' && $invoice->cdr_status === 'pending')))
                 <button onclick="toggleModal('modal-void')" class="s-btn" style="justify-content:flex-start; gap:10px; border-radius:10px; padding:12px 16px; background:var(--s-danger-bg); color:var(--s-danger-text); border:1px solid rgba(220,38,38,0.2);">
                     <i class="las la-ban" style="color:var(--s-danger); font-size:20px;"></i>
-                    <div style="text-align:left;"><b style="font-size:14px;">Anular Comprobante</b><br><small style="color:var(--s-danger-text); font-size:11px;">{{ in_array($invoice->tipo_doc ?? '', ['01', '07', '08']) ? 'Envía Comunicación de Baja (RA)' : 'Emite Nota de Crédito por anulación' }}</small></div>
+                    <div style="text-align:left;"><b style="font-size:14px;">{{ in_array($invoice->tipo_doc, ['01','03']) ? 'Emitir nota de crédito' : 'Anular Comprobante' }}</b><br><small style="color:var(--s-danger-text); font-size:11px;">{{ in_array($invoice->tipo_doc ?? '', ['07', '08']) ? 'Envía Comunicación de Baja (RA)' : 'Emite Nota de Crédito por anulación' }}</small></div>
                 </button>
                 @endif
 
-                @if(in_array($invoice->cdr_status, ['pending', 'error', 'rejected']))
-                <form method="POST" action="{{ route('seller.invoice.resend', $invoice->id) }}" onsubmit="return confirm('¿Reenviar este comprobante a SUNAT?');" style="margin:0;">
+                @if($invoice->tipo_doc === '01' && !$invoice->original_invoice_id && $invoice->cdr_status === 'accepted')
+                <button onclick="toggleModal('modal-baja')" class="s-btn s-btn-outline" style="justify-content:flex-start; padding:12px 16px;">Solicitar comunicación de baja (RA)</button>
+                @endif
+                @if($invoice->tipo_doc === 'RA')
+                <p><strong>Ticket SUNAT:</strong> {{ $invoice->ticket ?: 'Aún no recibido' }}<br>Estado de la baja: {{ $invoice->statusLabel() }}</p>
+                @endif
+
+                @if(($invoice->original_invoice_id && in_array($invoice->cdr_status, ['generated', 'error', 'pending', 'accepted']) && !$invoice->cancellation_applied_at) || (!$invoice->original_invoice_id && in_array($invoice->cdr_status, ['pending', 'error', 'rejected'])))
+                <form method="POST" action="{{ route('seller.invoice.resend', $invoice->id) }}"  style="margin:0;">
                     @csrf
                     <button type="submit" class="s-btn" style="width:100%; justify-content:flex-start; gap:10px; border-radius:10px; padding:12px 16px; background:var(--s-info-bg); color:var(--s-info-text); border:1px solid rgba(59,130,246,0.2);">
                         <i class="las la-redo" style="color:var(--s-info); font-size:20px;"></i>
-                        <div style="text-align:left;"><b style="font-size:14px;">Reenviar a SUNAT</b><br><small style="color:var(--s-info-text); font-size:11px;">Reintentar envío del comprobante electrónico</small></div>
+                        <div style="text-align:left;"><b style="font-size:14px;">{{ $invoice->tipo_doc === 'RA' ? ($invoice->ticket ? 'Consultar ticket / completar baja' : 'Reintentar comunicación de baja') : 'Reenviar a SUNAT' }}</b><br><small style="color:var(--s-info-text); font-size:11px;">{{ $invoice->tipo_doc === 'RA' && $invoice->ticket ? 'Consultar el resultado sin volver a enviar la baja' : 'Reintentar envío del comprobante electrónico' }}</small></div>
                     </button>
                 </form>
                 @endif
@@ -126,6 +135,13 @@
         </div>
     </div>
 
+    @foreach($cancellationNotes as $note)
+    <p><a href="{{ route('seller.invoice.detail', $note->id) }}">{{ $note->tipo_doc === 'RA' ? 'Comunicación de baja' : 'Nota de crédito' }} {{ $note->serie }}-{{ $note->correlativo }} — {{ $note->statusLabel() }}</a></p>
+    @endforeach
+    @if($invoice->original_invoice_id)
+    <p><a href="{{ route('seller.invoice.detail', $invoice->original_invoice_id) }}">Ver comprobante original afectado</a></p>
+    @endif
+    @include('seller.partials.credit_note_result')
     <!-- XML PREVIEW -->
     @if($xmlFormatted)
     <div class="s-card" style="margin-top:24px; border:1px solid var(--s-border);">
@@ -265,11 +281,11 @@
 </div>
 
 <!-- MODAL ANULAR -->
-@php $isVoidedDoc = in_array($invoice->tipo_doc ?? '', ['01', '07', '08']); @endphp
+@php $isVoidedDoc = in_array($invoice->tipo_doc ?? '', ['07', '08']); @endphp
 <div id="modal-void" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,25,35,0.6); align-items:center; justify-content:center; z-index:9999; backdrop-filter:blur(4px);">
-    <div class="s-card" style="width:100%; max-width:480px; padding:24px; border-radius:16px;">
+    <div class="s-card" style="width:100%; max-width:760px; max-height:90vh; overflow:auto; padding:24px; border-radius:16px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 style="margin:0; font-weight:900; font-size:18px; color:var(--s-text);"><i class="las la-ban" style="color:var(--s-danger);"></i> Anular Comprobante</h3>
+            <h3 style="margin:0; font-weight:900; font-size:18px; color:var(--s-text);"><i class="las la-ban" style="color:var(--s-danger);"></i> {{ in_array($invoice->tipo_doc,['01','03']) ? 'Emitir nota de crédito' : 'Anular Comprobante' }}</h3>
             <button class="s-btn s-btn-ghost" onclick="toggleModal('modal-void')" style="font-size:20px; color:var(--s-text-3);">✕</button>
         </div>
 
@@ -279,25 +295,52 @@
             </div>
         @else
             <div style="background:var(--s-warning-bg); color:var(--s-warning-text); padding:12px; border-radius:10px; margin-bottom:16px; font-size:12px; font-weight:700;">
-                <i class="las la-exclamation-triangle"></i> Se emitirá una Nota de Crédito Electrónica por anulación. Esta acción es irreversible.
+                <i class="las la-exclamation-triangle"></i> Se emitirá una Nota de Crédito Electrónica según el motivo seleccionado. Esta acción es irreversible.
             </div>
         @endif
 
         <form method="POST" action="{{ route('seller.invoice.void', $invoice->id) }}">
             @csrf
+            @if(in_array($invoice->tipo_doc, ['01', '03']))
+            <p>Comprobante afectado: <strong>{{ $invoice->serie }}-{{ $invoice->correlativo }}</strong><br>
+                Emisor: {{ $invoice->company?->business_name }}<br>
+                Importe total: {{ $invoice->moneda }} {{ number_format($invoice->total, 2) }}</p>
+            <div class="s-input-group" style="margin-bottom:16px;">
+                <label class="s-input-label" for="credit-note-series">Serie de nota de crédito *</label>
+                <select id="credit-note-series" name="credit_note_series_id" class="s-input" required>
+                    <option value="">Selecciona una serie {{ $invoice->tipo_doc === '03' ? 'BC' : 'FC' }}</option>
+                    @foreach($creditNoteSeries as $series)
+                    <option value="{{ $series->id }}" @selected(old('credit_note_series_id') == $series->id)>{{ $series->series }}</option>
+                    @endforeach
+                </select>
+                @if($creditNoteSeries->isEmpty())<small>No hay series activas de nota de crédito para este emisor. Configura una serie {{ $invoice->tipo_doc === '03' ? 'BC' : 'FC' }} de cuatro caracteres.</small>@endif
+            </div>
+            <div class="s-input-group" style="margin-bottom:16px;">
+                <label class="s-input-label" for="credit-note-reason">Motivo SUNAT *</label>
+                <select id="credit-note-reason" name="note_motivo" class="s-input" required>
+                    @foreach(\App\Services\CreditNoteReasons::LABELS as $code=>$label)
+                    <option value="{{ $code }}">{{ $code }} — {{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+            @include('seller.partials.credit_note_adjustments')
+            <p style="font-size:12px;">El ajuste se aplica después de la aceptación de SUNAT. Un reintento recupera la nota pendiente con su misma serie y número.</p>
+            @endif
             <div class="s-input-group" style="margin-bottom:20px;">
-                <label class="s-input-label">Motivo de Anulación *</label>
-                <textarea class="s-input" name="reason" rows="3" placeholder="Ej: Error en los datos del comprobante, datos del cliente incorrectos, etc." required style="resize:vertical;"></textarea>
+                <label class="s-input-label">Sustento del motivo *</label>
+                <textarea class="s-input" name="reason" rows="3" maxlength="250" placeholder="Explica la causa del ajuste seleccionado" required style="resize:vertical;"></textarea>
             </div>
             <div style="display:flex; gap:10px; justify-content:flex-end;">
                 <button type="button" class="s-btn s-btn-ghost" onclick="toggleModal('modal-void')">Cancelar</button>
                 <button type="submit" class="s-btn s-btn-danger" style="gap:6px;">
-                    <i class="las la-ban"></i> {{ $isVoidedDoc ? 'Enviar Comunicación de Baja' : 'Anular con Nota de Crédito' }}
+                    <i class="las la-ban"></i> {{ $isVoidedDoc ? 'Enviar Comunicación de Baja' : 'Emitir nota de crédito' }}
                 </button>
             </div>
         </form>
     </div>
 </div>
+
+@include('seller.partials.invoice_baja')
 
 @push('script')
 <script>

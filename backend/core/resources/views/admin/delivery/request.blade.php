@@ -387,13 +387,26 @@
     var maxPollTime = 180000; // 3 minutes
     var timerInterval = null;
 
+    function formatFeeDisplay(val) {
+        var num = parseFloat(val) || 0;
+        var floor = Math.floor(num);
+        var dec = Math.round((num - floor) * 100) / 100;
+        if (dec >= 0.46 && dec <= 0.54) {
+            return (floor + 0.50).toFixed(2);
+        } else if (dec > 0.54) {
+            return Math.ceil(num).toString();
+        } else {
+            return floor.toString();
+        }
+    }
+
     function refreshEstimatedTotal() {
         var additional = Math.max(0, parseFloat(additionalChargeInput.value) || 0);
         var total = baseDeliveryFee + additional;
-        document.getElementById('fee-additional').textContent = additional.toFixed(2);
+        document.getElementById('fee-additional').textContent = additional > 0 ? formatFeeDisplay(additional) : '0.00';
         if (baseDeliveryFee > 0) {
-            document.getElementById('fee-total').textContent = total.toFixed(2);
-            submitBtn.innerHTML = '<i class="las la-paper-plane"></i> Enviar solicitud a repartidores · S/ ' + total.toFixed(2);
+            document.getElementById('fee-total').textContent = formatFeeDisplay(total);
+            submitBtn.innerHTML = '<i class="las la-paper-plane"></i> Enviar solicitud a repartidores · S/ ' + formatFeeDisplay(total);
         }
     }
 

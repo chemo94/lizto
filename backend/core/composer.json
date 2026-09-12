@@ -31,6 +31,7 @@
         "mollie/laravel-mollie": "^3.0",
         "phpmailer/phpmailer": "^6.9",
         "phpoffice/phpspreadsheet": "^2.2",
+        "predis/predis": "*",
         "pusher/pusher-php-server": "^7.2",
         "razorpay/razorpay": "^2.9",
         "sendgrid/sendgrid": "^8.1",

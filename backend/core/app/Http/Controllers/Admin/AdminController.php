@@ -77,7 +77,8 @@ class AdminController extends Controller
             ->orderBy('total', 'desc')
             ->get();
 
-        return view('admin.dashboard', compact('pageTitle', 'admin', 'widget', 'userLogin'));
+        $recentRides = Ride::with('driver')->latest()->limit(5)->get();
+        return view('admin.dashboard', compact('pageTitle', 'admin', 'widget', 'userLogin', 'recentRides'));
     }
 
     public function profile()

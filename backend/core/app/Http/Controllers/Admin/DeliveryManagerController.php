@@ -101,7 +101,15 @@ class DeliveryManagerController extends Controller
 
         $commission = DeliveryCommission::first();
 
-        return view('admin.delivery.dashboard', compact('pageTitle', 'stats', 'commission'));
+        $orderStates = DeliveryOrder::selectRaw('status, COUNT(*) as total')->groupBy('status')->pluck('total', 'status');
+        $dailyOrders = DeliveryOrder::where('created_at', '>=', today()->subDays(13))
+            ->selectRaw('DATE(created_at) as day, COUNT(*) as total')->groupBy('day')->pluck('total', 'day');
+        $activity = collect(range(13, 0))->map(function ($offset) use ($dailyOrders) {
+            $day = today()->subDays($offset);
+            return ['label' => $day->format('d/m'), 'total' => (int) ($dailyOrders[$day->format('Y-m-d')] ?? 0)];
+        });
+        $recentOrders = DeliveryOrder::with('store', 'driver')->latest()->limit(5)->get();
+        return view('admin.delivery.dashboard', compact('pageTitle', 'stats', 'commission', 'orderStates', 'activity', 'recentOrders'));
     }
 
     // ── Orders ──

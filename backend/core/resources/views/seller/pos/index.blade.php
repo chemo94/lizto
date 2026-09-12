@@ -1483,10 +1483,15 @@ function openModal(p){
     var vl = document.getElementById('pm-var-list'), vc = document.getElementById('pm-var-section');
     if(p.variations.length){
         vc.style.display = 'block';
-        p.variations.forEach(function(v){
+        p.variations.forEach(function(v, idx){
             var lbl = document.createElement('label');
-            lbl.className = 'p-var';
-            lbl.innerHTML = '<span>' + v.name + '</span><span style="color:var(--s-accent-dark);font-weight:750;margin-left:auto">+S/ ' + v.price.toFixed(2) + '</span>';
+            lbl.className = 'p-var' + (idx === 0 ? ' selected' : '');
+            var priceText = 'S/ ' + v.price.toFixed(2);
+            var diff = v.price - p.price;
+            if (Math.abs(diff) > 0.001) {
+                priceText += ' (' + (diff > 0 ? '+S/ ' : '-S/ ') + Math.abs(diff).toFixed(2) + ')';
+            }
+            lbl.innerHTML = '<span>' + v.name + '</span><span style="color:var(--s-accent-dark);font-weight:750;margin-left:auto">' + priceText + '</span>';
             lbl.addEventListener('click', function(e){
                 e.preventDefault();
                 vl.querySelectorAll('.p-var').forEach(function(x){ x.classList.remove('selected'); });
@@ -1495,7 +1500,11 @@ function openModal(p){
                 pmUpd();
             });
             vl.appendChild(lbl);
+            if (idx === 0) {
+                window._pmVar = {name: v.name, price: v.price};
+            }
         });
+        pmUpd();
     }else{
         vc.style.display = 'none';
         window._pmVar = null;
@@ -1526,8 +1535,8 @@ function openModal(p){
 }
 
 function pmUpd(){
-    var t = window._pm.price;
-    if(window._pmVar) t += window._pmVar.price;
+    var basePrice = (window._pmVar && window._pmVar.price > 0) ? window._pmVar.price : window._pm.price;
+    var t = basePrice;
     window._pmAddons.forEach(function(a){ t += a.price; });
     if (document.getElementById('pm-tupper') && document.getElementById('pm-tupper').checked) {
         t += 1.00;
@@ -1536,9 +1545,13 @@ function pmUpd(){
 }
 
 function pmConfirm(){
-    var p = window._pm, t = p.price, n = p.name;
+    var p = window._pm, n = p.name;
+    if(p.variations.length && !window._pmVar){
+        alert('Por favor selecciona una variación');
+        return;
+    }
+    var t = (window._pmVar && window._pmVar.price > 0) ? window._pmVar.price : p.price;
     if(window._pmVar){
-        t += window._pmVar.price;
         n += ' (' + window._pmVar.name + ')';
     }
     window._pmAddons.forEach(function(a){

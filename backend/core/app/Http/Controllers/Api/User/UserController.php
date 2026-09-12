@@ -355,50 +355,41 @@ class UserController extends Controller
 
     public function nearbyDrivers(Request $request)
     {
-        $lat    = (float) $request->lat;
-        $lng    = (float) $request->lng;
-        $radius = (float) ($request->radius ?? 10);
+        $lat       = (float) $request->lat;
+        $lng       = (float) $request->lng;
+        $radius    = (float) ($request->radius ?? 10);
+        $serviceId = $request->filled('service_id') ? (int) $request->service_id : null;
 
-        $cacheKey = "nearby_drivers_" . round($lat, 1) . "_" . round($lng, 1) . "_$radius";
+        $drivers = \App\Services\H3\DriverGeoRedisService::findNearby(
+            lat: $lat,
+            lng: $lng,
+            radiusKm: $radius,
+            serviceId: $serviceId,
+            serviceType: ['ride', 'both'],
+            limit: 30,
+            fallbackToDb: true
+        );
 
-        $data = cache()->remember($cacheKey, 10, function () use ($lat, $lng, $radius) {
-            $latDelta  = $radius / 111.0;
-            $lngDelta  = $radius / (111.0 * cos(deg2rad($lat)));
-            $minLat    = $lat - $latDelta;
-            $maxLat    = $lat + $latDelta;
-            $minLng    = $lng - $lngDelta;
-            $maxLng    = $lng + $lngDelta;
+        $originH3 = \App\Services\H3\H3Grid::geoToH3($lat, $lng, 8);
 
-            $drivers = Driver::active()
-                ->where('online_status', Status::YES)
-                ->where('service_type', '!=', 'delivery')
-                ->whereNotNull('current_lat')
-                ->whereNotNull('current_lot')
-                ->whereBetween('current_lat', [$minLat, $maxLat])
-                ->whereBetween('current_lot', [$minLng, $maxLng])
-                ->selectRaw("*, (6371 * acos(cos(radians(?)) * cos(radians(current_lat)) * cos(radians(current_lot) - radians(?)) + sin(radians(?)) * sin(radians(current_lat)))) AS distance", [$lat, $lng, $lat])
-                ->having('distance', '<', $radius)
-                ->orderBy('distance')
-                ->with('service')
-                ->get();
-
-            return [
-                'driver_image_path' => getFilePath('driver'),
-                'drivers'           => $drivers->map(function ($driver) {
-                    return [
-                        'id'            => $driver->id,
-                        'firstname'     => $driver->firstname,
-                        'lastname'      => $driver->lastname,
-                        'latitude'      => $driver->current_lat,
-                        'longitude'     => $driver->current_lot,
-                        'bearing'       => $driver->bearing ?? 0,
-                        'service_name'  => $driver->service?->name,
-                        'distance_km'   => round($driver->distance, 2),
-                        'image'         => $driver->image,
-                    ];
-                }),
-            ];
-        });
+        $data = [
+            'h3_cell'           => $originH3,
+            'driver_image_path' => getFilePath('driver'),
+            'drivers'           => $drivers->map(function ($driver) {
+                return [
+                    'id'           => $driver['id'],
+                    'firstname'    => $driver['firstname'],
+                    'lastname'     => $driver['lastname'],
+                    'latitude'     => $driver['latitude'],
+                    'longitude'    => $driver['longitude'],
+                    'bearing'      => $driver['bearing'] ?? 0,
+                    'service_name' => $driver['service_name'] ?? null,
+                    'distance_km'  => round($driver['distance_km'], 2),
+                    'image'        => $driver['image'] ?? null,
+                    'h3'           => $driver['h3'] ?? null,
+                ];
+            })->values(),
+        ];
 
         $notify[] = 'Nearby drivers';
 

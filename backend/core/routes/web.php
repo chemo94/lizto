@@ -196,6 +196,7 @@ Route::get('/delivery/store-fee-estimate', 'storeFeeEstimate')->name('store.fee.
         Route::get('/products/bulk-template', [\App\Http\Controllers\SellerPosController::class, 'downloadTemplate'])->name('products.bulk-template');
         Route::post('/products/bulk-store', [\App\Http\Controllers\SellerPosController::class, 'bulkStore'])->name('products.bulk-store');
         Route::post('/products/ocr-parse', [\App\Http\Controllers\SellerPosController::class, 'ocrParse'])->name('products.ocr-parse');
+        Route::get('/products/export/stock', [\App\Http\Controllers\SellerPosController::class, 'exportProductsStock'])->name('products.export.stock');
 
         Route::get('/delivery', [\App\Http\Controllers\SellerPosController::class, 'delivery'])->name('delivery');
         Route::post('/logo-update', [\App\Http\Controllers\SellerPosController::class, 'logoUpdate'])->name('logo.update');
@@ -213,6 +214,7 @@ Route::get('/delivery/store-fee-estimate', 'storeFeeEstimate')->name('store.fee.
             Route::get('/invoicing/invoice/{id}/pdf/{format}', [\App\Http\Controllers\SellerPosController::class, 'invoicePdf'])->name('invoice.pdf');
             Route::get('/invoicing/invoice/{id}/cdr', [\App\Http\Controllers\SellerPosController::class, 'invoiceCdr'])->name('invoice.cdr');
             Route::get('/invoicing/invoice/{id}/xml', [\App\Http\Controllers\SellerPosController::class, 'invoiceXml'])->name('invoice.xml');
+            Route::post('/invoicing/invoice/{id}/baja', [\App\Http\Controllers\SellerPosController::class, 'invoiceRequestRa'])->name('invoice.baja');
             Route::post('/invoicing/invoice/{id}/void', [\App\Http\Controllers\SellerPosController::class, 'invoiceVoid'])->name('invoice.void');
             Route::post('/invoicing/invoice/{id}/resend', [\App\Http\Controllers\SellerPosController::class, 'resendToSunat'])->name('invoice.resend');
             Route::post('/orders/{id}/resend-receipt', [\App\Http\Controllers\SellerPosController::class, 'resendReceipt'])->name('orders.resend-receipt');

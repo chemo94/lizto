@@ -121,6 +121,15 @@ class ProcessSunatInvoices extends Command
 
         foreach ($pendingCdr as $invoice) {
             try {
+                if ($invoice->tipo_doc === 'RA' && $invoice->original_invoice_id) {
+                    try {
+                        $updated = app(\App\Services\VoidedCancellation::class)->submit($invoice);
+                        $this->line('  RA '.$invoice->serie.'-'.$invoice->correlativo.': '.$updated->cdr_status);
+                    } catch (\Throwable $e) {
+                        $this->warn('  RA: '.$e->getMessage());
+                    }
+                    continue;
+                }
                 $company = $this->validateInvoice($invoice);
                 if (!$company) continue;
 

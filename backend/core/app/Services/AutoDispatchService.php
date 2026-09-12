@@ -155,26 +155,25 @@ class AutoDispatchService
     }
 
     /**
-     * Find nearby online couriers using Haversine formula.
+     * Find nearby online couriers using Uber H3 + Redis spatial indexing.
      */
     private static function findNearbyCouriers(float $lat, float $lng, float $radiusKm)
     {
-        $haversine = "(6371 * acos(cos(radians($lat)) * cos(radians(latitude)) * cos(radians(longitude) - radians($lng)) + sin(radians($lat)) * sin(radians(latitude))))";
+        $h3Couriers = \App\Services\H3\DriverGeoRedisService::findNearbyCouriers($lat, $lng, $radiusKm, limit: 10);
+        if ($h3Couriers->isNotEmpty()) {
+            $ids = $h3Couriers->pluck('id')->all();
+            $drivers = Driver::whereIn('id', $ids)->get()->keyBy('id');
 
-        return Driver::where('status', '1') // ENABLE
-            ->whereIn('service_type', ['delivery', 'both'])
-            ->whereRaw("$haversine <= $radiusKm")
-            ->where(function ($q) {
-                // Online couriers OR couriers with recent location updates (last 5 min)
-                $q->where('online_status', 1)
-                  ->orWhere('current_lat', '!=', null)
-                  ->orWhere('updated_at', '>=', now()->subMinutes(5));
-            })
-            ->select('drivers.*')
-            ->selectRaw("$haversine AS distance_km")
-            ->orderBy('distance_km')
-            ->limit(10)
-            ->get();
+            return $h3Couriers->map(function ($hc) use ($drivers) {
+                $d = $drivers->get($hc['id']);
+                if ($d) {
+                    $d->distance_km = $hc['distance_km'];
+                }
+                return $d;
+            })->filter()->values();
+        }
+
+        return collect();
     }
 
     /**
@@ -184,10 +183,13 @@ class AutoDispatchService
     private static function scoreCourier(Driver $courier, float $pickupLat, float $pickupLng): float
     {
         // 1. Distance score (closer = better, max 5km considered)
-        $distanceKm = self::calculateDistance(
-            $pickupLat, $pickupLng,
-            (float) $courier->latitude, (float) $courier->longitude
-        );
+        $courierLat = (float) ($courier->current_lat ?? $courier->latitude);
+        $courierLng = (float) ($courier->current_lot ?? $courier->longitude);
+
+        $distanceKm = isset($courier->distance_km)
+            ? (float) $courier->distance_km
+            : \App\Services\H3\H3Grid::distanceKm($pickupLat, $pickupLng, $courierLat, $courierLng);
+
         $distanceScore = max(0, 1 - ($distanceKm / 5));
 
         // 2. Rating score (1-5 scale normalized to 0-1)

@@ -6,7 +6,7 @@
 
 <header class="dashboard__header">
     <div class="dashboard__header-left">
-        <span class="breadcrumb-icon navigation-bar"><i class="fa-solid fa-bars"></i></span>
+        <button type="button" aria-label="Alternar menú" class="breadcrumb-icon navigation-bar"><i class="fa-solid fa-bars"></i></button>
         <div class="header-search__input">
             <label for="desktop-search-input" class="header-search__icon open-search">
                 <x-admin.svg.search />

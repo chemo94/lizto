@@ -14,6 +14,7 @@
                 <div class="dashboard__area-inner p-0">
                     @yield('panel')
                 </div>
+                <footer class="lz-footer"><span>© {{ date('Y') }} {{ gs('site_name') }}</span><span>Centro de administración · Lizto</span></footer>
             </div>
         </section>
     </main>

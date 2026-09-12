@@ -356,6 +356,12 @@ class _MozoOrderScreenState extends State<MozoOrderScreen> {
     int? selectedVariationId;
     String? selectedVariationName;
     double selectedPrice = product.price ?? 0;
+    if (product.variations.isNotEmpty) {
+      final firstVar = product.variations.first;
+      selectedVariationId = firstVar.id;
+      selectedVariationName = firstVar.name;
+      selectedPrice = (firstVar.price != null && firstVar.price! > 0) ? firstVar.price! : (product.price ?? 0);
+    }
     final Set<int> selectedAddonIds = {};
     final List<String> selectedAddonNames = [];
     double addonsTotal = 0;
@@ -404,7 +410,7 @@ class _MozoOrderScreenState extends State<MozoOrderScreen> {
                             setModalState(() {
                               selectedVariationId = v.id;
                               selectedVariationName = v.name;
-                              selectedPrice = v.price ?? product.price ?? 0;
+                              selectedPrice = (v.price != null && v.price! > 0) ? v.price! : (product.price ?? 0);
                             });
                           },
                           child: Container(
@@ -434,10 +440,19 @@ class _MozoOrderScreenState extends State<MozoOrderScreen> {
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(child: Text(v.name ?? '', style: regularDefault)),
-                                Text(
-                                  'S/ ${(v.price ?? 0).toStringAsFixed(2)}',
-                                  style: boldDefault.copyWith(color: MyColor.primaryColor),
-                                ),
+                                Builder(builder: (_) {
+                                  final varPrice = v.price ?? 0;
+                                  final prodPrice = product.price ?? 0;
+                                  final diff = varPrice - prodPrice;
+                                  String text = 'S/ ${varPrice.toStringAsFixed(2)}';
+                                  if (diff.abs() > 0.01) {
+                                    text += ' (${diff > 0 ? "+S/ " : "-S/ "}${diff.abs().toStringAsFixed(2)})';
+                                  }
+                                  return Text(
+                                    text,
+                                    style: boldDefault.copyWith(color: MyColor.primaryColor),
+                                  );
+                                }),
                               ],
                             ),
                           ),

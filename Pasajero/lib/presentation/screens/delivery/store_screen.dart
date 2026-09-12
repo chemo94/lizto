@@ -208,7 +208,9 @@ class _StoreScreenState extends State<StoreScreen> with TickerProviderStateMixin
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
           double calcPrice() {
-            double base = selectedVar?.price ?? product.finalPrice;
+            double base = (selectedVar != null && (selectedVar!.price ?? 0) > 0)
+                ? selectedVar!.price!
+                : product.finalPrice;
             for (var a in selectedAddons) {
               base += a.price ?? 0;
             }
@@ -991,10 +993,18 @@ class _ProductConfigSheet extends StatelessWidget {
                               ),
                               const SizedBox(width: Dimensions.space12),
                               Expanded(child: Text(v.name ?? '', style: regularDefault.copyWith(color: MyColor.primaryTextColor))),
-                              Text(
-                                '+ S/ ${v.price?.toStringAsFixed(2) ?? "0.00"}',
-                                style: semiBoldSmall.copyWith(color: MyColor.primaryColor),
-                              ),
+                              Builder(builder: (_) {
+                                final varPrice = v.price ?? 0;
+                                final diff = varPrice - product.finalPrice;
+                                String priceText = 'S/ ${varPrice.toStringAsFixed(2)}';
+                                if (diff.abs() > 0.01) {
+                                  priceText += ' (${diff > 0 ? "+S/ " : "-S/ "}${diff.abs().toStringAsFixed(2)})';
+                                }
+                                return Text(
+                                  priceText,
+                                  style: semiBoldSmall.copyWith(color: MyColor.primaryColor),
+                                );
+                              }),
                             ],
                           ),
                         ),

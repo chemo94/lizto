@@ -1913,6 +1913,19 @@
         }
     };
 
+    function formatFeeDisplay(val) {
+        var num = parseFloat(val) || 0;
+        var floor = Math.floor(num);
+        var dec = Math.round((num - floor) * 100) / 100;
+        if (dec >= 0.46 && dec <= 0.54) {
+            return (floor + 0.50).toFixed(2);
+        } else if (dec > 0.54) {
+            return Math.ceil(num).toString();
+        } else {
+            return floor.toString();
+        }
+    }
+
     function updateFeeDisplay(data) {
         var distKm = parseFloat(data.distance_km) || 0;
         var isShort = distKm > 0 && distKm < 1.0;
@@ -1926,7 +1939,7 @@
         document.getElementById('fee-distance-fee').textContent = (isShort || data.is_short_distance) ? '0.00' : (data.distance_fee || '0.00');
         document.getElementById('fee-time-min').textContent = data.time_min || '--';
         document.getElementById('fee-time').textContent = (isShort || data.is_short_distance) ? '0.00' : (data.time_fee || '0.00');
-        document.getElementById('fee-total').textContent = total.toFixed(1);
+        document.getElementById('fee-total').textContent = formatFeeDisplay(total);
 
         // Short distance warning banner
         var shortAlert = document.getElementById('short-distance-warning');
@@ -1942,7 +1955,7 @@
 
         var submitBtn = document.getElementById('submit-btn');
         if (submitBtn) {
-            submitBtn.innerHTML = '<i class="las la-paper-plane"></i> Solicitar Delivery · S/ ' + total.toFixed(2);
+            submitBtn.innerHTML = '<i class="las la-paper-plane"></i> Solicitar Delivery · S/ ' + formatFeeDisplay(total);
         }
 
         if (parseFloat(data.surge) > 1) {

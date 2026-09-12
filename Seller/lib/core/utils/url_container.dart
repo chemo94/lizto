@@ -144,4 +144,31 @@ class UrlContainer {
   static const String panelProducts = 'seller/panel/products';
   static const String panelOrderCreate = 'seller/panel/order/create';
   static String panelTableActiveOrder(int id) => 'seller/panel/table/$id/active-order';
+
+  // ── Seller Inventory & Gastronomy ──
+  static const String inventoryMetadata = 'seller/inventory/metadata';
+  static const String inventoryItems = 'seller/inventory/items';
+  static const String inventoryItemStore = 'seller/inventory/items/store';
+  static String inventoryItemUpdate(int id) => 'seller/inventory/items/update/$id';
+  static String inventoryItemDelete(int id) => 'seller/inventory/items/delete/$id';
+  static const String inventoryStockAdjust = 'seller/inventory/stock-adjust';
+
+  static const String inventoryRecipes = 'seller/inventory/recipes';
+  static const String inventoryRecipeStore = 'seller/inventory/recipes/store';
+  static String inventoryRecipeDelete(int id) => 'seller/inventory/recipes/delete/$id';
+  static const String inventoryRecipeProduction = 'seller/inventory/recipes/production';
+  static String inventoryRecipeProductionVoid(int id) => 'seller/inventory/recipes/production/void/$id';
+
+  static const String inventoryPurchases = 'seller/inventory/purchases';
+  static const String inventoryPurchaseStore = 'seller/inventory/purchases/store';
+
+  static const String inventoryWastes = 'seller/inventory/wastes';
+  static const String inventoryWasteStore = 'seller/inventory/wastes/store';
+
+  static const String inventoryKardex = 'seller/inventory/kardex';
+
+  static const String inventorySuppliers = 'seller/inventory/suppliers';
+  static const String inventorySupplierStore = 'seller/inventory/suppliers/store';
+  static String inventorySupplierDelete(int id) => 'seller/inventory/suppliers/delete/$id';
 }
+
