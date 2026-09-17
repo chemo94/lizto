@@ -358,8 +358,7 @@ class _CourierEarningsScreenState extends State<CourierEarningsScreen> {
     final tierBadge = e.tierBadge ?? '🛵';
     final percent = (e.effectivePercent ?? e.baseCommissionPercent ?? 10.0).toStringAsFixed(0);
     final completedJobs = e.totalCompletedJobs ?? e.totalWeeklyJobs ?? 0;
-    final isPreferred = tierName == 'Preferente';
-    final commissionLabel = isPreferred ? 'S/ ${(e.minimumCommission ?? 1).toStringAsFixed(2)} mínimo' : '$percent% por pedido';
+    final commissionLabel = '$percent% por pedido';
     final nextNeeded = e.nextTierNeeded ?? 0;
     final nextName = e.nextTierName ?? 'Plata';
 
@@ -428,7 +427,7 @@ class _CourierEarningsScreenState extends State<CourierEarningsScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    isPreferred ? 'Preferente' : 'Comisión: $percent%',
+                    'Comisión: $percent%',
                     style: boldDefault.copyWith(color: Colors.white, fontSize: 12),
                   ),
                 ),
@@ -479,7 +478,6 @@ class _CourierEarningsScreenState extends State<CourierEarningsScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final currentTier = e.tierName ?? 'Inicial';
     final base = e.baseCommissionPercent ?? 10;
-    final minimum = e.minimumCommission ?? 1;
 
     showModalBottomSheet(
       context: context,
@@ -563,7 +561,7 @@ class _CourierEarningsScreenState extends State<CourierEarningsScreen> {
                 tier: 'Preferente',
                 badge: '⭐',
                 range: '30 o más entregas acumuladas',
-                commission: 'Comisión mínima: S/ ${minimum.toStringAsFixed(2)}',
+                commission: '10% por pedido (tarifa preferencial)',
                 color: const Color(0xFF10B981),
                 isCurrent: currentTier == 'Preferente',
                 isDark: isDark,

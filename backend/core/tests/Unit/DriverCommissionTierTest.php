@@ -31,8 +31,8 @@ class DriverCommissionTierTest extends TestCase
             'bronze end' => [19, 'Bronce', 7.0, 1],
             'silver start' => [20, 'Plata', 5.0, 10],
             'silver end' => [29, 'Plata', 5.0, 1],
-            'preferred start' => [30, 'Preferente', 0.0, 0],
-            'preferred remains' => [75, 'Preferente', 0.0, 0],
+            'preferred start' => [30, 'Preferente', 10.0, 0],
+            'preferred remains' => [75, 'Preferente', 10.0, 0],
         ];
     }
 

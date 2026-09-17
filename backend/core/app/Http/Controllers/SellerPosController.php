@@ -4161,48 +4161,193 @@ class SellerPosController extends Controller
             return back()->with('error', 'No tienes una tienda activa.');
         }
 
-        $query = Product::where('store_id', $store->id)
-            ->with(['category', 'variations', 'addons', 'invProductItems.item'])
-            ->when($request->filled('search'), fn($q) => $q->where('name', 'like', '%' . $request->search . '%'))
-            ->when($request->status === 'active', fn($q) => $q->where('status', 1))
-            ->when($request->status === 'inactive', fn($q) => $q->where('status', 0))
-            ->when($request->filled('category'), fn($q) => $q->where('store_category_id', $request->category))
-            ->orderBy('store_category_id')->orderBy('sort_order')->orderBy('name');
+        $allAvailableColumns = [
+            'id'             => 'ID',
+            'barcode'        => 'Código de Barras',
+            'category'       => 'Categoría',
+            'name'           => 'Nombre del Producto',
+            'stock_type'     => 'Tipo de Inventario',
+            'price'          => 'Precio Venta (S/)',
+            'discount_price' => 'Precio Oferta (S/)',
+            'cost'           => 'Costo (S/)',
+            'stock'          => 'Stock Actual',
+            'unit'           => 'Unidad',
+            'min_stock'      => 'Stock Mínimo',
+            'stock_status'   => 'Estado Stock',
+            'variations'     => 'Variaciones (Precios)',
+            'addons'         => 'Extras / Add-ons',
+            'status'         => 'Estado Menú',
+        ];
 
-        $products = $query->get();
+        // Column selection
+        $selectedColumns = [];
+        if ($request->filled('columns')) {
+            $colsInput = is_array($request->columns) ? $request->columns : explode(',', (string) $request->columns);
+            foreach ($colsInput as $cKey) {
+                $cKey = trim($cKey);
+                if (isset($allAvailableColumns[$cKey])) {
+                    $selectedColumns[] = $cKey;
+                }
+            }
+        }
+        if (empty($selectedColumns)) {
+            $selectedColumns = array_keys($allAvailableColumns);
+        }
+
+        $itemScope = $request->input('item_scope', 'all_stock'); // 'all_stock', 'only_products', 'only_insumos'
+        $items = collect();
+
+        // 1. Productos con stock real (Excluyendo platos preparados al momento y sin inventario)
+        if ($itemScope !== 'only_insumos') {
+            $prodQuery = Product::where('store_id', $store->id)
+                ->where('stock_type', '!=', Product::STOCK_PREPARED)
+                ->where('stock_type', '!=', Product::STOCK_NONE)
+                ->with(['category', 'variations', 'addons', 'invProductItems.item'])
+                ->when($request->filled('search'), fn($q) => $q->where('name', 'like', '%' . $request->search . '%'))
+                ->when($request->status === 'active', fn($q) => $q->where('status', 1))
+                ->when($request->status === 'inactive', fn($q) => $q->where('status', 0))
+                ->when($request->filled('category'), fn($q) => $q->where('store_category_id', $request->category));
+
+            $products = $prodQuery->get();
+
+            foreach ($products as $p) {
+                $invItem = $p->invProductItems->first()?->item;
+                $stock = $invItem ? (float) $invItem->stock : 0.0;
+                $cost = $invItem ? (float) $invItem->cost : 0.0;
+                $unit = $invItem ? $invItem->unit : 'NIU';
+                $minStock = $invItem ? (float) $invItem->min_stock : 5.0;
+
+                $stockStatus = 'Normal';
+                $stockColorMode = 'green';
+                if ($stock <= 0) {
+                    $stockStatus = 'Agotado';
+                    $stockColorMode = 'red';
+                } elseif ($stock <= $minStock) {
+                    $stockStatus = 'Bajo Stock';
+                    $stockColorMode = 'amber';
+                }
+
+                $varsStr = $p->variations->map(fn($v) => $v->name . ' (S/ ' . number_format($v->price, 2) . ')')->join(' | ');
+                $addonsStr = $p->addons->map(fn($a) => $a->name . ' (+S/ ' . number_format($a->price, 2) . ')')->join(' | ');
+
+                $items->push([
+                    'type'           => 'producto',
+                    'id'             => $p->id,
+                    'barcode'        => $p->barcode ?: ($invItem?->code ?: '-'),
+                    'category'       => $p->category?->name ?? 'Sin categoría',
+                    'name'           => $p->name,
+                    'stock_type'     => 'Empaquetado (Vitrina)',
+                    'price'          => (float) $p->price,
+                    'discount_price' => $p->discount_price > 0 ? (float) $p->discount_price : '-',
+                    'cost'           => $cost,
+                    'stock'          => $stock,
+                    'unit'           => $unit,
+                    'min_stock'      => $minStock,
+                    'stock_status'   => $stockStatus,
+                    'stock_color'    => $stockColorMode,
+                    'variations'     => $varsStr ?: 'Sin variaciones',
+                    'addons'         => $addonsStr ?: 'Sin extras',
+                    'status'         => $p->status ? 'Disponible' : 'Agotado / Inactivo',
+                ]);
+            }
+        }
+
+        // 2. Insumos / Materias Primas con stock real
+        if ($itemScope !== 'only_products') {
+            $catFilterName = null;
+            if ($request->filled('category')) {
+                $catFilterName = StoreCategory::where('id', $request->category)->value('name');
+            }
+
+            $insumosQuery = InvItem::where('seller_id', $seller->id)
+                ->insumos()
+                ->whereNull('deleted_at')
+                ->when($request->filled('search'), fn($q) => $q->where('name', 'like', '%' . $request->search . '%'))
+                ->when($request->status === 'active', fn($q) => $q->where('status', 'active'))
+                ->when($request->status === 'inactive', fn($q) => $q->where('status', '!=', 'active'))
+                ->when($catFilterName, fn($q) => $q->where('category', 'like', '%' . $catFilterName . '%'));
+
+            $insumos = $insumosQuery->get();
+
+            foreach ($insumos as $ins) {
+                $stock = (float) $ins->stock;
+                $cost = (float) $ins->cost;
+                $unit = $ins->unit ?: 'UNIDAD';
+                $minStock = (float) $ins->min_stock;
+
+                $stockStatus = 'Normal';
+                $stockColorMode = 'green';
+                if ($stock <= 0) {
+                    $stockStatus = 'Agotado';
+                    $stockColorMode = 'red';
+                } elseif ($minStock > 0 && $stock <= $minStock) {
+                    $stockStatus = 'Bajo Stock';
+                    $stockColorMode = 'amber';
+                }
+
+                $items->push([
+                    'type'           => 'insumo',
+                    'id'             => 'INS-' . $ins->id,
+                    'barcode'        => $ins->code ?: '-',
+                    'category'       => $ins->category ?: 'Insumos',
+                    'name'           => $ins->name,
+                    'stock_type'     => 'Insumo / Materia Prima',
+                    'price'          => $ins->sale_price > 0 ? (float) $ins->sale_price : '-',
+                    'discount_price' => '-',
+                    'cost'           => $cost,
+                    'stock'          => $stock,
+                    'unit'           => $unit,
+                    'min_stock'      => $minStock,
+                    'stock_status'   => $stockStatus,
+                    'stock_color'    => $stockColorMode,
+                    'variations'     => '-',
+                    'addons'         => '-',
+                    'status'         => $ins->status === 'active' ? 'Activo' : 'Inactivo',
+                ]);
+            }
+        }
+
+        // Sort: Default to mayor a menor (stock_desc) as requested by user
+        $sortBy = $request->input('sort_by', 'stock_desc');
+        if ($sortBy === 'stock_desc') {
+            $items = $items->sortByDesc('stock')->values();
+        } elseif ($sortBy === 'stock_asc') {
+            $items = $items->sortBy('stock')->values();
+        } elseif ($sortBy === 'name_asc') {
+            $items = $items->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values();
+        } elseif ($sortBy === 'category_asc') {
+            $items = $items->sortBy('category', SORT_NATURAL | SORT_FLAG_CASE)->values();
+        }
+
+        // Filter by stock level if requested
+        if ($request->filled('stock_filter') && $request->stock_filter !== 'all') {
+            if ($request->stock_filter === 'in_stock') {
+                $items = $items->filter(fn($item) => $item['stock'] > 0)->values();
+            } elseif ($request->stock_filter === 'low_stock') {
+                $items = $items->filter(fn($item) => $item['stock'] > 0 && $item['stock'] <= $item['min_stock'])->values();
+            } elseif ($request->stock_filter === 'out_of_stock') {
+                $items = $items->filter(fn($item) => $item['stock'] <= 0)->values();
+            }
+        }
 
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Stock de Productos');
+        $sheet->setTitle('Stock Real');
+
+        $totalCols = count($selectedColumns);
+        $lastColLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($totalCols);
 
         // Header Title
         $storeName = $store->name ?? 'Mi Negocio';
-        $sheet->mergeCells('A1:O1')->setCellValue('A1', 'REPORTE DE INVENTARIO Y STOCK DE PRODUCTOS - ' . mb_strtoupper($storeName));
-        $sheet->mergeCells('A2:O2')->setCellValue('A2', 'Generado: ' . now()->format('d/m/Y H:i:s') . ' | Total Productos: ' . $products->count());
+        $sheet->mergeCells("A1:{$lastColLetter}1")->setCellValue('A1', 'REPORTE DE INVENTARIO Y STOCK REAL - ' . mb_strtoupper($storeName));
+        $sheet->mergeCells("A2:{$lastColLetter}2")->setCellValue('A2', 'Generado: ' . now()->format('d/m/Y H:i:s') . ' | Total Items con Stock: ' . $items->count() . ' | (Excluye platos preparados al momento) | Orden: ' . ($sortBy === 'stock_desc' ? 'Stock de Mayor a Menor' : 'Personalizado'));
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14)->getColor()->setRGB('1E293B');
         $sheet->getStyle('A2')->getFont()->setSize(10)->getColor()->setRGB('64748B');
 
-        // Column Headers
-        $headers = [
-            'A4' => 'ID',
-            'B4' => 'Código de Barras',
-            'C4' => 'Categoría',
-            'D4' => 'Nombre del Producto',
-            'E4' => 'Tipo de Inventario',
-            'F4' => 'Precio Venta (S/)',
-            'G4' => 'Precio Oferta (S/)',
-            'H4' => 'Costo (S/)',
-            'I4' => 'Stock Actual',
-            'J4' => 'Unidad',
-            'K4' => 'Stock Mínimo',
-            'L4' => 'Estado Stock',
-            'M4' => 'Variaciones (Precios)',
-            'N4' => 'Extras / Add-ons',
-            'O4' => 'Estado Menú',
-        ];
-
-        foreach ($headers as $cell => $text) {
-            $sheet->setCellValue($cell, $text);
+        // Column Headers (row 4)
+        foreach ($selectedColumns as $idx => $colKey) {
+            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($idx + 1);
+            $sheet->setCellValue("{$colLetter}4", $allAvailableColumns[$colKey]);
         }
 
         // Header style
@@ -4211,92 +4356,140 @@ class SellerPosController extends Controller
             'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EA580C']],
             'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER],
         ];
-        $sheet->getStyle('A4:O4')->applyFromArray($headerStyle);
+        $sheet->getStyle("A4:{$lastColLetter}4")->applyFromArray($headerStyle);
         $sheet->getRowDimension(4)->setRowHeight(28);
 
         $row = 5;
-        foreach ($products as $p) {
-            $invItem = $p->invProductItems->first()?->item;
-            
-            $stockTypeLabel = match($p->stock_type) {
-                Product::STOCK_PACKAGED => 'Empaquetado (Vitrina)',
-                Product::STOCK_PREPARED => 'Preparado (Cocina/Carta)',
-                default => 'Sin inventario',
-            };
+        foreach ($items as $item) {
+            $stockColorMode = $item['stock_color'];
 
-            $stock = $invItem ? (float) $invItem->stock : ($p->stock_type === Product::STOCK_PACKAGED ? 0 : null);
-            $cost = $invItem ? (float) $invItem->cost : 0;
-            $unit = $invItem ? $invItem->unit : 'NIU';
-            $minStock = $invItem ? (float) $invItem->min_stock : null;
+            // Populate each selected column
+            foreach ($selectedColumns as $idx => $colKey) {
+                $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($idx + 1);
+                $cellCoord = "{$colLetter}{$row}";
 
-            $stockStatus = 'No aplica';
-            if ($p->stock_type === Product::STOCK_PACKAGED) {
-                if ($stock <= 0) {
-                    $stockStatus = 'Agotado';
-                } elseif ($minStock !== null && $stock <= $minStock) {
-                    $stockStatus = 'Bajo Stock';
-                } else {
-                    $stockStatus = 'Normal';
+                switch ($colKey) {
+                    case 'id':
+                        $sheet->setCellValueExplicit($cellCoord, (string) $item['id'], \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                        $sheet->getStyle($cellCoord)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                        break;
+                    case 'barcode':
+                        $sheet->setCellValueExplicit($cellCoord, (string) $item['barcode'], \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                        $sheet->getStyle($cellCoord)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                        break;
+                    case 'category':
+                        $sheet->setCellValue($cellCoord, $item['category']);
+                        break;
+                    case 'name':
+                        $sheet->setCellValue($cellCoord, $item['name']);
+                        break;
+                    case 'stock_type':
+                        $sheet->setCellValue($cellCoord, $item['stock_type']);
+                        break;
+                    case 'price':
+                        if (is_numeric($item['price'])) {
+                            $sheet->setCellValue($cellCoord, (float) $item['price']);
+                            $sheet->getStyle($cellCoord)->getNumberFormat()->setFormatCode('#,##0.00');
+                        } else {
+                            $sheet->setCellValue($cellCoord, $item['price']);
+                            $sheet->getStyle($cellCoord)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                        }
+                        break;
+                    case 'discount_price':
+                        if (is_numeric($item['discount_price'])) {
+                            $sheet->setCellValue($cellCoord, (float) $item['discount_price']);
+                            $sheet->getStyle($cellCoord)->getNumberFormat()->setFormatCode('#,##0.00');
+                        } else {
+                            $sheet->setCellValue($cellCoord, $item['discount_price']);
+                            $sheet->getStyle($cellCoord)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                        }
+                        break;
+                    case 'cost':
+                        $sheet->setCellValue($cellCoord, (float) $item['cost']);
+                        $sheet->getStyle($cellCoord)->getNumberFormat()->setFormatCode('#,##0.00');
+                        break;
+                    case 'stock':
+                        $sheet->setCellValue($cellCoord, (float) $item['stock']);
+                        $sheet->getStyle($cellCoord)->getNumberFormat()->setFormatCode('#,##0.00');
+                        $sheet->getStyle($cellCoord)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+                        // Pintar la columna de stock con Verde, Ámbar o Rojo
+                        if ($stockColorMode === 'red') {
+                            $sheet->getStyle($cellCoord)->applyFromArray([
+                                'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEE2E2']],
+                                'font' => ['bold' => true, 'color' => ['rgb' => 'B91C1C']],
+                            ]);
+                        } elseif ($stockColorMode === 'amber') {
+                            $sheet->getStyle($cellCoord)->applyFromArray([
+                                'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']],
+                                'font' => ['bold' => true, 'color' => ['rgb' => 'B45309']],
+                            ]);
+                        } elseif ($stockColorMode === 'green') {
+                            $sheet->getStyle($cellCoord)->applyFromArray([
+                                'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DCFCE7']],
+                                'font' => ['bold' => true, 'color' => ['rgb' => '15803D']],
+                            ]);
+                        }
+                        break;
+                    case 'unit':
+                        $sheet->setCellValue($cellCoord, $item['unit']);
+                        $sheet->getStyle($cellCoord)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                        break;
+                    case 'min_stock':
+                        $sheet->setCellValue($cellCoord, (float) $item['min_stock']);
+                        $sheet->getStyle($cellCoord)->getNumberFormat()->setFormatCode('#,##0.00');
+                        break;
+                    case 'stock_status':
+                        $sheet->setCellValue($cellCoord, $item['stock_status']);
+                        $sheet->getStyle($cellCoord)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                        if ($stockColorMode === 'red') {
+                            $sheet->getStyle($cellCoord)->applyFromArray([
+                                'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEE2E2']],
+                                'font' => ['bold' => true, 'color' => ['rgb' => 'B91C1C']],
+                            ]);
+                        } elseif ($stockColorMode === 'amber') {
+                            $sheet->getStyle($cellCoord)->applyFromArray([
+                                'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']],
+                                'font' => ['bold' => true, 'color' => ['rgb' => 'B45309']],
+                            ]);
+                        } elseif ($stockColorMode === 'green') {
+                            $sheet->getStyle($cellCoord)->applyFromArray([
+                                'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DCFCE7']],
+                                'font' => ['bold' => true, 'color' => ['rgb' => '15803D']],
+                            ]);
+                        }
+                        break;
+                    case 'variations':
+                        $sheet->setCellValue($cellCoord, $item['variations']);
+                        break;
+                    case 'addons':
+                        $sheet->setCellValue($cellCoord, $item['addons']);
+                        break;
+                    case 'status':
+                        $sheet->setCellValue($cellCoord, $item['status']);
+                        $sheet->getStyle($cellCoord)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                        break;
                 }
-            } elseif ($p->stock_type === Product::STOCK_PREPARED) {
-                $stockStatus = 'Preparado al momento';
             }
 
-            // Variations string
-            $varsStr = $p->variations->map(fn($v) => $v->name . ' (S/ ' . number_format($v->price, 2) . ')')->join(' | ');
-
-            // Addons string
-            $addonsStr = $p->addons->map(fn($a) => $a->name . ' (+S/ ' . number_format($a->price, 2) . ')')->join(' | ');
-
-            $sheet->setCellValue('A' . $row, $p->id);
-            $sheet->setCellValueExplicit('B' . $row, $p->barcode ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-            $sheet->setCellValue('C' . $row, $p->category?->name ?? 'Sin categoría');
-            $sheet->setCellValue('D' . $row, $p->name);
-            $sheet->setCellValue('E' . $row, $stockTypeLabel);
-            $sheet->setCellValue('F' . $row, (float) $p->price);
-            $sheet->setCellValue('G' . $row, $p->discount_price > 0 ? (float) $p->discount_price : '-');
-            $sheet->setCellValue('H' . $row, $cost);
-            $sheet->setCellValue('I' . $row, $stock !== null ? $stock : '-');
-            $sheet->setCellValue('J' . $row, $unit);
-            $sheet->setCellValue('K' . $row, $minStock !== null ? $minStock : '-');
-            $sheet->setCellValue('L' . $row, $stockStatus);
-            $sheet->setCellValue('M' . $row, $varsStr ?: 'Sin variaciones');
-            $sheet->setCellValue('N' . $row, $addonsStr ?: 'Sin extras');
-            $sheet->setCellValue('O' . $row, $p->status ? 'Disponible' : 'Agotado / Inactivo');
-
-            // Formats
-            $sheet->getStyle('F' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
-            $sheet->getStyle('H' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
-            if ($p->discount_price > 0) {
-                $sheet->getStyle('G' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
-            }
-            if ($stock !== null) {
-                $sheet->getStyle('I' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
-            }
-            if ($minStock !== null) {
-                $sheet->getStyle('K' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
-            }
-
-            // Colors for stock status
-            if ($stockStatus === 'Agotado') {
-                $sheet->getStyle('L' . $row)->getFont()->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('EF4444'))->setBold(true);
-            } elseif ($stockStatus === 'Bajo Stock') {
-                $sheet->getStyle('L' . $row)->getFont()->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('F59E0B'))->setBold(true);
-            } elseif ($stockStatus === 'Normal') {
-                $sheet->getStyle('L' . $row)->getFont()->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('10B981'))->setBold(true);
-            }
+            // Alternating subtle border for rows
+            $sheet->getStyle("A{$row}:{$lastColLetter}{$row}")->applyFromArray([
+                'borders' => [
+                    'bottom' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_HAIR, 'color' => ['rgb' => 'E2E8F0']],
+                ],
+            ]);
 
             $row++;
         }
 
-        // Auto-fit columns
-        foreach (range('A', 'O') as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(true);
+        // Auto-fit all selected columns
+        foreach (range(1, $totalCols) as $colIdx) {
+            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIdx);
+            $sheet->getColumnDimension($colLetter)->setAutoSize(true);
         }
 
         // Auto-filter
         if ($row > 5) {
-            $sheet->setAutoFilter('A4:O' . ($row - 1));
+            $sheet->setAutoFilter("A4:{$lastColLetter}" . ($row - 1));
         }
 
         $filename = 'stock-productos-' . \Illuminate\Support\Str::slug($storeName) . '-' . date('Y-m-d') . '.xlsx';

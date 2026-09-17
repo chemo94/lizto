@@ -5,6 +5,7 @@ namespace App\Providers;
 
 use App\Lib\Searchable;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\Paginator;
 
@@ -35,5 +36,10 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Paginator::useBootstrapFive();
+
+        Event::listen(
+            \App\Events\NewDeliveryOrderPlaced::class,
+            \App\Listeners\SendWhatsAppOrderNotification::class
+        );
     }
 }

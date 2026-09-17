@@ -1083,9 +1083,12 @@ class SiteController extends Controller
 
             // Revert order status if MercadoPago preference fails
             $order->update(['status' => 'pending']);
+            event(new \App\Events\NewDeliveryOrderPlaced($order, 'delivery'));
             $notify[] = ['error', 'Hubo un problema al conectar con MercadoPago. Tu pedido se ha registrado como pendiente de pago en efectivo/espera.'];
             return redirect()->route('home')->withNotify($notify);
         }
+
+        event(new \App\Events\NewDeliveryOrderPlaced($order, 'delivery'));
 
         $notify[] = ['success', '¡Pedido creado! Te notificaremos cuando la tienda lo confirme.'];
         return redirect()->route('home')->withNotify($notify);

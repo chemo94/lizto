@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'waapi' => [
+        'base_url'    => env('WAAPI_BASE_URL', 'http://localhost/waapi'),
+        'api_key'     => env('WAAPI_API_KEY', 'wa_secret_key_change_me_12345'),
+        'admin_phone' => env('WAAPI_ADMIN_PHONE', '997428341'),
+        'enabled'     => env('WAAPI_ENABLED', true),
+        'platform'    => env('WAAPI_PLATFORM', 'lizto'),
+    ],
+
 ];

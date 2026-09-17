@@ -19,38 +19,55 @@ use Illuminate\Validation\ValidationException;
 
 class DeliveryFinancialLedger
 {
-    public static function getDriverDynamicCommissionPercent($driverId, float $basePercent = 20.0, bool $includeCurrentJob = false): array
+    public static function getDriverDynamicCommissionPercent($driverId, float $basePercent = 20.0, bool $includeCurrentJob = false, ?DeliveryCommission $config = null): array
     {
-        $completedJobs = \App\Models\CourierEarning::where('courier_id', $driverId)->count();
+        if ($config === null) {
+            try { $config = DeliveryCommission::where('status', 1)->first(); } catch (\Throwable) { $config = null; }
+        }
+        $completedJobs = 0;
+        try {
+            $completedJobs = \App\Models\CourierEarning::where('courier_id', $driverId)->count();
+        } catch (\Throwable) {
+            $completedJobs = 0;
+        }
         if ($includeCurrentJob) {
             $completedJobs++;
         }
 
-        return self::commissionTierForCompletedJobs($completedJobs, $basePercent);
+        return self::commissionTierForCompletedJobs($completedJobs, $basePercent, $config);
     }
 
-    public static function commissionTierForCompletedJobs(int $completedJobs, float $basePercent): array
+    public static function commissionTierForCompletedJobs(int $completedJobs, float $basePercent, ?DeliveryCommission $config = null): array
     {
+        if ($config === null) {
+            try { $config = DeliveryCommission::where('status', 1)->first(); } catch (\Throwable) { $config = null; }
+        }
+
+        $tierInicial = (float) ($config?->tier_inicial_percent ?? $basePercent);
+        $tierBronce  = (float) ($config?->tier_bronce_percent ?? max(5.0, $tierInicial - 3.0));
+        $tierPlata   = (float) ($config?->tier_plata_percent ?? max(5.0, $tierInicial - 5.0));
+        $tierPref    = (float) ($config?->tier_preferente_percent ?? 10.0);
+
         if ($completedJobs >= 30) {
-            $effectivePercent = 0.0;
+            $effectivePercent = $tierPref;
             $tierName = 'Preferente';
             $tierBadge = '⭐';
             $nextTierNeeded = 0;
             $nextTierName = 'Nivel máximo';
         } elseif ($completedJobs >= 20) {
-            $effectivePercent = max(5.0, $basePercent - 5.0);
+            $effectivePercent = $tierPlata;
             $tierName = 'Plata';
             $tierBadge = '🥈';
             $nextTierNeeded = 30 - $completedJobs;
             $nextTierName = 'Preferente';
         } elseif ($completedJobs >= 10) {
-            $effectivePercent = max(5.0, $basePercent - 3.0);
+            $effectivePercent = $tierBronce;
             $tierName = 'Bronce';
             $tierBadge = '🥉';
             $nextTierNeeded = 20 - $completedJobs;
             $nextTierName = 'Plata';
         } else {
-            $effectivePercent = $basePercent;
+            $effectivePercent = $tierInicial;
             $tierName = 'Inicial';
             $tierBadge = '🛵';
             $nextTierNeeded = 10 - $completedJobs;
@@ -75,12 +92,10 @@ class DeliveryFinancialLedger
             ? ($config?->favor_percent ?? 15)
             : ($config?->delivery_percent ?? 10));
         $minimum = max(0, (float) ($config?->min_commission ?? 1));
-        $tier = self::getDriverDynamicCommissionPercent($driver->id, $basePercent, $includeCurrentJob);
+        $tier = self::getDriverDynamicCommissionPercent($driver->id, $basePercent, $includeCurrentJob, $config);
         $commissionType = $config?->courier_commission_type ?? 'percent';
 
-        if ($tier['tier_name'] === 'Preferente') {
-            $amount = $minimum;
-        } elseif ($commissionType === 'fixed') {
+        if ($commissionType === 'fixed') {
             $amount = max((float) ($config?->courier_fixed_amount ?? 0), $minimum);
         } else {
             $amount = max($deliveryFee * $tier['effective_percent'] / 100, $minimum);

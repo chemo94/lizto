@@ -22,6 +22,7 @@ class DeliveryOrder extends Model
         'payment_method_code' => 'double',
         'payment_status'      => 'integer',
         'cash_pay_amount'     => 'double',
+        'whatsapp_sent_at'    => 'datetime',
     ];
 
     public function user()

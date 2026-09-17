@@ -34,4 +34,14 @@ class Seller extends Authenticatable
     {
         return $this->hasMany(DeviceToken::class, 'seller_id');
     }
+
+    public function companies()
+    {
+        return $this->hasMany(SellerCompany::class);
+    }
+
+    public function company()
+    {
+        return $this->hasOne(SellerCompany::class)->latestOfMany();
+    }
 }

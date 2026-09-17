@@ -16,11 +16,18 @@
 .catalog-pill{display:inline-flex;align-items:center;text-decoration:none}.catalog-pill:hover{color:#ea580c;border-color:#fed7aa}.catalog-pill.active:hover{color:#fff}
 @media(max-width:900px){.catalog-toolbar{flex-wrap:wrap}.catalog-search{flex:1 1 220px}.catalog-toolbar select{flex:1 1 140px}}
 @media(max-width:600px){.catalog-toolbar .s-btn{flex:0 0 36px}.catalog-search{flex-basis:100%}}
+.s-check-label{display:flex;align-items:center;gap:7px;font-size:11px;color:#334155;cursor:pointer;padding:6px 9px;border-radius:7px;background:#fff;border:1px solid #e2e8f0;transition:.15s;user-select:none}
+.s-check-label:hover{background:#f8fafc;border-color:#cbd5e1}
+.catalog-stock-tag{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:6px;font-size:8px;font-weight:800;line-height:1.4}
+.catalog-stock-tag.green{background:#dcfce7;color:#15803d;border:1px solid #bbf7d0}
+.catalog-stock-tag.amber{background:#fef3c7;color:#b45309;border:1px solid #fde68a}
+.catalog-stock-tag.red{background:#fee2e2;color:#b91c1c;border:1px solid #fecaca}
+.catalog-stock-tag.blue{background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd}
 </style>
 <div class="s-content">
 <section class="catalog-head">
     <div><div class="crumb"><i class="las la-home"></i> Seller &nbsp;/&nbsp; Restaurante &nbsp;/&nbsp; Menú</div><h2><i class="las la-clipboard-list"></i> Gestión del menú</h2><p>Administra productos, categorías y precios de <b>{{ $store->name }}</b>.</p></div>
-    <div class="catalog-head-actions"><a class="s-btn" href="{{ route('seller.products.export.stock', request()->query()) }}" title="Exportar inventario y stock a Excel"><i class="las la-file-excel"></i> Exportar Stock</a><button class="s-btn primary" onclick="openProdModal()"><i class="las la-plus"></i> Añadir producto</button><a class="s-btn" href="{{ route('seller.categories') }}"><i class="las la-folder-plus"></i> Nueva categoría</a></div>
+    <div class="catalog-head-actions"><button type="button" class="s-btn" onclick="openExportModal()" title="Exportar inventario y stock a Excel"><i class="las la-file-excel"></i> Exportar Stock</button><button class="s-btn primary" onclick="openProdModal()"><i class="las la-plus"></i> Añadir producto</button><a class="s-btn" href="{{ route('seller.categories') }}"><i class="las la-folder-plus"></i> Nueva categoría</a></div>
 </section>
 <div class="catalog-kpis">
     <div class="catalog-kpi"><i class="las la-clipboard-list" style="background:linear-gradient(135deg,#fbbf24,#f59e0b)"></i><div><b>{{ $totalProducts }}</b><small>Total productos</small></div></div>
@@ -53,8 +60,27 @@
                 @endif
                 <span class="catalog-product-status {{ $p->status ? '' : 'off' }}">{{ $p->status ? 'Disponible' : 'Agotado' }}</span><span class="catalog-product-price">S/ {{ number_format($p->price,2) }}</span>
             </div>
-            <div class="catalog-product-body"><div class="catalog-product-name">{{ $p->name }}</div><div class="catalog-product-desc">{{ $p->description ?: 'Sin descripción. Añade detalles para presentar mejor este producto.' }}</div><div class="catalog-product-meta"><span class="catalog-category-tag">{{ $p->category?->name ?? 'Sin categoría' }}</span><div class="catalog-product-actions">
-                @php $invItem = $p->invProductItems->first()?->item; @endphp
+            <div class="catalog-product-body"><div class="catalog-product-name">{{ $p->name }}</div><div class="catalog-product-desc">{{ $p->description ?: 'Sin descripción. Añade detalles para presentar mejor este producto.' }}</div><div class="catalog-product-meta">
+                @php
+                    $invItem = $p->invProductItems->first()?->item;
+                    $pStock = $invItem ? (float) $invItem->stock : ($p->stock_type === 'packaged' ? 0.0 : null);
+                    $pMin = $invItem ? (float) $invItem->min_stock : 5.0;
+                @endphp
+                <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+                    <span class="catalog-category-tag">{{ $p->category?->name ?? 'Sin categoría' }}</span>
+                    @if($p->stock_type === 'packaged')
+                        @if($pStock <= 0)
+                            <span class="catalog-stock-tag red" title="Stock agotado"><i class="las la-times-circle"></i> Agotado (0)</span>
+                        @elseif($pStock <= $pMin)
+                            <span class="catalog-stock-tag amber" title="Stock bajo (Mínimo: {{ $pMin }})"><i class="las la-exclamation-triangle"></i> Bajo: {{ $pStock }}</span>
+                        @else
+                            <span class="catalog-stock-tag green" title="Stock disponible"><i class="las la-check-circle"></i> Stock: {{ $pStock }}</span>
+                        @endif
+                    @elseif($p->stock_type === 'prepared')
+                        <span class="catalog-stock-tag blue" title="Preparado al momento"><i class="las la-utensils"></i> Carta</span>
+                    @endif
+                </div>
+                <div class="catalog-product-actions">
                 <button class="s-btn s-btn-ghost s-btn-xs" onclick="editProduct({{ $p->id }},'{{ addslashes($p->name) }}',{{ $p->price }},{{ $p->discount_price??0 }},'{{ addslashes($p->description) }}',{{ $p->store_category_id }},{{ $p->sort_order }},{{ $p->status }},'{{ $p->stock_type??'packaged' }}','{{ $p->barcode }}',{{ $p->variations->toJson() }},{{ $p->addons->toJson() }},'{{ $p->tax_type ?? 'gravado' }}','{{ $p->sunat_code }}', '{{ $invItem?->unit ?? 'NIU' }}', {{ $invItem?->cost ?? 0 }}, {{ $invItem?->stock ?? 0 }}, {{ $invItem?->min_stock ?? 5 }})" title="Editar">
                     <i class="las la-edit"></i>
                 </button>
@@ -515,8 +541,132 @@
     </div>
 </div>
 
+<!-- MODAL DE EXPORTACIÓN PERSONALIZADA DE STOCK -->
+<div id="export-modal" class="s-modal">
+    <div class="s-modal-bg" onclick="this.parentElement.classList.remove('open')"></div>
+    <div class="s-modal-box" style="max-width:620px">
+        <div class="s-modal-head">
+            <div>
+                <h3 class="s-modal-title" style="display:flex;align-items:center;gap:8px">
+                    <i class="las la-file-excel" style="color:#10b981;font-size:24px"></i>
+                    Exportar Stock a Excel
+                </h3>
+                <small style="color:#64748b;font-size:11px">Selecciona las columnas y el orden que deseas incluir en el reporte.</small>
+            </div>
+            <button class="s-modal-close" type="button" onclick="this.closest('.s-modal').classList.remove('open')">✕</button>
+        </div>
+        <div class="s-modal-body">
+            <form id="export-form" method="GET" action="{{ route('seller.products.export.stock') }}">
+                @if(request('search'))<input type="hidden" name="search" value="{{ request('search') }}">@endif
+                @if(request('category'))<input type="hidden" name="category" value="{{ request('category') }}">@endif
+                @if(request('status'))<input type="hidden" name="status" value="{{ request('status') }}">@endif
+                @if(request('tax_type'))<input type="hidden" name="tax_type" value="{{ request('tax_type') }}">@endif
+
+                <!-- Banner informativo de stock real -->
+                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
+                    <i class="las la-check-circle" style="color:#16a34a;font-size:22px;flex-shrink:0"></i>
+                    <div style="font-size:11px;color:#166534;line-height:1.4">
+                        <b>Filtro de stock real activo:</b> Se exportan exclusivamente productos e insumos con inventario físico real. <u>Los platos preparados al momento (carta/cocina) quedan excluidos del reporte</u>.
+                    </div>
+                </div>
+
+                <!-- Ordenamiento & Filtro -->
+                <div style="background:#f8fafc;border:1px solid var(--s-border);border-radius:12px;padding:14px;margin-bottom:16px">
+                    <div style="font-size:12px;font-weight:800;color:#1e293b;margin-bottom:10px;display:flex;align-items:center;gap:6px">
+                        <i class="las la-sort-amount-down" style="color:#ea580c;font-size:16px"></i> Configuración del Reporte
+                    </div>
+                    <div style="margin-bottom:12px">
+                        <label style="font-size:11px;font-weight:700;color:#475569;display:block;margin-bottom:5px">Items a Exportar:</label>
+                        <select name="item_scope" class="s-input" style="height:36px;font-size:11px">
+                            <option value="all_stock" selected>Productos con stock real + Insumos (Todo el inventario físico)</option>
+                            <option value="only_products">Solo productos empaquetados (vitrina / venta directa)</option>
+                            <option value="only_insumos">Solo insumos / materias primas</option>
+                        </select>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                        <div>
+                            <label style="font-size:11px;font-weight:700;color:#475569;display:block;margin-bottom:5px">Ordenar lista por:</label>
+                            <select name="sort_by" class="s-input" style="height:36px;font-size:11px">
+                                <option value="stock_desc" selected>Stock: de Mayor a Menor (Predeterminado)</option>
+                                <option value="stock_asc">Stock: de Menor a Mayor</option>
+                                <option value="name_asc">Nombre del Producto / Insumo (A - Z)</option>
+                                <option value="category_asc">Por Categoría</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:11px;font-weight:700;color:#475569;display:block;margin-bottom:5px">Filtro de Nivel de Stock:</label>
+                            <select name="stock_filter" class="s-input" style="height:36px;font-size:11px">
+                                <option value="all" selected>Todos los items con stock</option>
+                                <option value="in_stock">Solo con stock positivo (> 0)</option>
+                                <option value="low_stock">Solo bajo stock (Alerta Ámbar)</option>
+                                <option value="out_of_stock">Solo agotados (Alerta Roja)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="margin-top:10px;font-size:10px;color:#64748b;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                        <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:50%;background:#10b981;display:inline-block"></span> <b>Verde:</b> Stock suficiente</span>
+                        <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block"></span> <b>Ámbar:</b> Bajo stock</span>
+                        <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block"></span> <b>Rojo:</b> Agotado</span>
+                    </div>
+                </div>
+
+                <!-- Selección de Columnas -->
+                <div style="margin-bottom:16px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+                        <span style="font-size:12px;font-weight:800;color:#1e293b">Columnas a incluir en el Excel:</span>
+                        <div style="display:flex;gap:6px">
+                            <button type="button" class="s-btn s-btn-ghost s-btn-xs" onclick="toggleAllExportCols(true)" style="font-size:10px">✓ Todas</button>
+                            <button type="button" class="s-btn s-btn-ghost s-btn-xs" onclick="toggleAllExportCols(false)" style="font-size:10px">✕ Ninguna</button>
+                            <button type="button" class="s-btn s-btn-ghost s-btn-xs" onclick="selectEssentialExportCols()" style="font-size:10px;color:#ea580c">⭐ Esenciales</button>
+                        </div>
+                    </div>
+                    <div id="export-cols-grid" style="display:grid;grid-template-columns:repeat(3, 1fr);gap:8px;max-height:240px;overflow-y:auto;padding:8px;background:#f8fafc;border:1px solid var(--s-border);border-radius:10px">
+                        <label class="s-check-label"><input type="checkbox" name="columns[]" value="id" checked class="exp-col exp-essential"> ID</label>
+                        <label class="s-check-label"><input type="checkbox" name="columns[]" value="barcode" checked class="exp-col"> Código / Barras</label>
+                        <label class="s-check-label"><input type="checkbox" name="columns[]" value="category" checked class="exp-col exp-essential"> Categoría</label>
+                        <label class="s-check-label"><input type="checkbox" name="columns[]" value="name" checked class="exp-col exp-essential"> Nombre</label>
+                        <label class="s-check-label"><input type="checkbox" name="columns[]" value="stock_type" checked class="exp-col"> Tipo inventario</label>
+                        <label class="s-check-label"><input type="checkbox" name="columns[]" value="price" checked class="exp-col exp-essential"> Precio Venta</label>
+                        <label class="s-check-label"><input type="checkbox" name="columns[]" value="discount_price" class="exp-col"> Precio Oferta</label>
+                        <label class="s-check-label"><input type="checkbox" name="columns[]" value="cost" checked class="exp-col"> Costo</label>
+                        <label class="s-check-label" style="font-weight:800;color:#0f172a"><input type="checkbox" name="columns[]" value="stock" checked class="exp-col exp-essential"> Stock Actual 🟢🟡🔴</label>
+                        <label class="s-check-label"><input type="checkbox" name="columns[]" value="unit" checked class="exp-col"> Unidad</label>
+                        <label class="s-check-label"><input type="checkbox" name="columns[]" value="min_stock" checked class="exp-col"> Stock Mínimo</label>
+                        <label class="s-check-label" style="font-weight:800;color:#0f172a"><input type="checkbox" name="columns[]" value="stock_status" checked class="exp-col exp-essential"> Estado Stock</label>
+                        <label class="s-check-label"><input type="checkbox" name="columns[]" value="variations" class="exp-col"> Variaciones</label>
+                        <label class="s-check-label"><input type="checkbox" name="columns[]" value="addons" class="exp-col"> Extras / Addons</label>
+                        <label class="s-check-label"><input type="checkbox" name="columns[]" value="status" checked class="exp-col exp-essential"> Estado</label>
+                    </div>
+                </div>
+
+                <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px;border-top:1px solid var(--s-border);padding-top:14px">
+                    <button type="button" class="s-btn" onclick="this.closest('.s-modal').classList.remove('open')">Cancelar</button>
+                    <button type="submit" class="s-btn primary" style="background:#10b981;border-color:#10b981">
+                        <i class="las la-file-excel"></i> Descargar Excel (.xlsx)
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @push('script')
 <script>
+function openExportModal() {
+    document.getElementById('export-modal').classList.add('open');
+}
+
+function toggleAllExportCols(checked) {
+    document.querySelectorAll('#export-cols-grid .exp-col').forEach(function(cb) {
+        cb.checked = checked;
+    });
+}
+
+function selectEssentialExportCols() {
+    document.querySelectorAll('#export-cols-grid .exp-col').forEach(function(cb) {
+        cb.checked = cb.classList.contains('exp-essential');
+    });
+}
 function filterCatalogProducts() {
     var query = (document.getElementById('catalogSearch')?.value || '').trim().toLowerCase();
     var status = document.getElementById('catalogStatus')?.value || 'all';

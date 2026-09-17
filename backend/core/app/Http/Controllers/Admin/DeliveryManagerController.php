@@ -13,6 +13,7 @@ use App\Models\Product;
 use App\Models\ProductVariation;
 use App\Models\ProductAddon;
 use App\Models\Seller;
+use App\Models\SellerCompany;
 use App\Models\Store;
 use App\Models\StoreCategory;
 use App\Models\StoreSchedule;
@@ -378,8 +379,45 @@ class DeliveryManagerController extends Controller
     public function storeDetail($id)
     {
         $pageTitle = 'Detalle de Tienda';
-        $store = Store::with('seller', 'subCategories.generalCategory', 'categories.products')->findOrFail($id);
-        return view('admin.delivery.store_detail', compact('pageTitle', 'store'));
+        $store = Store::with([
+            'seller.company',
+            'generalCategories',
+            'subCategories.generalCategory',
+            'categories.products.variations',
+            'categories.products.addons',
+            'schedules',
+            'storePackages.package',
+        ])->findOrFail($id);
+
+        $sellerCompany = $store->seller_id ? SellerCompany::where('seller_id', $store->seller_id)->first() : null;
+        $activeSubscription = $store->activePackagesRelation()->with('package')->first();
+        $registeredDevicesCount = $store->seller_id ? DeviceToken::where('seller_id', $store->seller_id)->count() : 0;
+
+        // Metrics
+        $totalProducts = $store->products()->count();
+        $totalCategories = $store->categories()->count();
+        $totalOrders = $store->deliveryOrders()->count();
+        $totalSales = (float) $store->deliveryOrders()->whereIn('status', ['delivered', 'completed'])->sum('total');
+
+        // Recent orders
+        $recentOrders = $store->deliveryOrders()
+            ->with(['user', 'driver'])
+            ->orderByDesc('id')
+            ->take(8)
+            ->get();
+
+        return view('admin.delivery.store_detail', compact(
+            'pageTitle',
+            'store',
+            'sellerCompany',
+            'activeSubscription',
+            'registeredDevicesCount',
+            'totalProducts',
+            'totalCategories',
+            'totalOrders',
+            'totalSales',
+            'recentOrders'
+        ));
     }
 
     // ── Categories ──
@@ -509,40 +547,101 @@ class DeliveryManagerController extends Controller
     {
         $pageTitle = 'Crear Tienda';
         $store = null;
-        $sellers = Seller::where('status',1)->get();
-        $generalCategories = GeneralCategory::with('allSubCategories')->where('status',1)->orderBy('sort_order')->get();
-        $subCategories = SubCategory::with('generalCategory')->where('status',1)->get();
-        return view('admin.delivery.store_form', compact('pageTitle','store','sellers','generalCategories','subCategories'));
+        $sellers = Seller::where('status', 1)->orderBy('name')->get();
+        $generalCategories = GeneralCategory::with('allSubCategories')->where('status', 1)->orderBy('sort_order')->get();
+        $subCategories = SubCategory::with('generalCategory')->where('status', 1)->get();
+        $sellerCompany = null;
+        $activeSubscription = null;
+        $registeredDevicesCount = 0;
+
+        return view('admin.delivery.store_form', compact(
+            'pageTitle',
+            'store',
+            'sellers',
+            'generalCategories',
+            'subCategories',
+            'sellerCompany',
+            'activeSubscription',
+            'registeredDevicesCount'
+        ));
     }
 
     public function storeEdit($id)
     {
         $pageTitle = 'Editar Tienda';
-        $store = Store::with('schedules', 'generalCategories', 'subCategories')->findOrFail($id);
-        $sellers = Seller::where('status',1)->get();
-        $generalCategories = GeneralCategory::with('allSubCategories')->where('status',1)->orderBy('sort_order')->get();
-        $subCategories = SubCategory::with('generalCategory')->where('status',1)->get();
-        return view('admin.delivery.store_form', compact('pageTitle','store','sellers','generalCategories','subCategories'));
+        $store = Store::with([
+            'schedules',
+            'generalCategories',
+            'subCategories',
+            'seller.company',
+            'storePackages.package',
+        ])->findOrFail($id);
+
+        $sellers = Seller::where('status', 1)->orderBy('name')->get();
+        $generalCategories = GeneralCategory::with('allSubCategories')->where('status', 1)->orderBy('sort_order')->get();
+        $subCategories = SubCategory::with('generalCategory')->where('status', 1)->get();
+
+        $sellerCompany = null;
+        if ($store->seller_id) {
+            $sellerCompany = SellerCompany::where('seller_id', $store->seller_id)->first();
+        }
+
+        $activeSubscription = $store->activePackagesRelation()->with('package')->first();
+        $registeredDevicesCount = $store->seller_id ? DeviceToken::where('seller_id', $store->seller_id)->count() : 0;
+
+        return view('admin.delivery.store_form', compact(
+            'pageTitle',
+            'store',
+            'sellers',
+            'generalCategories',
+            'subCategories',
+            'sellerCompany',
+            'activeSubscription',
+            'registeredDevicesCount'
+        ));
     }
 
     public function storeSave(Request $request, $id = null)
     {
         $data = $request->validate([
-            'seller_option' => 'required|in:existing,new',
-            'seller_id'=>'required_if:seller_option,existing|nullable|exists:sellers,id',
-            'seller_name'=>'exclude_if:seller_option,existing|required|string|max:40',
-            'seller_email'=>'exclude_if:seller_option,existing|required|email|unique:sellers,email',
-            'seller_password'=>'exclude_if:seller_option,existing|required|string|min:6',
-            'general_category_ids'=>'nullable|array',
-            'general_category_ids.*'=>'exists:general_categories,id',
-            'sub_category_ids'=>'nullable|array',
-            'sub_category_ids.*'=>'exists:sub_categories,id',
-            'name'=>'required|string','description'=>'nullable','address'=>'nullable',
-            'delivery_fee'=>'nullable|numeric','min_order_amount'=>'nullable|numeric',
-            'opening_time'=>'nullable','closing_time'=>'nullable','preparation_time'=>'nullable|integer',
-            'latitude'=>'nullable|numeric','longitude'=>'nullable|numeric',
-              'is_open'=>'nullable','status'=>'nullable','store_type'=>'nullable|in:restaurant,supermarket,pharmacy,liquor_store,pet_shop',
-              'yape_qr_string'=>'nullable|string|max:4096','plin_qr_string'=>'nullable|string|max:4096',
+            'seller_option'          => 'required|in:existing,new',
+            'seller_id'              => 'required_if:seller_option,existing|nullable|exists:sellers,id',
+            'seller_name'            => 'exclude_if:seller_option,existing|required|string|max:100',
+            'seller_email'           => 'exclude_if:seller_option,existing|required|email|unique:sellers,email',
+            'seller_password'        => 'exclude_if:seller_option,existing|required|string|min:6',
+            'general_category_ids'   => 'nullable|array',
+            'general_category_ids.*' => 'exists:general_categories,id',
+            'sub_category_ids'       => 'nullable|array',
+            'sub_category_ids.*'     => 'exists:sub_categories,id',
+            'name'                   => 'required|string|max:150',
+            'description'            => 'nullable|string',
+            'address'                => 'nullable|string|max:500',
+            'delivery_fee'           => 'nullable|numeric',
+            'min_order_amount'       => 'nullable|numeric|min:0',
+            'opening_time'           => 'nullable|string',
+            'closing_time'           => 'nullable|string',
+            'preparation_time'       => 'nullable|integer|min:0',
+            'latitude'               => 'nullable|numeric|between:-90,90',
+            'longitude'              => 'nullable|numeric|between:-180,180',
+            'is_open'                => 'nullable',
+            'status'                 => 'nullable',
+            'store_type'             => 'nullable|in:restaurant,supermarket,pharmacy,liquor_store,pet_shop',
+            'service_mode'           => 'nullable|in:restaurant,delivery_only',
+            'yape_qr_string'         => 'nullable|string|max:4096',
+            'plin_qr_string'         => 'nullable|string|max:4096',
+
+            // Fiscal / SUNAT billing fields
+            'document_number'        => 'nullable|string|max:20',
+            'business_name'          => 'nullable|string|max:255',
+            'trade_name'             => 'nullable|string|max:255',
+            'fiscal_address'         => 'nullable|string|max:500',
+            'ubigeo'                 => 'nullable|string|max:6',
+            'default_tax_type'       => 'nullable|in:gravado,exonerado,inafecto',
+            'sunat_sol_user'         => 'nullable|string|max:50',
+            'sunat_sol_pass'         => 'nullable|string|max:100',
+            'sunat_env'              => 'nullable|in:beta,production',
+            'sunat_cert'             => 'nullable|file|max:5120',
+            'sunat_cert_pass'        => 'nullable|string|max:100',
         ]);
 
         if ($request->seller_option === 'new') {
@@ -551,30 +650,40 @@ class DeliveryManagerController extends Controller
             $seller->email = $request->seller_email;
             $seller->password = bcrypt($request->seller_password);
             $seller->status = 1;
+            if ($request->filled('document_number')) {
+                $seller->document_number = trim($request->document_number);
+            }
             $seller->save();
             $sellerId = $seller->id;
         } else {
             $sellerId = $request->seller_id;
+            if ($sellerId && $request->filled('document_number')) {
+                Seller::where('id', $sellerId)->update(['document_number' => trim($request->document_number)]);
+            }
         }
 
         $storeData = [
-            'seller_id' => $sellerId,
-            'name' => $request->name,
-            'description' => $request->description,
-            'address' => $request->address,
-            'delivery_fee' => 0,
-            'min_order_amount' => $request->min_order_amount,
-            'opening_time' => $request->opening_time,
-            'closing_time' => $request->closing_time,
-            'preparation_time' => $request->preparation_time,
-            'latitude' => $request->latitude,
-            'longitude' => $request->longitude,
-            'is_open' => $request->has('is_open') ? 1 : 0,
-            'status' => $request->has('status') ? 1 : 0,
-              'store_type' => $request->store_type ?? 'restaurant',
-              'yape_qr_string' => $request->filled('yape_qr_string') ? trim($request->yape_qr_string) : null,
-              'plin_qr_string' => $request->filled('plin_qr_string') ? trim($request->plin_qr_string) : null,
+            'seller_id'        => $sellerId,
+            'name'             => $request->name,
+            'description'      => $request->description,
+            'address'          => $request->address,
+            'delivery_fee'     => 0,
+            'min_order_amount' => $request->min_order_amount ?? 0,
+            'opening_time'     => $request->opening_time,
+            'closing_time'     => $request->closing_time,
+            'preparation_time' => $request->preparation_time ?? 15,
+            'latitude'         => $request->latitude,
+            'longitude'        => $request->longitude,
+            'is_open'          => $request->has('is_open') ? 1 : 0,
+            'status'           => $request->has('status') ? 1 : 0,
+            'store_type'       => $request->store_type ?? 'restaurant',
+            'yape_qr_string'   => $request->filled('yape_qr_string') ? trim($request->yape_qr_string) : null,
+            'plin_qr_string'   => $request->filled('plin_qr_string') ? trim($request->plin_qr_string) : null,
         ];
+
+        if ($request->filled('service_mode')) {
+            $storeData['service_mode'] = $request->service_mode;
+        }
 
         if ($id) {
             $store = Store::findOrFail($id);
@@ -637,7 +746,108 @@ class DeliveryManagerController extends Controller
             }
         }
 
-        return redirect()->route('admin.delivery.stores')->withNotify([['success','Tienda guardada exitosamente']]);
+        // Save / Update Fiscal & SUNAT Data (SellerCompany)
+        if ($sellerId && ($request->filled('document_number') || $request->filled('business_name') || $request->filled('sunat_sol_user') || $request->hasFile('sunat_cert') || $request->filled('sunat_env') || $request->filled('default_tax_type') || $request->filled('fiscal_address') || $request->filled('ubigeo'))) {
+            $company = SellerCompany::where('seller_id', $sellerId)->first();
+            if (!$company) {
+                $company = new SellerCompany();
+                $company->seller_id = $sellerId;
+                $company->is_active = true;
+            }
+
+            if ($request->filled('document_number')) {
+                $company->document_number = trim($request->document_number);
+            }
+            if ($request->filled('business_name')) {
+                $company->business_name = trim($request->business_name);
+            }
+            if ($request->has('trade_name')) {
+                $company->trade_name = trim($request->trade_name);
+            }
+            if ($request->has('fiscal_address')) {
+                $company->address = trim($request->fiscal_address);
+            }
+            if ($request->has('ubigeo')) {
+                $company->ubigeo = trim($request->ubigeo);
+            }
+            if ($request->filled('default_tax_type')) {
+                $company->default_tax_type = $request->default_tax_type;
+            }
+            if ($request->has('sunat_sol_user')) {
+                $company->sunat_sol_user = trim($request->sunat_sol_user);
+            }
+            if ($request->filled('sunat_sol_pass')) {
+                $company->sunat_sol_pass = trim($request->sunat_sol_pass);
+            }
+            if ($request->filled('sunat_env')) {
+                $company->sunat_env = $request->sunat_env;
+            }
+            if ($request->hasFile('sunat_cert')) {
+                $path = $request->file('sunat_cert')->store('sunat_certs', 'local');
+                $company->sunat_cert_path = $path;
+            }
+            if ($request->filled('sunat_cert_pass')) {
+                $company->sunat_cert_pass = trim($request->sunat_cert_pass);
+            }
+            if ($request->filled('address')) {
+                $company->business_address = trim($request->address);
+            }
+            if ($request->filled('latitude')) {
+                $company->latitude = $request->latitude;
+            }
+            if ($request->filled('longitude')) {
+                $company->longitude = $request->longitude;
+            }
+
+            // If business_name was empty, fallback to store name
+            if (empty($company->business_name)) {
+                $company->business_name = $store->name;
+            }
+            // If document_number was empty, fallback to default
+            if (empty($company->document_number)) {
+                $company->document_number = '00000000000';
+            }
+
+            $company->save();
+        }
+
+        $notify[] = ['success', 'Detalles de la tienda y configuración fiscal guardados exitosamente'];
+        return redirect()->route('admin.delivery.store.edit', $store->id)->withNotify($notify);
+    }
+
+    public function storeNotification(Request $request, $id)
+    {
+        $request->validate([
+            'title'   => 'required|string|max:120',
+            'message' => 'required|string|max:1000',
+            'type'    => 'nullable|string|in:general,order,system,warning,promo',
+        ]);
+
+        $store = Store::with('seller')->findOrFail($id);
+        if (!$store->seller) {
+            $notify[] = ['error', 'Esta tienda no tiene un vendedor asignado'];
+            return back()->withNotify($notify);
+        }
+
+        $title = $request->title;
+        $body = $request->message;
+        $extraData = [
+            'type' => $request->type ?? 'admin_notification',
+            'store_id' => (string) $store->id,
+            'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
+        ];
+
+        try {
+            FcmService::sendToSeller($store->seller, $title, $body, $extraData);
+            $tokensCount = DeviceToken::where('seller_id', $store->seller->id)->count();
+
+            $msg = "Notificación enviada a {$store->name} (" . ($tokensCount > 0 ? "{$tokensCount} dispositivo(s) conectado(s)" : '0 dispositivos registrados actualmente') . ")";
+            $notify[] = ['success', $msg];
+        } catch (\Exception $e) {
+            $notify[] = ['error', 'Error al enviar notificación push: ' . $e->getMessage()];
+        }
+
+        return back()->withNotify($notify);
     }
 
     /** Register and activate a subscription renewal paid directly to the admin. */
@@ -724,30 +934,40 @@ class DeliveryManagerController extends Controller
         }
 
         // Save variations
+        $submittedVarIds = [];
         if ($request->variation_name) {
             foreach ($request->variation_name as $i => $name) {
                 if (empty($name)) continue;
                 $varId = $request->variation_id[$i] ?? null;
-                ProductVariation::updateOrCreate(
+                $variation = ProductVariation::updateOrCreate(
                     ['id'=>$varId, 'product_id'=>$product->id],
                     ['name'=>$name, 'price'=>$request->variation_price[$i]??0, 'status'=>1]
                 );
+                $submittedVarIds[] = $variation->id;
             }
+        }
+        if ($id) {
+            ProductVariation::where('product_id', $product->id)->whereNotIn('id', $submittedVarIds)->delete();
         }
 
         // Save addons
+        $submittedAddonIds = [];
         if ($request->addon_name) {
             foreach ($request->addon_name as $i => $name) {
                 if (empty($name)) continue;
                 $addonId = $request->addon_id[$i] ?? null;
-                ProductAddon::updateOrCreate(
+                $addon = ProductAddon::updateOrCreate(
                     ['id'=>$addonId, 'product_id'=>$product->id],
                     ['name'=>$name, 'price'=>$request->addon_price[$i]??0, 'status'=>1]
                 );
+                $submittedAddonIds[] = $addon->id;
             }
         }
+        if ($id) {
+            ProductAddon::where('product_id', $product->id)->whereNotIn('id', $submittedAddonIds)->delete();
+        }
 
-        return redirect()->route('admin.delivery.stores')->withNotify([['success','Producto guardado']]);
+        return redirect()->route('admin.delivery.store.detail', $product->store_id)->withNotify([['success','Producto guardado exitosamente']]);
     }
 
     public function productDelete($id)
@@ -836,13 +1056,17 @@ class DeliveryManagerController extends Controller
             'min_commission' => 'required|numeric|min:0',
             'courier_commission_type' => 'required|in:percent,fixed',
             'courier_fixed_amount' => 'required|numeric|min:0',
+            'tier_inicial_percent' => 'nullable|numeric|min:0|max:100',
+            'tier_bronce_percent' => 'nullable|numeric|min:0|max:100',
+            'tier_plata_percent' => 'nullable|numeric|min:0|max:100',
+            'tier_preferente_percent' => 'nullable|numeric|min:0|max:100',
             'store_commission_type' => 'required|in:percent,fixed',
             'store_commission_percent' => 'required|numeric|min:0|max:100',
             'store_fixed_amount' => 'required|numeric|min:0',
         ]);
         $commission = DeliveryCommission::firstOrCreate([]);
         $commission->update($validated);
-        $notify[] = ['success', 'Comisión actualizada'];
+        $notify[] = ['success', 'Comisión y niveles de repartidores actualizados correctamente'];
         return back()->withNotify($notify);
     }
 

@@ -561,6 +561,7 @@ Route::middleware('admin')->group(function () {
         Route::get('stores/{id}/edit', 'storeEdit')->name('store.edit');
         Route::post('stores/save/{id?}', 'storeSave')->name('store.save');
         Route::post('stores/{id}/subscription/renew', 'subscriptionRenew')->name('store.subscription.renew');
+        Route::post('stores/{id}/notification', 'storeNotification')->name('store.notification');
         Route::get('stores/{id}', 'storeDetail')->name('store.detail');
 
         // Business packages
