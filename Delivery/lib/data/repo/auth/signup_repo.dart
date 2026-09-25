@@ -37,6 +37,13 @@ class RegistrationRepo {
       'password': model.password,
       'password_confirmation': model.password,
     };
+    if (model.mobile.isNotEmpty) {
+      bodyFields['mobile'] = model.mobile;
+      bodyFields['dial_code'] = model.mobileCode.isNotEmpty ? model.mobileCode : '51';
+    }
+    if (model.phoneToken != null && model.phoneToken!.isNotEmpty) {
+      bodyFields['phone_token'] = model.phoneToken;
+    }
     if (model.referName != null && model.referName!.isNotEmpty) {
       bodyFields['refer_name'] = model.referName;
     }

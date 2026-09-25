@@ -11,6 +11,7 @@ import 'package:liztogo_repartidor/presentation/components/card/inner_shadow_con
 import 'package:liztogo_repartidor/presentation/components/divider/custom_spacer.dart';
 import 'package:liztogo_repartidor/presentation/components/file_download_dialog/download_dialogue.dart';
 import 'package:liztogo_repartidor/presentation/components/image/custom_svg_picture.dart';
+import 'package:liztogo_repartidor/presentation/components/step_indicator/registration_step_indicator.dart';
 
 import '../../../../data/controller/vehicle_verification/vehicle_verification_controller.dart';
 
@@ -33,119 +34,132 @@ class _VehicleVerificationPendingSectionState extends State<VehicleVerificationP
   Widget build(BuildContext context) {
     return GetBuilder<VehicleVerificationController>(
       builder: (controller) {
-        return Container(
-          margin: const EdgeInsets.all(5),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            color: MyColor.screenBgColor,
-          ),
-          child: controller.pendingData.isNotEmpty
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ListView.separated(
-                      separatorBuilder: (context, index) {
-                        return spaceDown(Dimensions.space15);
-                      },
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: controller.pendingData.length,
-                      itemBuilder: (context, index) {
-                        return controller.pendingData[index].value != null && controller.pendingData[index].value!.isNotEmpty
-                            ? buildColumWidget(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      controller.pendingData[index].name ?? '',
-                                      style: semiBoldDefault.copyWith(
-                                        fontSize: Dimensions.fontDefault,
-                                        color: MyColor.getHeadingTextColor(),
-                                      ),
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Container(
+            margin: const EdgeInsets.all(5),
+            padding: const EdgeInsets.all(Dimensions.space20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              color: MyColor.screenBgColor,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const RegistrationStepIndicator(currentStep: 3),
+                const SizedBox(height: 12),
+                if (controller.pendingData.isNotEmpty) ...[
+                  ListView.separated(
+                    separatorBuilder: (context, index) {
+                      return spaceDown(Dimensions.space15);
+                    },
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: controller.pendingData.length,
+                    itemBuilder: (context, index) {
+                      return controller.pendingData[index].value != null && controller.pendingData[index].value!.isNotEmpty
+                          ? buildColumWidget(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    controller.pendingData[index].name ?? '',
+                                    style: semiBoldDefault.copyWith(
+                                      fontSize: Dimensions.fontDefault,
+                                      color: MyColor.getHeadingTextColor(),
                                     ),
-                                    spaceDown(Dimensions.space10),
-                                    if (controller.pendingData[index].type == "file") ...[
-                                      GestureDetector(
-                                        onTap: () {
-                                          String url = "${controller.path}/${controller.pendingData[index].value.toString()}";
-                                          printX(url);
-                                          showDialog(
-                                            context: context,
-                                            builder: (context) {
-                                              return DownloadingDialog(
-                                                url: url,
-                                                fileName: MyStrings.kycData,
-                                              );
-                                            },
-                                          );
-                                        },
-                                        child: Row(
-                                          children: [
-                                            const Icon(
-                                              Icons.file_download,
-                                              size: 17,
+                                  ),
+                                  spaceDown(Dimensions.space10),
+                                  if (controller.pendingData[index].type == "file") ...[
+                                    GestureDetector(
+                                      onTap: () {
+                                        String url = "${controller.path}/${controller.pendingData[index].value.toString()}";
+                                        printX(url);
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) {
+                                            return DownloadingDialog(
+                                              url: url,
+                                              fileName: MyStrings.kycData,
+                                            );
+                                          },
+                                        );
+                                      },
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.file_download,
+                                            size: 17,
+                                            color: MyColor.primaryColor,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Text(
+                                            MyStrings.attachment.tr,
+                                            style: regularDefault.copyWith(
                                               color: MyColor.primaryColor,
                                             ),
-                                            const SizedBox(width: 12),
-                                            Text(
-                                              MyStrings.attachment.tr,
-                                              style: regularDefault.copyWith(
-                                                color: MyColor.primaryColor,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
-                                    ] else ...[
-                                      Text(
-                                        StringConverter.removeQuotationAndSpecialCharacterFromString(
-                                          controller.pendingData[index].value ?? '',
-                                        ),
-                                        style: regularDefault.copyWith(
-                                          color: MyColor.getBodyTextColor(),
-                                        ),
+                                    ),
+                                  ] else ...[
+                                    Text(
+                                      StringConverter.removeQuotationAndSpecialCharacterFromString(
+                                        controller.pendingData[index].value ?? '',
                                       ),
-                                    ],
+                                      style: regularDefault.copyWith(
+                                        color: MyColor.getBodyTextColor(),
+                                      ),
+                                    ),
                                   ],
-                                ),
-                              )
-                            : SizedBox.shrink();
-                      },
-                    ),
-                  ],
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CustomSvgPicture(
-                      image: widget.isPending ? MyImages.pendingIcon : MyImages.verifiedIcon,
-                      height: 100,
-                      width: 100,
-                      fit: BoxFit.cover,
-                    ),
-                    const SizedBox(height: 25),
-                    Text(
-                      widget.isPending ? widget.title.tr : MyStrings.kycAlreadyVerifiedMsg.tr,
-                      style: regularDefault.copyWith(
-                        color: MyColor.colorBlack,
-                        fontSize: Dimensions.fontExtraLarge,
+                                ],
+                              ),
+                            )
+                          : const SizedBox.shrink();
+                    },
+                  ),
+                ] else ...[
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CustomSvgPicture(
+                        image: widget.isPending ? MyImages.pendingIcon : MyImages.verifiedIcon,
+                        height: 90,
+                        width: 90,
+                        fit: BoxFit.cover,
                       ),
-                    ),
-                    const SizedBox(height: 40),
-                    if (widget.isPending)
-                      ElevatedButton(
-                        onPressed: () => Get.offAllNamed(RouteHelper.dashboard),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: MyColor.primaryColor,
-                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      const SizedBox(height: 20),
+                      Text(
+                        widget.isPending ? widget.title.tr : MyStrings.kycAlreadyVerifiedMsg.tr,
+                        style: regularDefault.copyWith(
+                          color: MyColor.colorBlack,
+                          fontSize: Dimensions.fontLarge,
+                          fontWeight: FontWeight.w600,
                         ),
-                        child: Text('Ir al inicio', style: regularDefault.copyWith(color: Colors.white, fontSize: 16)),
+                        textAlign: TextAlign.center,
                       ),
-                  ],
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 28),
+                ElevatedButton.icon(
+                  onPressed: () => Get.offAllNamed(RouteHelper.dashboard),
+                  icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+                  label: Text(
+                    'Ir al panel principal',
+                    style: boldDefault.copyWith(color: Colors.white, fontSize: 15),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: MyColor.primaryColor,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                 ),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -157,12 +171,12 @@ class _VehicleVerificationPendingSectionState extends State<VehicleVerificationP
       backgroundColor: MyColor.textFieldBgColor,
       borderRadius: Dimensions.largeRadius,
       blur: 6,
-      offset: Offset(3, 3),
+      offset: const Offset(3, 3),
       shadowColor: MyColor.colorBlack.withValues(alpha: 0.04),
       isShadowTopLeft: true,
       isShadowBottomRight: true,
       alignment: AlignmentDirectional.centerStart,
-      padding: EdgeInsetsGeometry.symmetric(
+      padding: const EdgeInsets.symmetric(
         horizontal: Dimensions.space10,
         vertical: Dimensions.space15,
       ),

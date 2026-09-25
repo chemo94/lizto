@@ -132,10 +132,10 @@ class _JobHistoryScreenState extends State<JobHistoryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(job.orderNo ?? '-', style: boldDefault.copyWith(fontSize: Dimensions.fontSmall)),
-                      if (job.createdAt != null)
+                      if ((job.requestedAt ?? job.createdAt) != null)
                         Text(
-                          _formatDate(job.createdAt ?? ''),
-                          style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor, fontSize: 10),
+                          '📅 ${_formatDate(job.requestedAt ?? job.createdAt ?? '')}',
+                          style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor, fontSize: 10, fontWeight: FontWeight.w500),
                         ),
                     ],
                   ),

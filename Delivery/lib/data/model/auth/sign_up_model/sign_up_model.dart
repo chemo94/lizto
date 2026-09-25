@@ -10,6 +10,7 @@ class SignUpModel {
   final String country;
   final String mobileCode;
   String? referName;
+  String? phoneToken;
 
   SignUpModel({
     required this.mobile,
@@ -23,5 +24,6 @@ class SignUpModel {
     required this.country,
     required this.mobileCode,
     this.referName,
+    this.phoneToken,
   });
 }

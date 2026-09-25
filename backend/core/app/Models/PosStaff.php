@@ -31,6 +31,11 @@ class PosStaff extends Model
         return in_array($permission, $this->permissions);
     }
 
+    public function isAdmin(): bool
+    {
+        return in_array(strtolower($this->position ?? ''), ['administrador', 'admin']);
+    }
+
     public function seller()
     {
         return $this->belongsTo(Seller::class);

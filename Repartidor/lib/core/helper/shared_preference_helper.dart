@@ -30,4 +30,5 @@ class SharedPreferenceHelper {
   static const String languageImagePath = 'language-image';
   static const String languageListKey = 'language-list-key';
   static const String userOnlineStatusKey = 'user-online-status-key';
+  static const String onboardingStepKey = 'onboarding-step-key';
 }

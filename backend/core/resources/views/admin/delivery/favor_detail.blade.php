@@ -71,7 +71,13 @@
 <div class="fav-hero">
     <div>
         <h4><i class="las la-motorcycle"></i> Favor #{{ $favor->order_no }}</h4>
-        <div class="sub">{{ $favor->created_at?->format('d M Y, H:i') }} · {{ $favor->type == 'buy' ? 'Compra' : 'Envío' }}</div>
+        <div class="sub">
+            Pedido: {{ ($favor->requested_at ?? $favor->created_at)?->format('d M Y, H:i') }}
+            @if($favor->requested_at && $favor->requested_at->ne($favor->created_at))
+                · Registrado: {{ $favor->created_at?->format('d M Y, H:i') }}
+            @endif
+            · {{ $favor->type == 'buy' ? 'Compra' : 'Envío' }}
+        </div>
     </div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
         <button type="button" class="btn btn-sm btn-light" onclick="shareTrackingLink()"><i class="las la-share-alt"></i> Compartir seguimiento</button>
@@ -174,6 +180,7 @@
                 @if($favor->payer_type === 'recipient' && $favor->cod_amount)
                 <div class="fav-row"><span class="lbl">Monto a cobrar</span><span class="val" style="color:#dc2626;">S/ {{ number_format($favor->cod_amount, 2) }}</span></div>
                 @endif
+                <div class="fav-row"><span class="lbl">Fecha real del pedido</span><span class="val">{{ ($favor->requested_at ?? $favor->created_at)?->format('d/m/Y H:i') }}</span></div>
                 <div class="fav-row"><span class="lbl">Tarifa delivery</span><span class="val">S/ {{ number_format($favor->delivery_fee ?? 0, 2) }}</span></div>
                 <div class="fav-row"><span class="lbl">Total</span><span class="val" style="color:#16a34a;font-size:15px;">S/ {{ number_format($favor->total, 2) }}</span></div>
                 @if($favor->is_express)

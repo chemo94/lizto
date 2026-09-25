@@ -417,13 +417,34 @@
                         <small class="text-muted mt-1 d-block" style="font-size:0.75rem;">Coordenadas: <span id="store-coords">--</span></small>
                     </div>
 
-                    <!-- Section 2: Driver -->
+                    <!-- Section 2: Date & Driver -->
                     <div class="form-section-title">
-                        <i class="las la-user-astronaut"></i> 2. Asignación de Repartidor
+                        <i class="las la-calendar-check"></i> 2. Fecha del Envío y Repartidor
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label-sneat">Destinatario del Despacho</label>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label-sneat mb-0">
+                                <i class="las la-clock text-primary"></i> Fecha y Hora Real del Pedido / Envío <span class="text-danger">*</span>
+                            </label>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-xs btn-outline-primary" id="btn-date-now" style="font-size:11px; padding:2px 8px;">
+                                    <i class="las la-bolt"></i> Ahora
+                                </button>
+                                <button type="button" class="btn btn-xs btn-outline-secondary" id="btn-date-yesterday" style="font-size:11px; padding:2px 8px;">
+                                    <i class="las la-history"></i> Ayer
+                                </button>
+                            </div>
+                        </div>
+                        <input type="datetime-local" class="form-control-sneat" name="requested_at" id="requested-at"
+                            value="{{ old('requested_at', now()->format('Y-m-d\TH:i')) }}" required>
+                        <small class="text-muted" style="font-size:0.75rem;">
+                            Indica cuándo se originó el pedido. Si te escribieron por WhatsApp ayer u horas antes y recién lo estás registrando en el sistema, selecciona aquí la fecha y hora original para que los repartidores verifiquen la fecha real de la entrega.
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label-sneat">Asignación de Repartidor</label>
                         <select class="form-select-sneat" name="driver_id" id="driver-select">
                             <option value="all">📢 Enviar solicitud a TODOS los repartidores disponibles</option>
                             @foreach($drivers as $driver)
@@ -432,6 +453,18 @@
                             </option>
                             @endforeach
                         </select>
+                    </div>
+
+                    <div class="mb-3 p-3 rounded" style="background:#f0fdf4; border:1px solid #bbf7d0;">
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" name="is_already_delivered" id="is-already-delivered" value="1" {{ old('is_already_delivered') ? 'checked' : '' }}>
+                            <label class="form-check-label fw-bold text-success" for="is-already-delivered" style="cursor:pointer; font-size:0.88rem;">
+                                <i class="las la-check-double"></i> ¿Este envío ya fue entregado directamente? (Registro histórico)
+                            </label>
+                        </div>
+                        <div id="already-delivered-help" style="display:none; font-size:0.78rem; color:#15803d; margin-top:6px;">
+                            <i class="las la-info-circle"></i> <b>Modo Envío Ya Entregado:</b> El pedido se guardará directamente con estado <b>Entregado</b> a nombre del repartidor seleccionado y computará en su historial con la fecha real del envío. No emitirá alertas de búsqueda ni requerirá confirmación en la app.
+                        </div>
                     </div>
 
                     <!-- Section 3: Destination -->
@@ -1102,9 +1135,71 @@
         });
     }
 
+    // ── Date and Already-Delivered Helpers ──
+    var reqAtInput = document.getElementById('requested-at');
+    var btnDateNow = document.getElementById('btn-date-now');
+    var btnDateYesterday = document.getElementById('btn-date-yesterday');
+    var alreadyDeliveredCheck = document.getElementById('is-already-delivered');
+    var alreadyDeliveredHelp = document.getElementById('already-delivered-help');
+    var driverSelect = document.getElementById('driver-select');
+
+    function formatDateTimeLocal(d) {
+        var year = d.getFullYear();
+        var month = String(d.getMonth() + 1).padStart(2, '0');
+        var day = String(d.getDate()).padStart(2, '0');
+        var hours = String(d.getHours()).padStart(2, '0');
+        var minutes = String(d.getMinutes()).padStart(2, '0');
+        return year + '-' + month + '-' + day + 'T' + hours + ':' + minutes;
+    }
+
+    if (btnDateNow && reqAtInput) {
+        btnDateNow.addEventListener('click', function() {
+            reqAtInput.value = formatDateTimeLocal(new Date());
+        });
+    }
+
+    if (btnDateYesterday && reqAtInput) {
+        btnDateYesterday.addEventListener('click', function() {
+            var yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            reqAtInput.value = formatDateTimeLocal(yesterday);
+        });
+    }
+
+    function updateDeliveredMode() {
+        if (!alreadyDeliveredCheck) return;
+        if (alreadyDeliveredCheck.checked) {
+            if (alreadyDeliveredHelp) alreadyDeliveredHelp.style.display = 'block';
+            submitBtn.innerHTML = '<i class="las la-check-double"></i> Registrar envío como Entregado';
+            if (driverSelect && driverSelect.value === 'all') {
+                for (var i = 0; i < driverSelect.options.length; i++) {
+                    if (driverSelect.options[i].value !== 'all') {
+                        driverSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+        } else {
+            if (alreadyDeliveredHelp) alreadyDeliveredHelp.style.display = 'none';
+            submitBtn.innerHTML = '<i class="las la-paper-plane"></i> Enviar solicitud a repartidores';
+        }
+    }
+
+    if (alreadyDeliveredCheck) {
+        alreadyDeliveredCheck.addEventListener('change', updateDeliveredMode);
+        updateDeliveredMode();
+    }
+
     // AJAX Form Submit
     requestForm.addEventListener('submit', function(e) {
         e.preventDefault();
+
+        if (alreadyDeliveredCheck && alreadyDeliveredCheck.checked) {
+            if (!driverSelect || !driverSelect.value || driverSelect.value === 'all') {
+                alert('Para registrar un envío ya entregado debes seleccionar al repartidor específico que realizó la entrega.');
+                if (driverSelect) driverSelect.focus();
+                return;
+            }
+        }
 
         if (!destAddr.value || !document.getElementById('delivery-lat').value) {
             alert('Selecciona una dirección de destino válida usando la sugerencia de Google Maps o el mapa.');
@@ -1132,6 +1227,11 @@
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.status === 'success') {
+                if (data.already_delivered) {
+                    alert('✅ Envío #' + data.order_no + ' registrado exitosamente con estado ENTREGADO.\nFecha real: ' + (data.requested_at_text || '') + '\nRepartidor: ' + (data.driver_name || ''));
+                    window.location.href = data.redirect_url || '{{ route("admin.delivery.favors") }}';
+                    return;
+                }
                 requestCard.style.display = 'none';
                 waitingCard.style.display = 'block';
                 document.getElementById('waiting-order-no').textContent = data.order_no;
@@ -1141,14 +1241,14 @@
             } else {
                 alert(data.message || 'Ocurrió un error al procesar la solicitud.');
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="las la-paper-plane"></i> Enviar solicitud a repartidores';
+                updateDeliveredMode();
             }
         })
         .catch(function(err) {
             console.error(err);
             alert('Error de conexión al servidor.');
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="las la-paper-plane"></i> Enviar solicitud a repartidores';
+            updateDeliveredMode();
         });
     });
 

@@ -12,11 +12,23 @@ import 'package:liztogo_repartidor/presentation/components/buttons/rounded_butto
 import 'package:liztogo_repartidor/presentation/components/divider/custom_spacer.dart';
 import 'package:liztogo_repartidor/presentation/components/image/my_local_image_widget.dart';
 import 'package:liztogo_repartidor/presentation/screens/auth/login/widgets/login_or_bar.dart';
-import 'package:liztogo_repartidor/presentation/screens/auth/social_auth/firebase_phone_login_dialog.dart';
+import 'package:liztogo_repartidor/presentation/screens/auth/social_auth/whatsapp_phone_login_dialog.dart';
 
 class SocialAuthSection extends StatefulWidget {
   final String googleAuthTitle;
-  const SocialAuthSection({super.key, this.googleAuthTitle = 'Continuar con Google'});
+  final String appleAuthTitle;
+  final String phoneAuthTitle;
+  final String userType;
+  final void Function(Map<String, dynamic> verifiedData)? onNewUserPhoneVerified;
+
+  const SocialAuthSection({
+    super.key,
+    this.googleAuthTitle = 'Continuar con Google',
+    this.appleAuthTitle = 'Continuar con Apple',
+    this.phoneAuthTitle = 'Continuar con celular',
+    this.userType = 'driver',
+    this.onNewUserPhoneVerified,
+  });
 
   @override
   State<SocialAuthSection> createState() => _SocialAuthSectionState();
@@ -36,104 +48,124 @@ class _SocialAuthSectionState extends State<SocialAuthSection> {
       builder: (controller) {
         return Column(
           children: [
-            Row(
-              children: [
-                if (true) ...[
-                  Expanded(
-                    child: RoundedButton(
-                      text: "",
-                      isOutlined: true,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.max,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          controller.isGoogleSignInLoading
-                              ? SizedBox(
-                                  height: 15,
-                                  width: 15,
-                                  child: CircularProgressIndicator(
-                                    color: MyColor.primaryColor,
-                                  ),
-                                )
-                              : MyLocalImageWidget(
-                                  imagePath: MyImages.google,
-                                  height: 25,
-                                  width: 25,
-                                  boxFit: BoxFit.contain,
-                                ),
-                          SizedBox(width: Dimensions.space10),
-                          Text(
-                            (widget.googleAuthTitle).tr,
-                            style: regularDefault.copyWith(
-                              fontWeight: FontWeight.w500,
-                              fontSize: 16,
-                            ),
+            // Botón Google
+            RoundedButton(
+              text: "",
+              isOutlined: true,
+              child: Row(
+                mainAxisSize: MainAxisSize.max,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  controller.isGoogleSignInLoading
+                      ? SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: MyColor.primaryColor,
                           ),
-                        ],
-                      ),
-                      press: () {
-                        if (!controller.isGoogleSignInLoading) {
-                          controller.signInWithGoogle();
-                        }
-                      },
+                        )
+                      : MyLocalImageWidget(
+                          imagePath: MyImages.google,
+                          height: 22,
+                          width: 22,
+                          boxFit: BoxFit.contain,
+                        ),
+                  SizedBox(width: Dimensions.space10),
+                  Text(
+                    widget.googleAuthTitle.tr,
+                    style: regularDefault.copyWith(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
                     ),
                   ),
                 ],
-                // Add spacing if both buttons are visible
-                if (Platform.isIOS) ...[
-                  spaceSide(Dimensions.space10),
-                ],
-                if (Platform.isIOS) ...[
-                  Expanded(
-                    child: RoundedButton(
-                      text: "",
-                      isOutlined: true,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.max,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          controller.isAppleSignInLoading
-                              ? SizedBox(
-                                  height: 15,
-                                  width: 15,
-                                  child: CircularProgressIndicator(
-                                    color: MyColor.primaryColor,
-                                  ),
-                                )
-                              : MyLocalImageWidget(
-                                  imagePath: MyImages.apple,
-                                  height: 25,
-                                  width: 25,
-                                  boxFit: BoxFit.contain,
-                                ),
-                          SizedBox(width: Dimensions.space10),
-                          Text(
-                            'Continuar con Apple',
-                            style: regularDefault.copyWith(
-                              fontWeight: FontWeight.w500,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                      press: () {
-                        if (!controller.isAppleSignInLoading) {
-                          controller.signInWithApple();
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ],
+              ),
+              press: () {
+                if (!controller.isGoogleSignInLoading) {
+                  controller.signInWithGoogle();
+                }
+              },
             ),
-            spaceDown(Dimensions.space12),
-            RoundedButton(text: '', isOutlined: true, press: () => showFirebasePhoneLoginDialog(context, onAuthenticated: (token) => controller.socialLoginUser(provider: 'phone', accessToken: token)), child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.phone_android), SizedBox(width: 10), Text('Continuar con celular')])),
-            if (true) ...[
-              spaceDown(Dimensions.space20),
-              const LoginOrBar(stock: 0.8),
+
+            // Botón Apple
+            if (Platform.isIOS) ...[
+              spaceDown(Dimensions.space10),
+              RoundedButton(
+                text: "",
+                isOutlined: true,
+                child: Row(
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    controller.isAppleSignInLoading
+                        ? SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: MyColor.primaryColor,
+                            ),
+                          )
+                        : MyLocalImageWidget(
+                            imagePath: MyImages.apple,
+                            height: 22,
+                            width: 22,
+                            boxFit: BoxFit.contain,
+                          ),
+                    SizedBox(width: Dimensions.space10),
+                    Text(
+                      widget.appleAuthTitle.tr,
+                      style: regularDefault.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
+                press: () {
+                  if (!controller.isAppleSignInLoading) {
+                    controller.signInWithApple();
+                  }
+                },
+              ),
             ],
+
+            spaceDown(Dimensions.space10),
+
+            // Botón Celular (WhatsApp OTP)
+            RoundedButton(
+              text: '',
+              isOutlined: true,
+              press: () => showWhatsAppPhoneLoginDialog(
+                context,
+                userType: widget.userType,
+                onNewUser: widget.onNewUserPhoneVerified,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.chat_bubble_rounded,
+                    color: Color(0xFF25D366),
+                    size: 22,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    widget.phoneAuthTitle.tr,
+                    style: regularDefault.copyWith(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            spaceDown(Dimensions.space15),
+            const LoginOrBar(stock: 0.8),
           ],
         );
       },

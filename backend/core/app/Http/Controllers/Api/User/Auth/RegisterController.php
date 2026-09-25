@@ -117,7 +117,22 @@ class RegisterController extends Controller
         $user->password  = Hash::make($data['password']);
         $user->ref_by    = $referUser ? $referUser->id : 0;
         $user->ev        = gs('ev') ? Status::UNVERIFIED : Status::VERIFIED;
-        $user->sv        = gs('sv') ? Status::UNVERIFIED : Status::VERIFIED;
+
+        if (!empty($data['mobile'])) {
+            $user->mobile    = preg_replace('/\D+/', '', (string) $data['mobile']);
+            $user->dial_code = preg_replace('/\D+/', '', (string) ($data['dial_code'] ?? $data['mobile_code'] ?? '51'));
+        }
+
+        // Si viene con phone_token de WhatsApp verificado
+        $isPhoneVerified = false;
+        if (!empty($data['phone_token'])) {
+            $tokenPayload = \App\Services\WhatsAppOtpService::verifyPhoneToken($data['phone_token']);
+            if ($tokenPayload && ($tokenPayload['verified'] ?? false)) {
+                $isPhoneVerified = true;
+            }
+        }
+
+        $user->sv        = $isPhoneVerified ? Status::VERIFIED : (gs('sv') ? Status::UNVERIFIED : Status::VERIFIED);
         $user->ts        = Status::DISABLE;
         $user->tv        = Status::VERIFIED;
         $user->save();

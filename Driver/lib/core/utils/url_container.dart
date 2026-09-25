@@ -10,6 +10,8 @@ class UrlContainer {
   static const String registrationEndPoint = 'driver/register';
   static const String loginEndPoint = 'driver/login';
   static const String socialLoginEndPoint = 'driver/social-login';
+  static const String whatsappSendOtp = 'driver/auth/whatsapp/send-otp';
+  static const String whatsappVerifyOtp = 'driver/auth/whatsapp/verify-otp';
 
   static const String socialLogin = 'driver/social-login';
   static const String logoutUrl = 'driver/logout';

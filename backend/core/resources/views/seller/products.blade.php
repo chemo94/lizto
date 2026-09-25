@@ -11,6 +11,13 @@
 @endsection
 
 @section('seller-content')
+@php
+    if (!isset($isAdmin)) {
+        $staffId = session()->get('seller_staff_id');
+        $staffUser = $staffId ? \App\Models\PosStaff::find($staffId) : null;
+        $isAdmin = !$staffId || ($staffUser && in_array(strtolower($staffUser->position ?? ''), ['administrador', 'admin']));
+    }
+@endphp
 <style>
 .catalog-head{min-height:148px;margin-bottom:16px;padding:24px 26px;border-radius:14px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:20px;background:linear-gradient(90deg,rgba(112,45,10,.92),rgba(161,71,19,.72),rgba(108,48,13,.42)),url('{{ asset('assets/images/banner-cover.png') }}') center/cover no-repeat}.catalog-head .crumb{font-size:9px;color:rgba(255,255,255,.75);margin-bottom:8px}.catalog-head h2{font:800 24px 'Plus Jakarta Sans','Inter',sans-serif;margin:0 0 4px;letter-spacing:-.5px}.catalog-head p{font-size:10px;color:rgba(255,255,255,.78);margin:0}.catalog-head-actions{display:flex;gap:8px;flex-wrap:wrap}.catalog-head-actions .s-btn{height:36px;border-radius:9px;background:rgba(255,255,255,.13);color:#fff;border:1px solid rgba(255,255,255,.28);backdrop-filter:blur(8px)}.catalog-head-actions .primary{background:#fff;color:#a64c15;border-color:#fff}.catalog-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}.catalog-kpi{min-height:82px;background:#fff;border:1px solid var(--s-border);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:var(--s-shadow-sm)}.catalog-kpi i{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;color:#fff;font-size:18px;box-shadow:0 6px 14px rgba(15,23,42,.1)}.catalog-kpi b{display:block;font-size:19px;color:#172033}.catalog-kpi small{display:block;font-size:9px;color:#94a3b8}.catalog-filter-row{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.catalog-pills{display:flex;gap:7px;overflow:auto;padding-bottom:2px}.catalog-pill{height:34px;padding:0 13px;border:1px solid var(--s-border);border-radius:9px;background:#fff;color:#64748b;font-size:10px;font-weight:700;white-space:nowrap;cursor:pointer}.catalog-pill.active{background:#f97316;color:#fff;border-color:#f97316;box-shadow:0 5px 12px rgba(249,115,22,.2)}.catalog-toolbar{display:flex;align-items:center;gap:8px;margin:0}.catalog-search{position:relative}.catalog-search i{position:absolute;left:13px;top:11px;color:#94a3b8}.catalog-search input{width:220px;height:36px;padding:0 12px 0 37px;border:1px solid var(--s-border);border-radius:10px;background:#fff;outline:0;font-size:10px}.catalog-toolbar select{height:36px;border:1px solid var(--s-border);border-radius:10px;padding:0 10px;background:#fff;color:#64748b;font-size:10px}.catalog-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.catalog-product-card{min-width:0;border:1px solid var(--s-border);border-radius:14px;background:#fff;overflow:hidden;box-shadow:0 3px 10px rgba(15,23,42,.045);transition:.2s}.catalog-product-card:hover{border-color:#fed7aa;transform:translateY(-2px);box-shadow:0 9px 20px rgba(15,23,42,.08)}.catalog-product-image{height:154px;position:relative;background:#edf1f5;overflow:hidden}.catalog-product-image img{width:100%;height:100%;object-fit:cover}.catalog-product-image:after{content:'';position:absolute;inset:auto 0 0;height:42%;background:linear-gradient(transparent,rgba(0,0,0,.55))}.catalog-product-price{position:absolute;right:12px;bottom:10px;z-index:2;color:#fff;font-size:15px;font-weight:800}.catalog-product-status{position:absolute;left:10px;top:10px;z-index:2;padding:4px 8px;border-radius:7px;color:#fff;background:#10b981;font-size:8px;font-weight:800}.catalog-product-status.off{background:#ef4444}.catalog-product-body{padding:13px}.catalog-product-name{font-size:12px;font-weight:800;color:#273244;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.catalog-product-desc{height:32px;margin:5px 0 8px;color:#94a3b8;font-size:9px;line-height:1.55;overflow:hidden}.catalog-product-meta{display:flex;justify-content:space-between;align-items:center;gap:8px}.catalog-product-actions{display:flex;align-items:center;gap:3px}.catalog-product-actions form{margin:0}.catalog-product-actions .s-btn{width:27px;height:27px;padding:0;justify-content:center}.catalog-category-tag{padding:3px 7px;border-radius:7px;background:#fff7ed;color:#ea580c;font-size:8px;font-weight:700}@media(max-width:1199px){.catalog-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:900px){.catalog-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.catalog-kpis{grid-template-columns:repeat(2,1fr)}.catalog-filter-row{align-items:stretch;flex-direction:column}.catalog-toolbar,.catalog-search,.catalog-search input{width:100%}}@media(max-width:600px){.catalog-head{align-items:flex-start;flex-direction:column}.catalog-head-actions{width:100%}.catalog-grid{grid-template-columns:1fr}.catalog-kpis{grid-template-columns:1fr}}
 .catalog-pill{display:inline-flex;align-items:center;text-decoration:none}.catalog-pill:hover{color:#ea580c;border-color:#fed7aa}.catalog-pill.active:hover{color:#fff}
@@ -85,9 +92,15 @@
                     <i class="las la-edit"></i>
                 </button>
                 @if($p->stock_type === 'packaged')
-                <button class="s-btn s-btn-ghost s-btn-xs" style="color:var(--s-warning)" onclick="openStockAdjModal({{ $p->id }}, '{{ addslashes($p->name) }}', {{ $invItem?->stock ?? 0 }}, '{{ $invItem?->unit ?? 'NIU' }}')" title="Ajustar Stock (Kardex)">
-                    <i class="las la-boxes"></i>
-                </button>
+                    @if($isAdmin)
+                    <button class="s-btn s-btn-ghost s-btn-xs" style="color:var(--s-warning)" onclick="openStockAdjModal({{ $p->id }}, '{{ addslashes($p->name) }}', {{ $invItem?->stock ?? 0 }}, '{{ $invItem?->unit ?? 'NIU' }}')" title="Ajustar Stock (Kardex)">
+                        <i class="las la-boxes"></i>
+                    </button>
+                    @else
+                    <button type="button" class="s-btn s-btn-ghost s-btn-xs" style="color:var(--s-text-3); opacity:0.35; cursor:not-allowed;" disabled title="Solo el administrador puede modificar el stock">
+                        <i class="las la-boxes"></i>
+                    </button>
+                    @endif
                 @endif
                 <form method="POST" action="{{ route('seller.products.delete', $p->id) }}" onsubmit="return confirm('¿Eliminar {{ addslashes($p->name) }}?')">
                     @csrf
@@ -284,7 +297,10 @@
                         </div>
                         <div class="s-input-group">
                             <label class="s-input-label">Stock actual / inicial</label>
-                            <input class="s-input" type="number" name="initial_stock" id="prod-initial-stock" step="0.01" placeholder="0.00" value="0">
+                            <input class="s-input" type="number" name="initial_stock" id="prod-initial-stock" step="0.01" placeholder="0.00" value="0" @if(!$isAdmin) readonly style="background:var(--s-surface-3);cursor:not-allowed;" @endif>
+                            @if(!$isAdmin)
+                            <small style="color:var(--s-text-3);font-size:10px">Solo el administrador puede definir o modificar el stock.</small>
+                            @endif
                         </div>
                         <div class="s-input-group">
                             <label class="s-input-label">Stock mínimo (alerta)</label>
@@ -502,6 +518,7 @@
             <button class="s-modal-close" onclick="this.closest('.s-modal').classList.remove('open')">✕</button>
         </div>
         <div class="s-modal-body">
+            @if($isAdmin)
             <form id="stock-adj-form" method="POST" action="">
                 @csrf
                 <div style="background:var(--s-surface-2);padding:12px;border-radius:8px;border:1px solid var(--s-border);margin-bottom:14px">
@@ -537,6 +554,13 @@
                     </button>
                 </div>
             </form>
+            @else
+            <div style="padding:24px 16px;text-align:center;color:var(--s-text-3);">
+                <i class="las la-lock" style="font-size:36px;display:block;margin-bottom:8px;color:var(--s-warning);"></i>
+                <p style="margin:0 0 4px;font-weight:700;color:var(--s-text);font-size:14px;">Acceso restringido</p>
+                <small style="font-size:12px;">Solamente el administrador puede modificar el stock de productos.</small>
+            </div>
+            @endif
         </div>
     </div>
 </div>
@@ -703,11 +727,16 @@ function openProdModal() {
     document.getElementById('prod-unit').value = 'NIU';
     document.getElementById('prod-cost').value = '0';
     
-    // Configuración para nuevo producto: stock editable
+    // Configuración para nuevo producto: stock editable solo si es admin
     var stockField = document.getElementById('prod-initial-stock');
     stockField.value = '0';
+    @if($isAdmin)
     stockField.removeAttribute('readonly');
     stockField.style.backgroundColor = '';
+    @else
+    stockField.setAttribute('readonly', 'readonly');
+    stockField.style.backgroundColor = 'var(--s-surface-3)';
+    @endif
 
     document.getElementById('prod-min-stock').value = '5';
     document.getElementById('var-list').innerHTML = '';
@@ -750,14 +779,19 @@ function editProduct(id, name, price, discount, desc, cat, sort, status, stockTy
 }
 
 function openStockAdjModal(productId, productName, currentStock, unit) {
+    @if(!$isAdmin)
+    alert('Solo el administrador puede modificar el stock.');
+    return;
+    @endif
     document.getElementById('adj-product-name').textContent = 'Producto: ' + productName;
     document.getElementById('adj-product-stock').textContent = 'Stock actual: ' + parseFloat(currentStock).toFixed(2) + ' (' + unit + ')';
     
     var form = document.getElementById('stock-adj-form');
-    form.action = '{{ route("seller.products.adjust-stock", ":id") }}'.replace(':id', productId);
-    
-    // Reset form fields
-    form.reset();
+    if (form) {
+        form.action = '{{ route("seller.products.adjust-stock", ":id") }}'.replace(':id', productId);
+        // Reset form fields
+        form.reset();
+    }
     
     document.getElementById('stock-adj-modal').classList.add('open');
 }

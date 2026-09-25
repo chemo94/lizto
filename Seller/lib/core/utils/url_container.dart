@@ -10,6 +10,8 @@ class UrlContainer {
   static const String registrationEndPoint = 'seller/panel/register';
   static const String loginEndPoint = 'seller/login';
   static const String socialLoginEndPoint = 'seller/social-login';
+  static const String whatsappSendOtp = 'seller/auth/whatsapp/send-otp';
+  static const String whatsappVerifyOtp = 'seller/auth/whatsapp/verify-otp';
   static const String logoutUrl = 'logout';
 
   static const String forgetPasswordEndPoint = 'password/email';

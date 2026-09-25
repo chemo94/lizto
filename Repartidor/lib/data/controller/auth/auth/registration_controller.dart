@@ -39,12 +39,25 @@ class RegistrationController extends GetxController {
   final FocusNode firstNameFocusNode = FocusNode();
   final FocusNode lastNameFocusNode = FocusNode();
   final FocusNode referNameFocusNode = FocusNode();
+  final FocusNode mobileFocusNode = FocusNode();
   final TextEditingController emailController = TextEditingController();
+  final TextEditingController mobileController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController cPasswordController = TextEditingController();
   final TextEditingController fNameController = TextEditingController();
   final TextEditingController lNameController = TextEditingController();
   final TextEditingController referNameController = TextEditingController();
+
+  String phoneToken = '';
+  bool isPhoneVerified = false;
+
+  void setVerifiedPhone(String mobile, String dialCode, String token) {
+    mobileController.text = mobile;
+    mobileCode = dialCode;
+    phoneToken = token;
+    isPhoneVerified = true;
+    update();
+  }
 
   String? email;
   String? password;
@@ -109,6 +122,7 @@ class RegistrationController extends GetxController {
   void closeAllController() {
     isLoading = false;
     emailController.text = '';
+    mobileController.text = '';
     passwordController.text = '';
     cPasswordController.text = '';
     fNameController.text = '';
@@ -170,6 +184,10 @@ class RegistrationController extends GetxController {
       SharedPreferenceHelper.userPhoneNumberKey,
       responseModel.data?.user?.mobile ?? '',
     );
+    await preferences.setString(
+      SharedPreferenceHelper.onboardingStepKey,
+      'profile',
+    );
 
     Get.offAndToNamed(RouteHelper.profileCompleteScreen);
   }
@@ -178,6 +196,15 @@ class RegistrationController extends GetxController {
   void initData() async {
     isLoading = true;
     update();
+
+    if (Get.arguments != null && Get.arguments is Map) {
+      final args = Get.arguments as Map;
+      if (args['mobile'] != null) {
+        mobileController.text = args['mobile'].toString();
+        phoneToken = args['phone_token']?.toString() ?? '';
+        isPhoneVerified = true;
+      }
+    }
 
     ResponseModel response = await generalSettingRepo.getGeneralSetting();
     if (response.statusCode == 200) {
@@ -239,6 +266,9 @@ class RegistrationController extends GetxController {
       password: passwordController.text.toString(),
       serviceType: serviceType,
       agree: agreeTC ? true : false,
+      mobile: mobileController.text.trim(),
+      dialCode: mobileCode ?? '51',
+      phoneToken: phoneToken,
     );
 
     return model;

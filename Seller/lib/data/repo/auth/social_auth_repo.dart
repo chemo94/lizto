@@ -51,6 +51,59 @@ class SocialAuthRepo {
     return model;
   }
 
+  Future<ResponseModel> sendWhatsAppOtp({
+    required String mobile,
+    String dialCode = '51',
+    String userType = 'seller',
+  }) async {
+    final Map<String, String> map = {
+      'mobile': mobile,
+      'dial_code': dialCode,
+      'user_type': userType,
+    };
+
+    final String url = '${UrlContainer.baseUrl}${UrlContainer.whatsappSendOtp}';
+    final ResponseModel model = await apiClient.request(
+      url,
+      Method.postMethod,
+      map,
+      passHeader: false,
+    );
+    return model;
+  }
+
+  Future<ResponseModel> verifyWhatsAppOtp({
+    required String mobile,
+    required String otp,
+    String dialCode = '51',
+    String userType = 'seller',
+  }) async {
+    String deviceToken = '';
+    try {
+      deviceToken = await FirebaseMessaging.instance.getToken() ?? '';
+    } catch (_) {}
+
+    final Map<String, String> map = {
+      'mobile': mobile,
+      'otp': otp,
+      'dial_code': dialCode,
+      'user_type': userType,
+    };
+
+    if (deviceToken.isNotEmpty) {
+      map['device_token'] = deviceToken;
+    }
+
+    final String url = '${UrlContainer.baseUrl}${UrlContainer.whatsappVerifyOtp}';
+    final ResponseModel model = await apiClient.request(
+      url,
+      Method.postMethod,
+      map,
+      passHeader: false,
+    );
+    return model;
+  }
+
   Future<bool> sendUserToken() async {
     FirebaseMessaging firebaseMessaging = FirebaseMessaging.instance;
     final cachedToken = apiClient.sharedPreferences.getString(SharedPreferenceHelper.fcmDeviceKey) ?? '';

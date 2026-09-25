@@ -36,8 +36,8 @@ class SocialAuthController extends GetxController {
         printX("authorization error: $authErr");
       }
 
-      final String token = (authorization?.accessToken != null && authorization!.accessToken!.isNotEmpty)
-          ? authorization.accessToken!
+      final String token = (authorization?.accessToken != null && authorization!.accessToken.isNotEmpty)
+          ? authorization.accessToken
           : (googleAuth.idToken ?? '');
 
       if (token.isEmpty) {
@@ -117,6 +117,51 @@ class SocialAuthController extends GetxController {
       }
     } catch (e) {
       printX(e.toString());
+    }
+  }
+
+  bool isOtpSending = false;
+  bool isOtpVerifying = false;
+
+  Future<ResponseModel> sendWhatsAppOtp({
+    required String mobile,
+    String dialCode = '51',
+    String userType = 'seller',
+  }) async {
+    isOtpSending = true;
+    update();
+    try {
+      final response = await authRepo.sendWhatsAppOtp(
+        mobile: mobile,
+        dialCode: dialCode,
+        userType: userType,
+      );
+      return response;
+    } finally {
+      isOtpSending = false;
+      update();
+    }
+  }
+
+  Future<ResponseModel> verifyWhatsAppOtp({
+    required String mobile,
+    required String otp,
+    String dialCode = '51',
+    String userType = 'seller',
+  }) async {
+    isOtpVerifying = true;
+    update();
+    try {
+      final response = await authRepo.verifyWhatsAppOtp(
+        mobile: mobile,
+        otp: otp,
+        dialCode: dialCode,
+        userType: userType,
+      );
+      return response;
+    } finally {
+      isOtpVerifying = false;
+      update();
     }
   }
 }

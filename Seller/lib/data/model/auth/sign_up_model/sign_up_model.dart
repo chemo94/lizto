@@ -9,6 +9,8 @@ class SignUpModel {
   final double? longitude;
   final String? businessName;
   final String? tradeName;
+  final String? phoneToken;
+  final String? dialCode;
 
   SignUpModel({
     required this.name,
@@ -21,5 +23,7 @@ class SignUpModel {
     this.longitude,
     this.businessName,
     this.tradeName,
+    this.phoneToken,
+    this.dialCode,
   });
 }

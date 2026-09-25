@@ -11,6 +11,9 @@ import 'package:liztogo_repartidor/data/model/kyc/kyc_response_model.dart';
 import 'package:liztogo_repartidor/data/repo/driver_profile_verification/driver_kyc_repo.dart';
 import 'package:liztogo_repartidor/presentation/components/snack_bar/show_custom_snackbar.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:liztogo_repartidor/core/helper/shared_preference_helper.dart';
+import 'package:liztogo_repartidor/core/route/route.dart';
 import '../../../core/helper/date_converter.dart';
 
 class DriverKycController extends GetxController {
@@ -95,9 +98,18 @@ class DriverKycController extends GetxController {
 
     if (response.status?.toLowerCase() == MyStrings.success.toLowerCase()) {
       isAlreadyPending = true;
+      try {
+        SharedPreferences preferences = await SharedPreferences.getInstance();
+        await preferences.setString(SharedPreferenceHelper.onboardingStepKey, 'vehicle');
+      } catch (e) {
+        printX(e);
+      }
       CustomSnackBar.success(
         successList: response.message ?? [MyStrings.success.tr],
       );
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        Get.offNamed(RouteHelper.vehicleVerificationScreen);
+      });
     } else {
       CustomSnackBar.error(
         errorList: response.message ?? [MyStrings.requestFail.tr],

@@ -46,4 +46,40 @@ class SocialAuthRepo {
     );
     return model;
   }
+
+  Future<ResponseModel> sendWhatsAppOtp({
+    required String mobile,
+    String dialCode = '51',
+    String userType = 'driver',
+  }) async {
+    String url = '${UrlContainer.baseUrl}${UrlContainer.whatsappSendOtp}';
+    Map<String, String> map = {
+      'mobile': mobile,
+      'dial_code': dialCode,
+      'user_type': userType,
+    };
+    return await apiClient.request(url, Method.postMethod, map, passHeader: false);
+  }
+
+  Future<ResponseModel> verifyWhatsAppOtp({
+    required String mobile,
+    required String otpCode,
+    String dialCode = '51',
+    String userType = 'driver',
+  }) async {
+    String deviceToken = '';
+    try {
+      deviceToken = await FirebaseMessaging.instance.getToken() ?? '';
+    } catch (_) {}
+
+    String url = '${UrlContainer.baseUrl}${UrlContainer.whatsappVerifyOtp}';
+    Map<String, String> map = {
+      'mobile': mobile,
+      'otp_code': otpCode,
+      'dial_code': dialCode,
+      'user_type': userType,
+      if (deviceToken.isNotEmpty) 'device_token': deviceToken,
+    };
+    return await apiClient.request(url, Method.postMethod, map, passHeader: false);
+  }
 }

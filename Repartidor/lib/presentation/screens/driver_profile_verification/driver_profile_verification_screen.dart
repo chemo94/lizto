@@ -21,6 +21,7 @@ import '../../components/app-bar/custom_appbar.dart';
 import '../../components/buttons/rounded_button.dart';
 import '../../components/text-form-field/custom_text_field.dart';
 import '../../components/text/label_text_with_instructions.dart';
+import 'package:liztogo_repartidor/presentation/components/step_indicator/registration_step_indicator.dart';
 
 class DriverProfileVerificationScreen extends StatefulWidget {
   const DriverProfileVerificationScreen({super.key});
@@ -79,6 +80,8 @@ class _DriverProfileVerificationScreenState extends State<DriverProfileVerificat
                                     padding: Dimensions.screenPaddingHV,
                                     child: Column(
                                       children: [
+                                        const RegistrationStepIndicator(currentStep: 2),
+                                        spaceDown(Dimensions.space10),
                                         CustomAppCard(
                                           width: double.infinity,
                                           child: Column(

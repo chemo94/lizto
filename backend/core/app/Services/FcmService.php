@@ -75,6 +75,13 @@ class FcmService
         return self::send($tokens, $title, $body, $data);
     }
 
+    public static function sendToAllUsers(string $title, string $body, array $data = [])
+    {
+        $tokens = DeviceToken::whereNotNull('user_id')->pluck('token')->toArray();
+        Log::info('FCM sendToAllUsers', ['tokens_count' => count($tokens), 'title' => $title]);
+        return self::send($tokens, $title, $body, $data);
+    }
+
     public static function sendToAllCouriers(string $title, string $body, array $data = [])
     {
         $drivers = \App\Models\Driver::whereIn('service_type', ['delivery', 'both'])

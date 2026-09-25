@@ -1178,6 +1178,8 @@ class DeliveryManagerController extends Controller
             'recipient_phone'  => 'nullable|string|max:20',
             'estimated_amount' => 'nullable|numeric|min:0|max:999999.99',
             'driver_id'        => 'nullable|string',
+            'requested_at'     => 'nullable|date',
+            'is_already_delivered' => 'nullable|boolean',
         ]);
 
         $isCustomRequest = $request->request_mode === 'custom';
@@ -1204,8 +1206,11 @@ class DeliveryManagerController extends Controller
         }
         $additionalCharge = round((float) ($request->estimated_amount ?? 0), 2);
         $total = round($deliveryFee + $additionalCharge, 2);
-        $orderNo = 'ENV-' . now()->format('Ymd') . '-' . strtoupper(\Str::random(5));
 
+        $requestedAt = $request->requested_at ? \Carbon\Carbon::parse($request->requested_at) : now();
+        $orderNo = 'ENV-' . $requestedAt->format('Ymd') . '-' . strtoupper(\Str::random(5));
+
+        $isAlreadyDelivered = $request->boolean('is_already_delivered');
         $driverId = $request->driver_id;
         $assignedDriver = null;
         if ($driverId && $driverId !== 'all') {
@@ -1213,6 +1218,20 @@ class DeliveryManagerController extends Controller
                 ->whereIn('service_type', ['delivery', 'both'])
                 ->findOrFail($driverId);
         }
+
+        if ($isAlreadyDelivered && !$assignedDriver) {
+            if ($request->expectsJson() || $request->isJson()) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Para registrar un envío ya entregado debes seleccionar al repartidor específico que realizó la entrega.',
+                ], 422);
+            }
+            return back()->withNotify([['error', 'Para registrar un envío ya entregado debes seleccionar un repartidor específico.']]);
+        }
+
+        $status = $isAlreadyDelivered ? 'delivered' : ($assignedDriver ? 'accepted' : 'searching_courier');
+        $deliveredAt = $isAlreadyDelivered ? $requestedAt : null;
+        $courierAssignedAt = $assignedDriver ? $requestedAt : null;
 
         $favor = Favor::create([
             'order_no'         => $orderNo,
@@ -1232,14 +1251,51 @@ class DeliveryManagerController extends Controller
             'recipient_phone'  => $request->recipient_phone,
             'delivery_fee'     => $deliveryFee,
             'total'            => $total,
-            'status'           => $assignedDriver ? 'accepted' : 'searching_courier',
+            'requested_at'     => $requestedAt,
+            'status'           => $status,
             'courier_id'       => $assignedDriver ? $assignedDriver->id : null,
-            'courier_assigned_at' => $assignedDriver ? now() : null,
-            'dispatch_mode'    => $assignedDriver ? 'admin_direct' : 'admin_broadcast',
-            'dispatch_timeout_at' => $assignedDriver ? null : now()->addSeconds(AdminDeliveryRequestDispatchService::INITIAL_BROADCAST_WAIT_SECONDS),
+            'courier_assigned_at' => $courierAssignedAt,
+            'delivered_at'     => $deliveredAt,
+            'dispatch_mode'    => $isAlreadyDelivered ? 'admin_direct' : ($assignedDriver ? 'admin_direct' : 'admin_broadcast'),
+            'dispatch_timeout_at' => ($isAlreadyDelivered || $assignedDriver) ? null : now()->addSeconds(AdminDeliveryRequestDispatchService::INITIAL_BROADCAST_WAIT_SECONDS),
             'dispatch_attempted_driver_ids' => [],
             'payment_method_code' => 0,
+            'payment_status'   => $isAlreadyDelivered ? 1 : 0,
         ]);
+
+        if ($isAlreadyDelivered && $assignedDriver) {
+            $this->processFavorCommission($favor);
+
+            // Ensure courier earning matches delivery date for reports
+            $earningIdentity = [
+                'courier_id' => $assignedDriver->id,
+                'job_type'   => Favor::class,
+                'job_id'     => $favor->id,
+            ];
+            $earning = CourierEarning::where($earningIdentity)->first();
+            if ($earning) {
+                $earning->timestamps = false;
+                $earning->created_at = $requestedAt;
+                $earning->updated_at = $requestedAt;
+                $earning->save();
+            }
+
+            if ($request->expectsJson() || $request->isJson()) {
+                return response()->json([
+                    'status'            => 'success',
+                    'already_delivered' => true,
+                    'favor_id'          => $favor->id,
+                    'order_no'          => $orderNo,
+                    'requested_at_text' => $requestedAt->format('d/m/Y H:i'),
+                    'driver_name'       => $assignedDriver->fullname,
+                    'redirect_url'      => route('admin.delivery.favor.detail', $favor->id),
+                    'message'           => 'Envío registrado como entregado con éxito.',
+                ]);
+            }
+
+            $notify = [['success', 'Solicitud #' . $orderNo . ' registrada exitosamente como ENTREGADA para el repartidor ' . $assignedDriver->fullname]];
+            return redirect()->route('admin.delivery.favor.detail', $favor->id)->withNotify($notify);
+        }
 
         // Broadcast real-time event to online couriers
         try {

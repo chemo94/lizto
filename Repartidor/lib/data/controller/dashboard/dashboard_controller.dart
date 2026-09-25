@@ -13,6 +13,7 @@ import 'package:liztogo_repartidor/data/model/global/user/global_driver_model.da
 import 'package:liztogo_repartidor/data/repo/dashboard/dashboard_repo.dart';
 import 'package:liztogo_repartidor/environment.dart';
 import 'package:liztogo_repartidor/presentation/components/snack_bar/show_custom_snackbar.dart';
+import 'package:liztogo_repartidor/core/route/route.dart';
 import '../../../core/utils/url_container.dart';
 import '../../../presentation/components/foreground_task_widget.dart';
 
@@ -141,6 +142,14 @@ class DashBoardController extends GetxController {
           (responseModel.responseJson),
         );
         if (model.status == MyStrings.success) {
+          final driverInfo = model.data?.driverInfo;
+          if (driverInfo != null) {
+            if (driverInfo.profileComplete == '0' || driverInfo.dv == '0' || driverInfo.vv == '0') {
+              RouteHelper.checkUserStatusAndGoToNextStep(driverInfo);
+              return;
+            }
+          }
+
           userImagePath = '${UrlContainer.domainUrl}/${model.data?.userImagePath}';
 
           isDriverVerified = model.data?.driverInfo?.dv == "1" ? true : false;

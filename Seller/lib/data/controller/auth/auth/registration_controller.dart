@@ -53,6 +53,17 @@ class RegistrationController extends GetxController {
   final TextEditingController companyNameController = TextEditingController();
   final TextEditingController referNameController = TextEditingController();
 
+  String phoneToken = '';
+  bool isPhoneVerified = false;
+
+  void setVerifiedPhone(String mobile, String dialCode, String token) {
+    mobileController.text = mobile;
+    mobileCode = dialCode;
+    phoneToken = token;
+    isPhoneVerified = true;
+    update();
+  }
+
   String? email;
   String? password;
   String? confirmPassword;
@@ -123,6 +134,8 @@ class RegistrationController extends GetxController {
       zoneId: 2,
       businessName: companyNameController.text.trim().isNotEmpty ? companyNameController.text.trim() : null,
       tradeName: companyNameController.text.trim().isNotEmpty ? companyNameController.text.trim() : null,
+      phoneToken: phoneToken,
+      dialCode: mobileCode ?? '51',
     );
     return model;
   }
@@ -222,7 +235,15 @@ class RegistrationController extends GetxController {
   void initData() async {
     isLoading = true;
     update();
-    //   await getCountryData();
+
+    if (Get.arguments != null && Get.arguments is Map) {
+      final args = Get.arguments as Map;
+      if (args['mobile'] != null) {
+        mobileController.text = args['mobile'].toString();
+        phoneToken = args['phone_token']?.toString() ?? '';
+        isPhoneVerified = true;
+      }
+    }
 
     ResponseModel response = await generalSettingRepo.getGeneralSetting();
     if (response.statusCode == 200) {

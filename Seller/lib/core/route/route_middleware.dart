@@ -58,7 +58,7 @@ class RouteMiddleware {
       }
 
       PushNotificationService(apiClient: Get.find()).sendUserToken();
-      Get.offAndToNamed(RouteHelper.sellerDashboardScreen);
+      Get.offAllNamed(RouteHelper.sellerDashboardScreen);
     } catch (e) {
       printD(e);
     }

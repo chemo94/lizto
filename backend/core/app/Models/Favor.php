@@ -18,6 +18,7 @@ class Favor extends Model
         'delivery_lng'      => 'double',
         'payment_status'    => 'integer',
         'cash_pay_amount'   => 'double',
+        'requested_at'      => 'datetime',
         'courier_assigned_at' => 'datetime',
         'delivered_at'      => 'datetime',
         'cancelled_at'      => 'datetime',

@@ -14,6 +14,8 @@ import 'package:liztogo_repartidor/data/repo/auth/general_setting_repo.dart';
 import 'package:liztogo_repartidor/data/services/push_notification_service.dart';
 import 'package:liztogo_repartidor/presentation/components/snack_bar/show_custom_snackbar.dart';
 
+import 'package:liztogo_repartidor/data/repo/account/profile_repo.dart';
+import 'package:liztogo_repartidor/data/model/profile/profile_response_model.dart';
 import '../../model/authorization/authorization_response_model.dart';
 
 class SplashController extends GetxController {
@@ -90,16 +92,36 @@ class SplashController extends GetxController {
 
     // Always navigate forward even on network failure
     if (!noInternet) {
-      void navigate() {
+      void navigate() async {
         if (!isOnboardAlreadyDisplayed) {
           Get.offAndToNamed(RouteHelper.onboardScreen);
         } else if (isRemember || repo.apiClient.getToken().isNotEmpty) {
           PushNotificationService(apiClient: repo.apiClient).sendUserToken(force: true);
-          Get.offAndToNamed(RouteHelper.dashboard);
+          try {
+            ProfileRepo profileRepo = ProfileRepo(apiClient: repo.apiClient);
+            ProfileResponseModel profileModel = await profileRepo.loadProfileInfo();
+            if (profileModel.status?.toLowerCase() == 'success' && profileModel.data?.driver != null) {
+              await RouteHelper.checkUserStatusAndGoToNextStep(profileModel.data?.driver);
+              return;
+            }
+          } catch (e) {
+            printX(e);
+          }
+          String? step = repo.apiClient.sharedPreferences.getString(SharedPreferenceHelper.onboardingStepKey);
+          if (step == 'profile') {
+            Get.offAndToNamed(RouteHelper.profileCompleteScreen);
+          } else if (step == 'license') {
+            Get.offAndToNamed(RouteHelper.driverProfileVerificationScreen);
+          } else if (step == 'vehicle') {
+            Get.offAndToNamed(RouteHelper.vehicleVerificationScreen);
+          } else {
+            Get.offAndToNamed(RouteHelper.dashboard);
+          }
         } else {
           Get.offAndToNamed(RouteHelper.loginScreen);
         }
       }
+
       Future.delayed(const Duration(seconds: 1), navigate);
     }
   }

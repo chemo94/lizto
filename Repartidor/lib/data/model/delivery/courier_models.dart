@@ -23,6 +23,8 @@ class CourierJobModel {
   String? description;
   double? customerRating;
   String? createdAt;
+  String? requestedAt;
+  String? deliveredAt;
   String? updatedAt;
   String? storeImagePath;
   String? customerImagePath;
@@ -91,6 +93,8 @@ class CourierJobModel {
     this.description,
     this.customerRating,
     this.createdAt,
+    this.requestedAt,
+    this.deliveredAt,
     this.updatedAt,
     this.storeImagePath,
     this.customerImagePath,
@@ -146,6 +150,8 @@ class CourierJobModel {
         description: json["description"]?.toString(),
         customerRating: _pDouble(json["customer_rating"]),
         createdAt: json["created_at"]?.toString(),
+        requestedAt: json["requested_at"]?.toString(),
+        deliveredAt: json["delivered_at"]?.toString(),
         updatedAt: json["updated_at"]?.toString(),
         storeImagePath: json["store_image_path"]?.toString(),
         customerImagePath: json["customer_image_path"]?.toString(),
@@ -191,6 +197,26 @@ class CourierJobModel {
   bool get isActive => status != null && status != 'delivered' && status != 'cancelled';
   bool get requiresPin => payerType == 'recipient';
   bool get hasReturn => returnStatus != null && returnStatus!.isNotEmpty;
+
+  /// Fecha real en que se solicitó el pedido. Si el operador la registró
+  /// manualmente se usa esa; de lo contrario se usa la fecha de creación.
+  String? get requestedAtText => _formatJobDate(requestedAt ?? createdAt);
+
+  /// Fecha de entrega confirmada
+  String? get deliveredAtText => _formatJobDate(deliveredAt ?? (status == 'delivered' ? updatedAt : null));
+
+  static String? _formatJobDate(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final dt = DateTime.tryParse(raw);
+      if (dt == null) return raw;
+      final local = dt.toLocal();
+      final months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      return '${local.day} ${months[local.month - 1]} ${local.year}  ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return raw;
+    }
+  }
 
   String get statusLabel {
     switch (status ?? '') {

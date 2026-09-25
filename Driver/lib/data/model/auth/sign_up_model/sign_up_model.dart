@@ -7,6 +7,9 @@ class SignUpModel {
   final String serviceType;
   final bool? agree;
   final String? inviteCode;
+  final String? mobile;
+  final String? dialCode;
+  final String? phoneToken;
 
   SignUpModel({
     required this.firstName,
@@ -17,6 +20,9 @@ class SignUpModel {
     this.serviceType = "ride",
     required this.agree,
     this.inviteCode,
+    this.mobile,
+    this.dialCode,
+    this.phoneToken,
   });
 
   Map<String, dynamic> toMap() {
@@ -30,6 +36,9 @@ class SignUpModel {
       'service_type': serviceType,
       'agree': agree.toString() == 'true' ? 'true' : '',
       'invite_code': inviteCode ?? '',
+      if (mobile != null && mobile!.isNotEmpty) 'mobile': mobile,
+      if (dialCode != null && dialCode!.isNotEmpty) 'dial_code': dialCode,
+      if (phoneToken != null && phoneToken!.isNotEmpty) 'phone_token': phoneToken,
     };
   }
 
@@ -43,6 +52,9 @@ class SignUpModel {
       serviceType: map['service_type'] as String? ?? 'ride',
       agree: map['agree'] as bool,
       inviteCode: map['invite_code'] as String?,
+      mobile: map['mobile'] as String?,
+      dialCode: map['dial_code'] as String?,
+      phoneToken: map['phone_token'] as String?,
     );
   }
 }

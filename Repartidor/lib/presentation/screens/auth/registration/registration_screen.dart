@@ -136,9 +136,18 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                             padding: EdgeInsets.symmetric(horizontal: Dimensions.space20, vertical: Dimensions.space20),
                             child: Column(
                               children: [
-                                spaceDown(Dimensions.space20),
                                 SocialAuthSection(
-                                  googleAuthTitle: MyStrings.google,
+                                  googleAuthTitle: 'Registrarse con Google',
+                                  appleAuthTitle: 'Registrarse con Apple',
+                                  phoneAuthTitle: 'Registrarse con celular',
+                                  userType: 'driver',
+                                  onNewUserPhoneVerified: (data) {
+                                    controller.setVerifiedPhone(
+                                      data['mobile']?.toString() ?? '',
+                                      data['dial_code']?.toString() ?? '51',
+                                      data['phone_token']?.toString() ?? '',
+                                    );
+                                  },
                                 ),
                                 spaceDown(Dimensions.space15),
                                 const RegistrationForm(),

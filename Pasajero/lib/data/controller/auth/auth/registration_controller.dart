@@ -63,9 +63,18 @@ class RegistrationController extends GetxController {
   String? phoneNo;
   String? firstName;
   String? lastName;
-
   RegExp regex = RegExp(r'[!@#$%^&*(),.?":{}|<>]');
   bool submitLoading = false;
+  String phoneToken = '';
+  bool isPhoneVerified = false;
+
+  void setVerifiedPhone(String mobile, String dialCode, String token) {
+    mobileController.text = mobile;
+    mobileCode = dialCode;
+    phoneToken = token;
+    isPhoneVerified = true;
+    update();
+  }
 
   Future<void> signUpUser() async {
     if (needAgree && !agreeTC) {
@@ -128,8 +137,9 @@ class RegistrationController extends GetxController {
       lName: lNameController.text,
       password: passwordController.text.toString(),
       country: '',
-      mobileCode: "",
-      countryCode: '',
+      mobileCode: mobileCode ?? "51",
+      countryCode: countryCode ?? '',
+      phoneToken: phoneToken,
     );
 
     return model;
@@ -230,7 +240,16 @@ class RegistrationController extends GetxController {
   void initData() async {
     isLoading = true;
     update();
-    //   await getCountryData();
+
+    if (Get.arguments != null && Get.arguments is Map) {
+      final args = Get.arguments as Map;
+      if (args['mobile'] != null) {
+        mobileController.text = args['mobile'].toString();
+        mobileCode = (args['dial_code'] ?? '51').toString();
+        phoneToken = args['phone_token']?.toString() ?? '';
+        isPhoneVerified = true;
+      }
+    }
 
     ResponseModel response = await generalSettingRepo.getGeneralSetting();
     if (response.statusCode == 200) {

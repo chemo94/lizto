@@ -88,7 +88,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
                 hintText: MyStrings.email.tr,
                 controller: controller.emailController,
                 focusNode: controller.emailFocusNode,
-                nextFocus: controller.passwordFocusNode,
+                nextFocus: controller.mobileFocusNode,
                 textInputType: TextInputType.emailAddress,
                 inputAction: TextInputAction.next,
                 prefixIcon: Padding(
@@ -112,6 +112,60 @@ class _RegistrationFormState extends State<RegistrationForm> {
                 },
                 onChanged: (value) {
                   return;
+                },
+              ),
+              const SizedBox(height: Dimensions.space20),
+              CustomTextField(
+                hintText: 'Número de celular (ej: 987654321)',
+                controller: controller.mobileController,
+                focusNode: controller.mobileFocusNode,
+                nextFocus: controller.passwordFocusNode,
+                textInputType: TextInputType.phone,
+                readOnly: controller.isPhoneVerified,
+                onChanged: (value) {
+                  return;
+                },
+                prefixIcon: const Padding(
+                  padding: EdgeInsetsDirectional.only(start: Dimensions.space12, end: Dimensions.space8),
+                  child: Icon(
+                    Icons.chat_bubble_rounded,
+                    color: Color(0xFF25D366),
+                    size: 24,
+                  ),
+                ),
+                suffixWidget: controller.isPhoneVerified
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        margin: const EdgeInsetsDirectional.only(end: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF25D366).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_circle, color: Color(0xFF25D366), size: 16),
+                            SizedBox(width: 4),
+                            Text(
+                              'Verificado',
+                              style: TextStyle(
+                                color: Color(0xFF1E8E3E),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : null,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Ingresa tu número de celular';
+                  }
+                  if (value.trim().length < 8) {
+                    return 'Número celular inválido';
+                  }
+                  return null;
                 },
               ),
               const SizedBox(height: Dimensions.space20),

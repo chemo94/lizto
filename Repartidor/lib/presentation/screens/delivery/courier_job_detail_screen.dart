@@ -604,6 +604,14 @@ class _CourierJobDetailScreenState extends State<CourierJobDetailScreen> {
           SizedBox(height: Dimensions.space6),
           _row('Tienda', job.storeName),
         ],
+        if (job.requestedAtText != null) ...[
+          SizedBox(height: Dimensions.space6),
+          _row('Fecha del pedido', job.requestedAtText),
+        ],
+        if (job.status == 'delivered' && job.deliveredAtText != null) ...[
+          SizedBox(height: Dimensions.space6),
+          _row('Fecha de entrega', job.deliveredAtText),
+        ],
         if (job.packageWeightKg != null || job.isFragile || job.itemValue != null) ...[
           SizedBox(height: Dimensions.space12),
           Divider(color: MyColor.borderColor),

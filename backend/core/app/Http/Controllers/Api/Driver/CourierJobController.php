@@ -114,7 +114,9 @@ class CourierJobController extends Controller
             ->get()
             ->map(fn($o) => $this->formatFavorJob($o));
 
-        $jobs = $deliveryJobs->concat($favorJobs)->sortByDesc('created_at')->values();
+        $jobs = $deliveryJobs->concat($favorJobs)->sortByDesc(function ($j) {
+            return $j['requested_at'] ?? $j['created_at'];
+        })->values();
 
         return apiResponse('job_history', 'success', ['Historial de pedidos'], [
             'jobs' => $jobs,
@@ -1010,6 +1012,10 @@ class CourierJobController extends Controller
             'requires_payment_collection' => !(bool) $order->payment_status,
             'payment_wallet'  => $wallet,
             'payment_qr_string' => $qrString,
+            'requested_at'    => optional($order->created_at)->toIso8601String(),
+            'requested_at_text' => optional($order->created_at)->format('d/m/Y H:i'),
+            'delivered_at'    => optional($order->delivered_at)->toIso8601String(),
+            'delivered_at_text' => optional($order->delivered_at)->format('d/m/Y H:i'),
             'created_at'      => $order->created_at,
             'updated_at'      => $order->updated_at,
         ];
@@ -1061,6 +1067,10 @@ class CourierJobController extends Controller
             'requires_payment_collection' => $favor->payer_type === 'recipient',
             'is_short_distance'    => $isShortDistance,
             'short_distance_notice'=> $isShortDistance ? '⚡ Envío super corto (< 1 km): Tarifa plana S/ 4.00' : null,
+            'requested_at'    => optional($favor->requested_at)->toIso8601String(),
+            'requested_at_text' => optional($favor->requested_at)->format('d/m/Y H:i'),
+            'delivered_at'    => optional($favor->delivered_at)->toIso8601String(),
+            'delivered_at_text' => optional($favor->delivered_at)->format('d/m/Y H:i'),
             'created_at'      => $favor->created_at,
             'updated_at'      => $favor->updated_at,
             'favor'           => $favor->load('messages'),

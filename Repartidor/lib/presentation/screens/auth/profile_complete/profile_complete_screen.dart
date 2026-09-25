@@ -19,6 +19,7 @@ import 'package:liztogo_repartidor/presentation/components/will_pop_widget.dart'
 import 'package:liztogo_repartidor/presentation/screens/auth/auth_background.dart';
 import 'package:liztogo_repartidor/presentation/screens/auth/registration/widget/country_bottom_sheet.dart';
 import 'package:liztogo_repartidor/presentation/screens/auth/registration/widget/zone_bottom_sheet.dart';
+import 'package:liztogo_repartidor/presentation/components/step_indicator/registration_step_indicator.dart';
 
 class ProfileCompleteScreen extends StatefulWidget {
   const ProfileCompleteScreen({super.key});
@@ -142,6 +143,8 @@ class _ProfileCompleteScreenState extends State<ProfileCompleteScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  const RegistrationStepIndicator(currentStep: 1),
+                                  spaceDown(Dimensions.space10),
                                   CustomTextField(
                                     labelText: MyStrings.username.tr,
                                     hintText: "${MyStrings.enterYour.tr} ${MyStrings.username.toLowerCase().tr}",

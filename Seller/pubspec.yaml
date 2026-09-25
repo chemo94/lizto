@@ -3,7 +3,7 @@ description: Lizto Pro - Gestiona tu tienda, productos y pedidos.
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 4.1.11+36
+version: 4.1.13+38
 
 environment:
   sdk: '>=3.5.0 <4.0.0'

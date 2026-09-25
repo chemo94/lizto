@@ -15,14 +15,19 @@
 </form>
 </div>
 <div class="card-body p-0"><div class="table-responsive--md"><table class="table table--light">
-<thead><tr><th>#Favor</th><th>Cliente</th><th>Tipo</th><th>Total</th><th>Repartidor</th><th>Estado</th><th>Fecha</th><th>Acción</th></tr></thead>
+<thead><tr><th>#Favor</th><th>Cliente</th><th>Tipo</th><th>Total</th><th>Repartidor</th><th>Estado</th><th>Fecha real</th><th>Acción</th></tr></thead>
 <tbody>@forelse($favors as $f)
 <tr>
-<td><strong>{{ $f->order_no }}</strong></td><td>{{ $f->user?->fullname }}</td>
+<td><strong>{{ $f->order_no }}</strong></td><td>{{ $f->user?->fullname ?? $f->recipient_name }}</td>
 <td><span class="badge badge--{{ $f->type=='buy'?'info':'warning' }}">{{ $f->type=='buy'?'Compra':'Envío' }}</span></td>
 <td>S/ {{ number_format($f->total,2) }}</td><td>{{ $f->courier?->fullname ?? 'Sin asignar' }}</td>
 <td><span class="badge badge--{{ $f->status=='delivered'?'success':($f->status=='cancelled'?'danger':'primary') }}">{{ $f->status }}</span></td>
-<td>{{ $f->created_at?->format('d/m/Y H:i') }}</td>
+<td>
+{{ ($f->requested_at ?? $f->created_at)?->format('d/m/Y H:i') }}
+@if($f->requested_at && $f->requested_at->ne($f->created_at))
+<br><small class="text-muted" title="Fecha de registro en el sistema">Registrado: {{ $f->created_at?->format('d/m/Y H:i') }}</small>
+@endif
+</td>
 <td><a href="{{ route('admin.delivery.favor.detail',$f->id) }}" class="btn btn-sm btn-outline--primary"><i class="las la-eye"></i></a></td>
 </tr>
 @empty

@@ -355,7 +355,7 @@ class RouteHelper {
     } else if (isTwoFactorEnable) {
       Get.offAndToNamed(RouteHelper.twoFactorScreen);
     } else {
-      Get.offAndToNamed(RouteHelper.dashboard);
+      Get.offAllNamed(RouteHelper.dashboard);
     }
   }
 }

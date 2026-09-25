@@ -51,6 +51,16 @@ Route::namespace("Api")->group(function () {
     });
 });
 
+// WhatsApp OTP Authentication for all apps (User, Driver, Seller)
+Route::controller(\App\Http\Controllers\Api\WhatsAppOtpController::class)->group(function () {
+    Route::post('auth/whatsapp/send-otp', 'sendOtp');
+    Route::post('auth/whatsapp/verify-otp', 'verifyOtp');
+    Route::post('driver/auth/whatsapp/send-otp', 'sendOtp');
+    Route::post('driver/auth/whatsapp/verify-otp', 'verifyOtp');
+    Route::post('seller/auth/whatsapp/send-otp', 'sendOtp');
+    Route::post('seller/auth/whatsapp/verify-otp', 'verifyOtp');
+});
+
 Route::namespace('Api\User')->group(function () {
 
     Route::namespace('Auth')->group(function () {

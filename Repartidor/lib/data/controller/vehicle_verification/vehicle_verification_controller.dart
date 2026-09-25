@@ -11,6 +11,9 @@ import 'package:liztogo_repartidor/data/model/vehicle_verification/vehicle_verif
 import 'package:liztogo_repartidor/data/repo/vehicle_verification/vehicle_verification_repo.dart';
 import 'package:liztogo_repartidor/presentation/components/snack_bar/show_custom_snackbar.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:liztogo_repartidor/core/helper/shared_preference_helper.dart';
+import 'package:liztogo_repartidor/core/route/route.dart';
 import '../../../core/helper/date_converter.dart';
 
 class VehicleVerificationController extends GetxController {
@@ -109,10 +112,19 @@ class VehicleVerificationController extends GetxController {
 
       if (response.status?.toLowerCase() == MyStrings.success.toLowerCase()) {
         isAlreadyPending = true;
+        try {
+          SharedPreferences preferences = await SharedPreferences.getInstance();
+          await preferences.setString(SharedPreferenceHelper.onboardingStepKey, 'completed');
+        } catch (e) {
+          printX(e);
+        }
         update();
         CustomSnackBar.success(
           successList: response.message ?? [MyStrings.success.tr],
         );
+        Future.delayed(const Duration(milliseconds: 1200), () {
+          Get.offAllNamed(RouteHelper.dashboard);
+        });
       } else {
         CustomSnackBar.error(
           errorList: response.message ?? [MyStrings.requestFail.tr],

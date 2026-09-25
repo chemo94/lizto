@@ -303,6 +303,7 @@ class RouteHelper {
     PushNotificationService(apiClient: Get.find()).sendUserToken();
 
     if (isProfileCompleteEnable) {
+      await sharedPreferences.setString(SharedPreferenceHelper.onboardingStepKey, 'profile');
       Get.offAndToNamed(RouteHelper.profileCompleteScreen);
     } else if (needEmailVerification) {
       Get.offAndToNamed(RouteHelper.emailVerificationScreen);
@@ -311,11 +312,14 @@ class RouteHelper {
     } else if (isTwoFactorEnable) {
       Get.offAndToNamed(RouteHelper.twoFactorScreen);
     } else if (user?.dv == '0') {
+      await sharedPreferences.setString(SharedPreferenceHelper.onboardingStepKey, 'license');
       Get.offAndToNamed(RouteHelper.driverProfileVerificationScreen);
     } else if (user?.vv == '0') {
+      await sharedPreferences.setString(SharedPreferenceHelper.onboardingStepKey, 'vehicle');
       Get.offAndToNamed(RouteHelper.vehicleVerificationScreen);
     } else {
-      Get.offAndToNamed(RouteHelper.dashboard);
+      await sharedPreferences.setString(SharedPreferenceHelper.onboardingStepKey, 'completed');
+      Get.offAllNamed(RouteHelper.dashboard);
     }
   }
 }

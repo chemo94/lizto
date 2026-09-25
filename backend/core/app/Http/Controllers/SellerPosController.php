@@ -1796,6 +1796,7 @@ class SellerPosController extends Controller
 
                 $recipe = \App\Models\InvRecipe::where('product_id', $product->id)->active()->with('items.item')->first();
                 if ($recipe) {
+                    // Producto preparado con receta: se valida el stock de sus ingredientes.
                     foreach ($recipe->items as $ri) {
                         if (!$ri->item) continue;
                         $needed = ($ri->quantity_net / max(0.01, $recipe->portions)) * $oi['quantity'];
@@ -1803,7 +1804,9 @@ class SellerPosController extends Controller
                             $stockErrors[] = "{$ri->item->name} (necesita {$needed}, stock: {$ri->item->stock})";
                         }
                     }
-                } else {
+                } elseif ($product->isStockPackaged()) {
+                    // Producto empaquetado/devoluble: se valida el stock unitario del item vinculado.
+                    // Los 'prepared' sin receta NO se bloquean por stock (se preparan por comanda).
                     $links = InvProductItem::where('product_id', $product->id)->get();
                     foreach ($links as $link) {
                         $invItem = InvItem::find($link->item_id);
@@ -2304,9 +2307,14 @@ class SellerPosController extends Controller
             ->orderBy('store_category_id')->orderBy('sort_order')->orderBy('name');
         $allProducts = $productsQuery->paginate(12)->withQueryString();
 
+        $staffId = Session::get('seller_staff_id');
+        $staffUser = $staffId ? \App\Models\PosStaff::find($staffId) : null;
+        $isAdmin = !$staffId || ($staffUser && $staffUser->isAdmin());
+
         return view('seller.products', compact(
             'pageTitle', 'seller', 'store', 'storeCategories', 'storeType', 'warehouses',
-            'allProducts', 'cats', 'totalProducts', 'activeProducts', 'inactiveProducts', 'categoryCounts', 'taxTypes'
+            'allProducts', 'cats', 'totalProducts', 'activeProducts', 'inactiveProducts', 'categoryCounts', 'taxTypes',
+            'isAdmin', 'staffUser'
         ));
     }
 
@@ -3612,6 +3620,11 @@ class SellerPosController extends Controller
 
         // Auto-create InvItem + link for packaged products
         if ($product->stock_type === 'packaged') {
+            $staffId = Session::get('seller_staff_id');
+            $staffUser = $staffId ? \App\Models\PosStaff::find($staffId) : null;
+            $isAdmin = !$staffId || ($staffUser && $staffUser->isAdmin());
+            $initialStock = $isAdmin ? (float) $request->input('initial_stock', 0) : 0;
+
             $invItem = \App\Models\InvItem::create([
                 'seller_id'  => $seller->id,
                 'name'       => $product->name,
@@ -3620,7 +3633,7 @@ class SellerPosController extends Controller
                 'tax_type'   => $request->input('tax_type', 'gravado'),
                 'cost'       => $request->input('cost', 0),
                 'sale_price' => $product->price,
-                'stock'      => $request->input('initial_stock', 0),
+                'stock'      => $initialStock,
                 'min_stock'  => $request->input('min_stock', 5),
                 'sunat_code' => $request->input('sunat_code'),
             ]);
@@ -3632,12 +3645,12 @@ class SellerPosController extends Controller
             ]);
 
             // Register initial stock via kardex if provided
-            if ($request->input('initial_stock', 0) > 0) {
+            if ($initialStock > 0) {
                 $warehouseId = \App\Models\InvWarehouse::where('seller_id', $seller->id)->where('is_default', true)->value('id')
                     ?? \App\Models\InvWarehouse::where('seller_id', $seller->id)->value('id');
 
                 \App\Services\KardexService::entry(
-                    $seller->id, $invItem->id, $request->input('initial_stock'), $invItem->cost ?? 0, $request->input('initial_stock'),
+                    $seller->id, $invItem->id, $initialStock, $invItem->cost ?? 0, $initialStock,
                     'Stock inicial auto-creado', null, null, $warehouseId
                 );
 
@@ -3646,7 +3659,7 @@ class SellerPosController extends Controller
                         ['warehouse_id' => $warehouseId, 'item_id' => $invItem->id],
                         ['stock' => 0]
                     );
-                    $wStock->increment('stock', $request->input('initial_stock'));
+                    $wStock->increment('stock', $initialStock);
                 }
             }
         }
@@ -3751,6 +3764,18 @@ class SellerPosController extends Controller
 
     public function productAdjustStock(Request $request, $id)
     {
+        $staffId = Session::get('seller_staff_id');
+        if ($staffId) {
+            $staffUser = \App\Models\PosStaff::find($staffId);
+            $isAdmin = $staffUser && $staffUser->isAdmin();
+            if (!$isAdmin) {
+                if ($request->expectsJson()) {
+                    return response()->json(['status' => false, 'message' => 'Solo el administrador puede modificar el stock.'], 403);
+                }
+                return back()->with('error', 'Solo el administrador puede modificar el stock.');
+            }
+        }
+
         $request->validate([
             'adjust_type' => 'required|in:in,out',
             'adjust_qty' => 'required|numeric|min:0.01',
@@ -3764,10 +3789,11 @@ class SellerPosController extends Controller
 
         $link = \App\Models\InvProductItem::where('product_id', $product->id)->first();
         if (!$link || !$link->item) {
-            // Productos devolubles creados antes del módulo de inventario no
-            // tienen vínculo aún: créalo al primer ajuste de Kardex.
-            if (!$product->isStockPackaged()) {
-                return back()->with('error', 'Solo los productos devolubles pueden manejar stock en Kardex.');
+            // Productos creados antes del módulo de inventario no tienen vínculo
+            // aún. Todo producto con seguimiento de stock (packaged o prepared)
+            // debe poder registrar Kardex: créale el item al primer ajuste.
+            if (!$product->hasStockTracking()) {
+                return back()->with('error', 'Este producto no maneja inventario (sin stock).');
             }
 
             $item = \App\Models\InvItem::create([

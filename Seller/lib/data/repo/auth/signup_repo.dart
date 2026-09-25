@@ -48,6 +48,8 @@ class RegistrationRepo {
     if (model.longitude != null) bodyFields['longitude'] = model.longitude;
     if (model.businessName != null && model.businessName!.isNotEmpty) bodyFields['business_name'] = model.businessName;
     if (model.tradeName != null && model.tradeName!.isNotEmpty) bodyFields['trade_name'] = model.tradeName;
+    if (model.phoneToken != null && model.phoneToken!.isNotEmpty) bodyFields['phone_token'] = model.phoneToken;
+    if (model.dialCode != null && model.dialCode!.isNotEmpty) bodyFields['dial_code'] = model.dialCode;
     return bodyFields;
   }
 

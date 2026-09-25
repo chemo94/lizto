@@ -21,6 +21,7 @@ import '../../../core/utils/dimensions.dart';
 import '../../../core/utils/my_color.dart';
 import '../../../core/utils/my_strings.dart';
 import '../../../core/utils/style.dart';
+import 'package:liztogo_repartidor/presentation/components/step_indicator/registration_step_indicator.dart';
 
 class VehicleVerificationScreen extends StatefulWidget {
   const VehicleVerificationScreen({super.key});
@@ -71,6 +72,8 @@ class _VehicleVerificationScreenState extends State<VehicleVerificationScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 spaceDown(Dimensions.space20),
+                                const RegistrationStepIndicator(currentStep: 3),
+                                spaceDown(Dimensions.space10),
                                 if (controller.formList.isNotEmpty) ...[
                                   CustomAppCard(
                                     width: double.infinity,

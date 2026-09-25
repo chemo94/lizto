@@ -5,6 +5,9 @@ class SignUpModel {
   final String password;
   final String refference;
   final String serviceType;
+  final String? mobile;
+  final String? dialCode;
+  final String? phoneToken;
   final bool? agree;
 
   SignUpModel({
@@ -14,11 +17,14 @@ class SignUpModel {
     required this.password,
     this.refference = "",
     this.serviceType = "delivery",
+    this.mobile,
+    this.dialCode,
+    this.phoneToken,
     required this.agree,
   });
 
   Map<String, dynamic> toMap() {
-    return {
+    final map = {
       'firstname': firstName,
       'lastname': lastName,
       'email': email,
@@ -28,6 +34,16 @@ class SignUpModel {
       'service_type': serviceType,
       'agree': agree.toString() == 'true' ? 'true' : '',
     };
+    if (mobile != null && mobile!.isNotEmpty) {
+      map['mobile'] = mobile!;
+    }
+    if (dialCode != null && dialCode!.isNotEmpty) {
+      map['dial_code'] = dialCode!;
+    }
+    if (phoneToken != null && phoneToken!.isNotEmpty) {
+      map['phone_token'] = phoneToken!;
+    }
+    return map;
   }
 
   factory SignUpModel.fromMap(Map<String, dynamic> map) {
@@ -38,6 +54,9 @@ class SignUpModel {
       password: map['password'] as String,
       refference: map['reference'] as String,
       serviceType: map['service_type'] as String? ?? 'delivery',
+      mobile: map['mobile'] as String?,
+      dialCode: map['dial_code'] as String?,
+      phoneToken: map['phone_token'] as String?,
       agree: map['agree'] as bool,
     );
   }

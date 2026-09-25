@@ -75,7 +75,7 @@ class RouteMiddleware {
       } else if (needProfileCompleted) {
         Get.offAndToNamed(RouteHelper.profileCompleteScreen);
       } else {
-        Get.toNamed(RouteHelper.dashboard);
+        Get.offAllNamed(RouteHelper.dashboard);
       }
 
       PushNotificationService(apiClient: Get.find()).sendUserToken();
