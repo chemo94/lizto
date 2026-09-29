@@ -7,7 +7,8 @@ use App\Http\Controllers\Controller;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use App\Services\FirebasePhoneAuthService;
+use Illuminate\Support\Facades\Log;
+use App\Services\WhatsAppOtpService;
 use Throwable;
 
 class AuthorizationController extends Controller
@@ -41,19 +42,31 @@ class AuthorizationController extends Controller
             return apiResponse("already_verified", "error", $notify);
         }
 
-        if (!$this->checkCodeValidity($user) && ($type != '2fa') && ($type != 'ban') && $type != 'sms') {
-            $user->ver_code         = verificationCode(6);
+        $codeValid = $this->checkCodeValidity($user);
+
+        if (!$codeValid && ($type != '2fa') && ($type != 'ban')) {
+            $code = verificationCode(6);
+            $user->ver_code         = $code;
             $user->ver_code_send_at = Carbon::now();
             $user->save();
-            notify($user, $notifyTemplate, [
-                'code' => $user->ver_code
-            ], [$type, 'push']);
+
+            if ($type === 'sms') {
+                WhatsAppOtpService::sendOtp(
+                    $user->mobile ?? '',
+                    $user->dial_code ?? '51',
+                    'user'
+                );
+            } else {
+                notify($user, $notifyTemplate, [
+                    'code' => $code
+                ], [$type, 'push']);
+            }
         }
 
         $notify[] = 'Verify your account';
         return apiResponse("code_sent", "success", $notify, $type === 'sms' ? [
-            'phone_number' => app(FirebasePhoneAuthService::class)->phoneFor($user),
-            'verification_provider' => 'firebase',
+            'phone_number' => '+' . ($user->dial_code ?? '51') . ($user->mobile ?? ''),
+            'verification_provider' => 'whatsapp',
         ] : null);
     }
 
@@ -61,13 +74,6 @@ class AuthorizationController extends Controller
     public function sendVerifyCode($type)
     {
         $user = auth()->user();
-
-        if ($type === 'mobile') {
-            return apiResponse('firebase_phone_required', 'success', ['Use Firebase to resend the verification code'], [
-                'phone_number' => app(FirebasePhoneAuthService::class)->phoneFor($user),
-                'verification_provider' => 'firebase',
-            ]);
-        }
 
         if ($this->checkCodeValidity($user)) {
             $targetTime = $user->ver_code_send_at->addMinutes(2)->timestamp;
@@ -77,21 +83,24 @@ class AuthorizationController extends Controller
             return apiResponse("try_after", "error", $notify);
         }
 
-        $user->ver_code         = verificationCode(6);
+        $code = verificationCode(6);
+        $user->ver_code         = $code;
         $user->ver_code_send_at = Carbon::now();
         $user->save();
 
         if ($type == 'email') {
-            $type           = 'email';
             $notifyTemplate = 'EVER_CODE';
+            notify($user, $notifyTemplate, [
+                'code' => $code
+            ], ['email', 'push']);
         } else {
-            $type           = 'sms';
-            $notifyTemplate = 'SVER_CODE';
+            // SMS / WhatsApp
+            WhatsAppOtpService::sendOtp(
+                $user->mobile ?? '',
+                $user->dial_code ?? '51',
+                'user'
+            );
         }
-
-        notify($user, $notifyTemplate, [
-            'code' => $user->ver_code
-        ], [$type, 'push']);
 
         $notify[] = 'Verification code sent successfully';
         return apiResponse("code_sent", "success", $notify);
@@ -126,34 +135,40 @@ class AuthorizationController extends Controller
 
     public function mobileVerification(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'firebase_id_token' => 'required|string',
-        ]);
+        $inputCode = trim((string) ($request->code ?? $request->otp_code ?? $request->verification_code ?? ''));
 
-        if ($validator->fails()) {
-            return apiResponse("validation_error", "error", $validator->errors()->all());
+        if (empty($inputCode) && $request->filled('firebase_id_token')) {
+            $inputCode = trim((string) $request->firebase_id_token);
+        }
+
+        if (empty($inputCode)) {
+            return apiResponse("validation_error", "error", ['El código de verificación es obligatorio']);
         }
 
         $user = auth()->user();
-        try {
-            $matches = app(FirebasePhoneAuthService::class)->tokenMatchesAccount($request->firebase_id_token, $user);
-        } catch (Throwable $exception) {
-            report($exception);
-            return apiResponse('firebase_token_invalid', 'error', ['No se pudo validar el teléfono con Firebase']);
-        }
 
-        if ($matches) {
+        $waVerify = WhatsAppOtpService::verifyOtp(
+            $user->mobile ?? '',
+            $inputCode,
+            $user->dial_code ?? '51'
+        );
+
+        $dbMatch = (!empty($user->ver_code) && (string)$user->ver_code === $inputCode);
+
+        if (($waVerify['valid'] ?? false) || $dbMatch) {
             $user->sv               = Status::VERIFIED;
             $user->ver_code         = null;
             $user->ver_code_send_at = null;
             $user->save();
 
-            $notify[]     = 'Mobile verified successfully';
+            $notify[] = 'Teléfono verificado correctamente';
             return apiResponse("mobile_verified", "success", $notify, [
                 'user' => $user
             ]);
         }
-        return apiResponse('phone_not_match', 'error', ['El teléfono verificado no corresponde a esta cuenta']);
+
+        return apiResponse('code_not_match', 'error', ['El código de verificación ingresado no es válido o ha expirado']);
     }
 
 }
+

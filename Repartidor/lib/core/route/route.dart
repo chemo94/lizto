@@ -278,13 +278,16 @@ class RouteHelper {
       SharedPreferenceHelper.userEmailKey,
       user?.email ?? '',
     );
+    final cleanMobile = (user?.mobile != null && user!.mobile != 'null' && user.mobile!.trim().isNotEmpty) ? user.mobile! : '';
+    final cleanUsername = (user?.username != null && user!.username != 'null' && user.username!.trim().isNotEmpty) ? user.username! : '';
+
     await sharedPreferences.setString(
       SharedPreferenceHelper.userPhoneNumberKey,
-      user?.mobile ?? '',
+      cleanMobile,
     );
     await sharedPreferences.setString(
       SharedPreferenceHelper.userNameKey,
-      user?.username ?? '',
+      cleanUsername,
     );
 
     if (accessToken.isNotEmpty) {

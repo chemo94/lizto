@@ -16,7 +16,7 @@ class SmsEmailVerificationRepo {
     bool isEmail = true,
     bool isTFA = false,
   }) async {
-    final map = isEmail ? {'code': code} : {'firebase_id_token': code};
+    final map = isEmail ? {'code': code} : {'code': code, 'otp_code': code};
 
     String url = '${UrlContainer.baseUrl}${isEmail ? UrlContainer.verifyEmailEndPoint : UrlContainer.verifySmsEndPoint}';
     ResponseModel responseModel = await apiClient.request(

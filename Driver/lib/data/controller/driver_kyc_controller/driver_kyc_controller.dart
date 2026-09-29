@@ -63,7 +63,8 @@ class DriverKycController extends GetxController {
         if (model.remark?.toLowerCase() == 'already_verified') {
           isAlreadyVerified = true;
         } else if (model.remark?.toLowerCase() == 'under_review') {
-          isAlreadyVerified = true;
+          isAlreadyPending = true;
+          isAlreadyVerified = false;
         }
         isNoDataFound = false;
         update();
@@ -98,21 +99,26 @@ class DriverKycController extends GetxController {
     submitLoading = true;
     update();
 
-    AuthorizationResponseModel response = await repo.submitDriverVerificationKycData(formList);
+    try {
+      AuthorizationResponseModel response = await repo.submitDriverVerificationKycData(formList);
 
-    if (response.status?.toLowerCase() == MyStrings.success.toLowerCase()) {
-      isAlreadyPending = true;
-      CustomSnackBar.success(
-        successList: response.message ?? [MyStrings.success.tr],
-      );
-    } else {
-      CustomSnackBar.error(
-        errorList: response.message ?? [MyStrings.requestFail.tr],
-      );
+      if (response.status?.toLowerCase() == MyStrings.success.toLowerCase()) {
+        isAlreadyPending = true;
+        Get.back();
+        CustomSnackBar.success(
+          successList: response.message ?? [MyStrings.success.tr],
+        );
+      } else {
+        CustomSnackBar.error(
+          errorList: response.message ?? [MyStrings.requestFail.tr],
+        );
+      }
+    } catch (e) {
+      printX(e);
+    } finally {
+      submitLoading = false;
+      update();
     }
-
-    submitLoading = false;
-    update();
   }
 
   List<String> hasError() {

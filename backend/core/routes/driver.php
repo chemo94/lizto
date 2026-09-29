@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Route;
 Route::name('driver.')->group(function () {
     Route::controller("Gateway\PaymentController")
         ->name('deposit.')
-        ->middleware(['auth:driver', 'check.status', 'registration.complete'])
+        ->middleware(['auth:driver'])
         ->prefix("deposit")
         ->group(function () {
             Route::get('confirm', 'depositConfirm')->name('confirm');

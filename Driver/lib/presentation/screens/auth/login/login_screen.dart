@@ -17,6 +17,8 @@ import '../../../../core/utils/my_icons.dart';
 import '../../../../core/utils/my_images.dart';
 import '../../../components/divider/custom_spacer.dart';
 import '../../../components/image/custom_svg_picture.dart';
+import 'package:liztogo_pro/data/controller/auth/social_auth_controller.dart';
+import 'package:liztogo_pro/data/repo/auth/social_auth_repo.dart';
 import '../social_auth/social_auth_section.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -33,6 +35,8 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     Get.put(LoginRepo(apiClient: Get.find()));
     Get.put(LoginController(loginRepo: Get.find()));
+    Get.put(SocialAuthRepo(apiClient: Get.find()));
+    Get.put(SocialAuthController(authRepo: Get.find()));
 
     super.initState();
 

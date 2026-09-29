@@ -17,20 +17,41 @@ class ProcessController extends Controller
     	$alias = $deposit->gateway->alias;
     	$gatewayAcc = json_decode($gatewayCurrency->gateway_parameter);
         $curl = curl_init();
-        $user = auth()->user();
+
+        // En el flujo de recarga de las apps Driver/Repartidor, el guard activo es
+        // "driver" (auth()->guard('driver')->login(...)), por lo que auth()->user()
+        // (guard "web") devuelve null y provocaba un fatal error al acceder a
+        // $user->username / $user->email -> la app recibía "Not Found".
+        // Se resuelve el usuario/payer desde el propio depósito en lugar del guard.
+        $payerEmail = '';
+        $payerName  = 'Cliente';
+        if ($deposit->driver_id) {
+            $driver = \App\Models\Driver::find($deposit->driver_id);
+            if ($driver) {
+                $payerEmail = $driver->email;
+                $payerName  = $driver->username ?? $driver->fullname ?? 'Driver';
+            }
+        } elseif ($deposit->user_id) {
+            $user = \App\Models\User::find($deposit->user_id);
+            if ($user) {
+                $payerEmail = $user->email;
+                $payerName  = $user->username;
+            }
+        }
+
         $preferenceData = [
             'items' => [
                 [
                     'id' => $deposit->trx,
                     'title' => 'Deposit',
-                    'description' => 'Deposit from '.$user->username,
+                    'description' => 'Deposit from '.$payerName,
                     'quantity' => 1,
                     'currency_id' => $gatewayCurrency->currency,
                     'unit_price' => $deposit->final_amount
                 ]
             ],
             'payer' => [
-                'email' => $user->email,
+                'email' => $payerEmail,
             ],
             'back_urls' => [
                 'success' => route('home').$deposit->success_url,

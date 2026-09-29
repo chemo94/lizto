@@ -103,18 +103,7 @@ class WhatsAppOtpService
         $message = "🔐 Tu código de verificación {$appName} es: *{$otpCode}*\n\n" .
                    "Válido por 5 minutos. Por tu seguridad, no compartas este código con nadie.";
 
-        // Send via WhatsApp waapi microservice
-        $sendResult = WhatsAppNotificationService::sendTextMessage($normalized, $message);
-
-        if (!$sendResult['success']) {
-            Log::error("WhatsAppOtpService: Falló el envío a {$normalized}: " . ($sendResult['error'] ?? 'desconocido'));
-            return [
-                'success' => false,
-                'message' => 'No pudimos enviar el mensaje por WhatsApp. Asegúrate de tener una cuenta activa de WhatsApp.',
-            ];
-        }
-
-        // Store OTP in Cache
+        // Store OTP in Cache (valid for 5 minutes)
         $cacheKey = self::CACHE_PREFIX . "{$userType}_{$normalized}";
         Cache::put($cacheKey, [
             'code'       => $otpCode,
@@ -124,6 +113,17 @@ class WhatsAppOtpService
             'attempts'   => 0,
             'created_at' => Carbon::now()->toIso8601String(),
         ], self::OTP_EXPIRY_SECONDS);
+
+        // Send via WhatsApp waapi microservice (previewUrl = false for instant delivery)
+        $sendResult = WhatsAppNotificationService::sendTextMessage($normalized, $message, false);
+
+        if (!$sendResult['success']) {
+            Log::error("WhatsAppOtpService: Falló el envío a {$normalized}: " . ($sendResult['error'] ?? 'desconocido'));
+            return [
+                'success' => false,
+                'message' => 'No pudimos confirmar la entrega por WhatsApp. Si te llegó el código en tu WhatsApp, puedes ingresarlo.',
+            ];
+        }
 
         // Update rate limiter (10 minutes expiry)
         Cache::put($rateKey, $sendCount + 1, 600);

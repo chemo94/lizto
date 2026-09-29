@@ -19,6 +19,8 @@ class RegistrationRepo {
     } catch (_) {}
     if (deviceToken.isNotEmpty) {
       map['device_token'] = deviceToken;
+      map['fcm_token'] = deviceToken;
+      map['token'] = deviceToken;
     }
     String url = '${UrlContainer.baseUrl}${UrlContainer.registrationEndPoint}';
     ResponseModel responseModel = await apiClient.request(
@@ -80,7 +82,11 @@ class RegistrationRepo {
   }
 
   Map<String, String> deviceTokenMap(String deviceToken) {
-    Map<String, String> map = {'token': deviceToken.toString()};
+    Map<String, String> map = {
+      'token': deviceToken.toString(),
+      'device_token': deviceToken.toString(),
+      'fcm_token': deviceToken.toString(),
+    };
     return map;
   }
 

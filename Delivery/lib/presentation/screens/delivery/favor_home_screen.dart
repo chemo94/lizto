@@ -10,7 +10,7 @@ import 'package:lizto_delivery/presentation/screens/delivery/favor_list_screen.d
 /// API existentes.
 class FavorHomeScreen extends StatelessWidget {
   final bool showBottomMenu;
-  const FavorHomeScreen({super.key, this.showBottomMenu = true});
+  const FavorHomeScreen({super.key, this.showBottomMenu = false});
 
   @override
   Widget build(BuildContext context) {

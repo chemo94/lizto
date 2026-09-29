@@ -63,11 +63,12 @@ class VehicleVerificationRepo {
       finalMap.addAll(element);
     }
 
-    Map<String, File> attachmentFiles = filesList.isEmpty == true
-        ? {}
-        : filesList.asMap().map(
-              (index, value) => MapEntry(value.key ?? "", value.value),
-            );
+    Map<String, File> attachmentFiles = {};
+    for (var f in filesList) {
+      if (f.key != null && f.key!.isNotEmpty && f.value is File) {
+        attachmentFiles[f.key!] = f.value as File;
+      }
+    }
 
     ResponseModel responseModel = await apiClient.multipartRequest(
       url,
@@ -85,19 +86,22 @@ class VehicleVerificationRepo {
 
   Future<dynamic> modelToMap(List<GlobalFormModel> list) async {
     for (var e in list) {
+      String key = (e.label != null && e.label!.isNotEmpty) ? e.label! : (e.name ?? '');
+      if (key.isEmpty) continue;
+
       if (e.type == 'checkbox') {
         if (e.cbSelected != null && e.cbSelected!.isNotEmpty) {
           for (int i = 0; i < e.cbSelected!.length; i++) {
-            fieldList.add({'${e.label}[$i]': e.cbSelected![i]});
+            fieldList.add({'$key[$i]': e.cbSelected![i]});
           }
         }
       } else if (e.type == 'file') {
         if (e.imageFile != null) {
-          filesList.add(ModelDynamicValue(e.label, e.imageFile!));
+          filesList.add(ModelDynamicValue(key, e.imageFile!));
         }
       } else {
         if (e.selectedValue != null && e.selectedValue.toString().isNotEmpty) {
-          fieldList.add({e.label ?? '': e.selectedValue});
+          fieldList.add({key: e.selectedValue.toString()});
         }
       }
     }

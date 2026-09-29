@@ -123,6 +123,24 @@ class DriverController extends Controller
         $notify[] = 'Información de Usuario';
         $driver   = auth()->user();
 
+        if ($driver) {
+            if (empty($driver->username) || $driver->username === 'null') {
+                $rawName = $driver->firstname ?: (explode('@', $driver->email)[0] ?? 'driver');
+                $cleanBase = strtolower(preg_replace('/[^a-z0-9]/', '', $rawName));
+                if (empty($cleanBase)) $cleanBase = 'driver';
+                $gen = $cleanBase . '_' . rand(1000, 9999);
+                while (Driver::where('username', $gen)->where('id', '!=', $driver->id)->exists()) {
+                    $gen = $cleanBase . '_' . rand(10000, 99999);
+                }
+                $driver->username = $gen;
+                $driver->save();
+            }
+            if ($driver->mobile === 'null') {
+                $driver->mobile = null;
+                $driver->save();
+            }
+        }
+
         if (!$driver->wallet) {
             $wallet = Wallet::create(['holder_type' => get_class($driver), 'holder_id' => $driver->id]);
             $driver->update(['wallet_id' => $wallet->id]);
@@ -140,7 +158,7 @@ class DriverController extends Controller
 
     public function driverVerification()
     {
-        $driver = auth()->user('driver');
+        $driver = auth()->user();
 
         if ($driver->dv == Status::PENDING) {
             $notify[] = 'Actualmente estamos revisando la información de tu conductor.';
@@ -162,13 +180,17 @@ class DriverController extends Controller
         $notify[] = 'El campo de verificación del conductor está abajo';
 
         return apiResponse("vehicle_form", "success", $notify, [
-            'form'      => $form->form_data,
+            'form'      => $form ? $form->form_data : [],
             'file_path' => getFilePath('verify'),
         ]);
     }
     public function driverVerificationStore(Request $request)
     {
         $form           = Form::where('act', 'driver_verification')->first();
+        if (!$form) {
+            $notify[] = 'Formulario de verificación no encontrado';
+            return apiResponse("not_found", "error", $notify);
+        }
         $formData       = $form->form_data;
         $formProcessor  = new FormProcessor();
         $validationRule = $formProcessor->valueValidation($formData);
@@ -178,11 +200,11 @@ class DriverController extends Controller
             return apiResponse("validation_error", "error", $validator->errors()->all());
         }
 
-        $driver = auth()->user('driver');
+        $driver = auth()->user();
 
-        if ($driver->dv == Status::PENDING) {
-            $notify[] = 'Estamos revisando su información como conductor.';
-            return apiResponse("under_review", "success", $notify, [
+        if ($driver->dv == Status::VERIFIED) {
+            $notify[] = 'Ya has completado exitosamente el proceso de verificación de conductor.';
+            return apiResponse("already_verified", "error", $notify, [
                 'driver_data' => $driver->driver_data,
                 'file_path'   => getFilePath('verify')
             ]);
@@ -202,7 +224,9 @@ class DriverController extends Controller
 
         $notify[] = 'La información de verificación del conductor se envió correctamente';
 
-        return apiResponse("verification_submitted", "success", $notify);
+        return apiResponse("verification_submitted", "success", $notify, [
+            'driver' => $driver
+        ]);
     }
 
     public function depositHistory(Request $request)
@@ -295,23 +319,37 @@ class DriverController extends Controller
         $mobileCodes  = implode(',', array_column($countryData, 'dial_code'));
         $countries    = implode(',', array_column($countryData, 'country'));
 
+        $mobileVal = ($request->filled('mobile') && $request->mobile !== 'null') ? preg_replace('/\D+/', '', (string) $request->mobile) : ($driver->mobile === 'null' ? null : $driver->mobile);
+        $mobileCodeVal = ($request->filled('mobile_code') && $request->mobile_code !== 'null') ? preg_replace('/\D+/', '', (string) $request->mobile_code) : ($driver->dial_code ?: '51');
 
         $validator = Validator::make($request->all(), [
-            'country_code' => 'required|in:' . $countryCodes,
-            'country'      => 'required|in:' . $countries,
-            'mobile_code'  => 'required|in:' . $mobileCodes,
+            'country_code' => 'nullable|in:' . $countryCodes,
+            'country'      => 'nullable|in:' . $countries,
+            'mobile_code'  => 'nullable|in:' . $mobileCodes,
             'zone'         => 'required|integer',
-            'username'     => 'required|unique:drivers,username|min:6',
-            'mobile'       => ['required', 'regex:/^([0-9]*)$/', Rule::unique('users')->where('dial_code', $request->mobile_code)],
+            'username'     => ['nullable', 'min:6', Rule::unique('drivers', 'username')->ignore($driver->id)],
+            'mobile'       => ['nullable', 'regex:/^([0-9]*)$/', Rule::unique('drivers', 'mobile')->where('dial_code', $mobileCodeVal)->ignore($driver->id)],
         ]);
 
         if ($validator->fails()) {
             return apiResponse("validation_error", "error", $validator->errors()->all());
         }
 
-        if (preg_match("/[^a-z0-9_]/", trim($request->username))) {
-            $notify[] = 'No usar caracteres especiales, espacios ni letras mayúsculas en el nombre de usuario';
-            return apiResponse("validation_error", "error", $notify);
+        if ($request->filled('username') && $request->username !== 'null') {
+            if (preg_match("/[^a-z0-9_.]/", trim($request->username))) {
+                $notify[] = 'No usar caracteres especiales, espacios ni letras mayúsculas en el nombre de usuario';
+                return apiResponse("validation_error", "error", $notify);
+            }
+            $driver->username = trim($request->username);
+        } elseif (empty($driver->username) || $driver->username === 'null') {
+            $rawName = $driver->firstname ?: (explode('@', $driver->email)[0] ?? 'driver');
+            $cleanBase = strtolower(preg_replace('/[^a-z0-9]/', '', $rawName));
+            if (empty($cleanBase)) $cleanBase = 'driver';
+            $gen = $cleanBase . '_' . rand(1000, 9999);
+            while (Driver::where('username', $gen)->where('id', '!=', $driver->id)->exists()) {
+                $gen = $cleanBase . '_' . rand(10000, 99999);
+            }
+            $driver->username = $gen;
         }
 
         $zone = Zone::active()->where('id', $request->zone)->first();
@@ -321,16 +359,22 @@ class DriverController extends Controller
             return apiResponse("not_found", "error", $notify);
         }
 
-        $driver->country_code = $request->country_code;
-        $driver->mobile       = $request->mobile;
-        $driver->username     = $request->username;
-        $driver->address      = $request->address;
-        $driver->city         = $request->city;
-        $driver->state        = $request->state;
-        $driver->zip          = $request->zip;
-        $driver->country_name = @$request->country;
-        $driver->dial_code    = $request->mobile_code;
-        $driver->zone_id      = $request->zone;
+        if ($request->filled('country_code') && $request->country_code !== 'null') {
+            $driver->country_code = $request->country_code;
+        }
+        if (!empty($mobileVal)) {
+            $driver->mobile = $mobileVal;
+            $driver->dial_code = $mobileCodeVal;
+        }
+        if ($request->filled('country') && $request->country !== 'null') {
+            $driver->country_name = $request->country;
+        }
+
+        $driver->address = ($request->address !== 'null') ? ($request->address ?? $driver->address) : $driver->address;
+        $driver->city    = ($request->city !== 'null') ? ($request->city ?? $driver->city) : $driver->city;
+        $driver->state   = ($request->state !== 'null') ? ($request->state ?? $driver->state) : $driver->state;
+        $driver->zip     = ($request->zip !== 'null') ? ($request->zip ?? $driver->zip) : $driver->zip;
+        $driver->zone_id = $request->zone;
 
         $driver->profile_complete = Status::YES;
         $driver->save();
@@ -338,7 +382,8 @@ class DriverController extends Controller
         $notify[] = 'Perfil completado con éxito';
 
         return apiResponse("profile_completed", "success", $notify, [
-            'driver' => $driver
+            'driver' => $driver,
+            'user'   => $driver,
         ]);
     }
 
@@ -397,10 +442,12 @@ class DriverController extends Controller
 
         $driver = auth()->user();
 
-        if ($driver->vv == Status::VERIFIED || $driver->vv == Status::PENDING) {
-            $notify[] = '"La información de su vehículo ya está verificada';
+        if ($driver->vv == Status::VERIFIED) {
+            $notify[] = 'La información de su vehículo ya está verificada';
             return apiResponse("verified", "error", $notify);
         }
+
+        $existingVehicle = Vehicle::where('driver_id', $driver->id)->first();
 
         // Build validation rules based on service type
         $isDelivery = in_array($driver->service_type, ['delivery', 'both']);
@@ -413,7 +460,7 @@ class DriverController extends Controller
                 'model'          => 'nullable',
                 'year'           => 'nullable',
                 'color'          => 'nullable',
-                'vehicle_number' => 'nullable|unique:vehicles,vehicle_number',
+                'vehicle_number' => ['nullable', Rule::unique('vehicles', 'vehicle_number')->ignore($existingVehicle->id ?? 0)],
                 'rules'          => 'nullable|array',
                 'rules.*'        => 'nullable|integer|exists:rider_rules,id',
                 'image'          => ['nullable', 'image', new FileTypeValidate(['jpg', 'jpeg', 'png'])]
@@ -426,7 +473,7 @@ class DriverController extends Controller
                 'model'          => 'required',
                 'year'           => 'required',
                 'color'          => 'required',
-                'vehicle_number' => 'required|unique:vehicles,vehicle_number',
+                'vehicle_number' => ['required', Rule::unique('vehicles', 'vehicle_number')->ignore($existingVehicle->id ?? 0)],
                 'rules'          => 'required|array',
                 'rules.*'        => 'required|integer|exists:rider_rules,id',
                 'image'          => ['required', 'image', new FileTypeValidate(['jpg', 'jpeg', 'png'])]
@@ -800,6 +847,16 @@ class DriverController extends Controller
                 'speed'     => $request->speed,
             ]));
         }
+
+        // WebSocket nativo: publicar la posición en vivo al servidor de tiempo real.
+        \App\Services\RealtimePublisher::driverLocation(
+            (int) $user->id,
+            (float) $request->current_lat,
+            (float) $request->input($lngKey),
+            $request->has('bearing') ? (float) $request->bearing : null,
+            $request->has('speed') ? (float) $request->speed : null,
+            $ride ? (int) $ride->id : null,
+        );
 
 
         $notify[] = 'Ubicación actualizada con éxito';

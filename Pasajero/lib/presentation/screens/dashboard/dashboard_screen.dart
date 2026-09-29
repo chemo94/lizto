@@ -60,7 +60,7 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
     _widgets = <Widget>[
       HomeScreen(dashBoardScaffoldKey: _dashBoardScaffoldKey), // 0 - Viaje
       DeliveryHomeScreen(dashBoardScaffoldKey: _dashBoardScaffoldKey), // 1 - Comida
-      FavorHomeScreen(), // 2 - Entrega (Favores)
+      const FavorHomeScreen(showBottomMenu: false), // 2 - Entrega (Favores)
       RideActivityScreen(
         onBackPress: () {
           changeScreen(0);

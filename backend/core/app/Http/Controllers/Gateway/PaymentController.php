@@ -35,34 +35,47 @@ class PaymentController extends Controller
 
     public function appDepositConfirm($hash)
     {
-        try {
-            $id = decrypt($hash);
-        } catch (\Exception $ex) {
-            abort(404);
+        $data = Deposit::where('trx', $hash)->where('status', Status::PAYMENT_INITIATE)->first();
+
+        if (!$data) {
+            try {
+                $id = decrypt($hash);
+                $data = Deposit::where('id', $id)->where('status', Status::PAYMENT_INITIATE)->orderBy('id', 'DESC')->first();
+            } catch (\Exception $ex) {
+                // not encrypted id
+            }
         }
 
-        $data = Deposit::where('id', $id)->where('status', Status::PAYMENT_INITIATE)->orderBy('id', 'DESC')->firstOrFail();
+        if (!$data && is_numeric($hash)) {
+            $data = Deposit::where('id', $hash)->where('status', Status::PAYMENT_INITIATE)->orderBy('id', 'DESC')->first();
+        }
+
+        abort_if(!$data, 404);
         session()->put('Track', $data->trx);
 
         if ($data->user_id) {
             $user = User::findOrFail($data->user_id);
             auth()->login($user);
-            return to_route('user.deposit.confirm');
+            return $this->processDeposit($data);
         } else {
             $driver = Driver::findOrFail($data->driver_id);
             auth()->guard('driver')->login($driver);
-            return to_route('driver.deposit.confirm');
+            return $this->processDeposit($data);
         }
     }
 
-
-    public function depositConfirm()
+    /**
+     * Procesa el pago de un deposito (usado tanto por el flujo web como por la app).
+     * Idempotente: crea una preferencia de pago nueva en cada invocacion.
+     *
+     * @return \Illuminate\Http\RedirectResponse|\Illuminate\View\View|\Illuminate\Http\Response
+     */
+    private function processDeposit($deposit)
     {
-        $track   = session()->get('Track');
-        $deposit = Deposit::where('trx', $track)->where('status', Status::PAYMENT_INITIATE)->orderBy('id', 'DESC')->with('gateway')->firstOrFail();
-
         if ($deposit->method_code >= 1000) {
-            return to_route('driver.deposit.manual.confirm');
+            return $deposit->driver_id
+                ? to_route('driver.deposit.manual.confirm', ['trx' => $deposit->trx])
+                : to_route('user.deposit.manual.confirm', ['trx' => $deposit->trx]);
         }
 
         $dirName = $deposit->gateway->alias;
@@ -90,6 +103,17 @@ class PaymentController extends Controller
         $pageTitle = 'Payment Confirm';
 
         return view("Template::$view", compact('data', 'pageTitle', 'deposit'));
+    }
+
+    public function depositConfirm(Request $request)
+    {
+        $track   = session()->get('Track') ?? $request->query('trx');
+        if ($track) {
+            session()->put('Track', $track);
+        }
+        $deposit = Deposit::where('trx', $track)->where('status', Status::PAYMENT_INITIATE)->orderBy('id', 'DESC')->with('gateway')->firstOrFail();
+
+        return $this->processDeposit($deposit);
     }
 
     public static function userDataUpdate($deposit, $isManual = null)
@@ -174,23 +198,30 @@ class PaymentController extends Controller
         }
     }
 
-    public function manualDepositConfirm()
+    public function manualDepositConfirm(Request $request)
     {
-        $track = session()->get('Track');
+        $track = session()->get('Track') ?? $request->query('trx');
+        if ($track) {
+            session()->put('Track', $track);
+        }
         $data = Deposit::with('gateway')->where('status', Status::PAYMENT_INITIATE)->where('trx', $track)->first();
         abort_if(!$data, 404);
         if ($data->method_code > 999) {
             $pageTitle = 'Confirm Deposit';
             $method = $data->gatewayCurrency();
             $gateway = $method->method;
-            return view('Template::driver.payment.manual', compact('data', 'pageTitle', 'method', 'gateway'));
+            $view = $data->driver_id ? 'Template::driver.payment.manual' : 'Template::user.payment.manual';
+            return view($view, compact('data', 'pageTitle', 'method', 'gateway'));
         }
         abort(404);
     }
 
     public function manualDepositUpdate(Request $request)
     {
-        $track = session()->get('Track');
+        $track = session()->get('Track') ?? $request->query('trx') ?? $request->input('trx');
+        if ($track) {
+            session()->put('Track', $track);
+        }
         $data = Deposit::with('gateway')->where('status', Status::PAYMENT_INITIATE)->where('trx', $track)->first();
         abort_if(!$data, 404);
 
@@ -203,29 +234,48 @@ class PaymentController extends Controller
         $request->validate($validationRule);
         $userData = $formProcessor->processFormData($request, $formData);
 
-
         $data->detail = $userData;
         $data->status = Status::PAYMENT_PENDING;
         $data->save();
 
+        if ($data->driver_id) {
+            $adminNotification            = new AdminNotification();
+            $adminNotification->driver_id = $data->driver->id;
+            $adminNotification->title     = 'Deposit request from ' . $data->driver->username;
+            $adminNotification->click_url = urlPath('admin.deposit.details', $data->id);
+            $adminNotification->save();
 
-        $adminNotification            = new AdminNotification();
-        $adminNotification->driver_id = $data->driver->id;
-        $adminNotification->title     = 'Deposit request from ' . $data->driver->username;
-        $adminNotification->click_url = urlPath('admin.deposit.details', $data->id);
-        $adminNotification->save();
+            notify($data->driver, 'DEPOSIT_REQUEST', [
+                'method_name'     => $data->gatewayCurrency()->name,
+                'method_currency' => $data->method_currency,
+                'method_amount'   => showAmount($data->final_amount, currencyFormat: false),
+                'amount'          => showAmount($data->amount, currencyFormat: false),
+                'charge'          => showAmount($data->charge, currencyFormat: false),
+                'rate'            => showAmount($data->rate, currencyFormat: false),
+                'trx'             => $data->trx
+            ]);
 
-        notify($data->driver, 'DEPOSIT_REQUEST', [
-            'method_name'     => $data->gatewayCurrency()->name,
-            'method_currency' => $data->method_currency,
-            'method_amount'   => showAmount($data->final_amount, currencyFormat: false),
-            'amount'          => showAmount($data->amount, currencyFormat: false),
-            'charge'          => showAmount($data->charge, currencyFormat: false),
-            'rate'            => showAmount($data->rate, currencyFormat: false),
-            'trx'             => $data->trx
-        ]);
+            $notify[] = ['success', 'You have deposit request has been taken'];
+            return to_route('driver.deposit.history')->withNotify($notify);
+        } else {
+            $adminNotification            = new AdminNotification();
+            $adminNotification->user_id   = $data->user->id;
+            $adminNotification->title     = 'Deposit request from ' . $data->user->username;
+            $adminNotification->click_url = urlPath('admin.deposit.details', $data->id);
+            $adminNotification->save();
 
-        $notify[] = ['success', 'You have deposit request has been taken'];
-        return to_route('driver.deposit.history')->withNotify($notify);
+            notify($data->user, 'DEPOSIT_REQUEST', [
+                'method_name'     => $data->gatewayCurrency()->name,
+                'method_currency' => $data->method_currency,
+                'method_amount'   => showAmount($data->final_amount, currencyFormat: false),
+                'amount'          => showAmount($data->amount, currencyFormat: false),
+                'charge'          => showAmount($data->charge, currencyFormat: false),
+                'rate'            => showAmount($data->rate, currencyFormat: false),
+                'trx'             => $data->trx
+            ]);
+
+            $notify[] = ['success', 'You have deposit request has been taken'];
+            return to_route('user.deposit.history')->withNotify($notify);
+        }
     }
 }

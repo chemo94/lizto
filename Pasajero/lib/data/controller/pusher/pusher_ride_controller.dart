@@ -13,13 +13,18 @@ import 'package:liztogo/presentation/components/dialog/show_custom_bid_dialog.da
 import 'package:get/get.dart';
 import 'package:liztogo/data/controller/ride/ride_meassage/ride_meassage_controller.dart';
 import 'package:liztogo/data/services/api_client.dart';
-import 'package:toastification/toastification.dart';
+import 'dart:async';
+import 'package:liztogo/core/utils/url_container.dart';
+import 'package:liztogo/data/services/realtime_service.dart';
 
 class PusherRideController extends GetxController {
   ApiClient apiClient;
   RideMessageController rideMessageController;
   RideDetailsController rideDetailsController;
   String rideID;
+  StreamSubscription? _realtimeWsSub;
+  String? _subscribedDriverTopic;
+
   PusherRideController({
     required this.apiClient,
     required this.rideMessageController,
@@ -31,6 +36,75 @@ class PusherRideController extends GetxController {
   void onInit() {
     super.onInit();
     PusherManager().addListener(onEvent);
+    _initRealtimeWs();
+  }
+
+  void _initRealtimeWs() async {
+    try {
+      final token = apiClient.sharedPreferences.getString(SharedPreferenceHelper.accessTokenKey) ?? '';
+      if (token.isNotEmpty && rideID.isNotEmpty) {
+        await RealtimeManager().init(wsUrl: UrlContainer.wsUrl, token: token);
+        RealtimeManager().subscribe('ride.$rideID');
+
+        // Si ya hay conductor asignado, suscribirse a su posición
+        final driverId = rideDetailsController.ride.driver?.id?.toString() ??
+            rideDetailsController.ride.driverId?.toString();
+        if (driverId != null && driverId.isNotEmpty && driverId != '0') {
+          _subscribeDriverTopic(driverId);
+        }
+
+        _realtimeWsSub?.cancel();
+        _realtimeWsSub = RealtimeManager().onBroadcast.listen(_handleRealtimeMessage);
+      }
+    } catch (e) {
+      printX("Error init Realtime WS in Pasajero: $e");
+    }
+  }
+
+  void _subscribeDriverTopic(String driverId) {
+    if (_subscribedDriverTopic == 'driver.$driverId') return;
+    if (_subscribedDriverTopic != null) {
+      RealtimeManager().unsubscribe(_subscribedDriverTopic!);
+    }
+    _subscribedDriverTopic = 'driver.$driverId';
+    RealtimeManager().subscribe(_subscribedDriverTopic!);
+  }
+
+  void _handleRealtimeMessage(Map<String, dynamic> msg) {
+    try {
+      final topic = msg['topic']?.toString() ?? '';
+      final payload = msg['payload'];
+
+      if (payload is Map<String, dynamic>) {
+        // 1. Manejo de ubicación en vivo del taxista
+        if (payload['type'] == 'driver_location') {
+          final lat = (payload['lat'] as num?)?.toDouble() ?? 0.0;
+          final lng = (payload['lng'] as num?)?.toDouble() ?? 0.0;
+          final bearing = (payload['bearing'] as num?)?.toDouble() ?? 0.0;
+          final driverId = payload['driver_id']?.toString() ??
+              rideDetailsController.ride.driver?.id?.toString() ??
+              'driver';
+
+          if (lat != 0 && lng != 0) {
+            rideDetailsController.mapController.updateDriverLocation(
+              driverId: driverId,
+              latLng: LatLng(lat, lng),
+              isRunning: false,
+              bearing: bearing,
+              serviceName: rideDetailsController.ride.service?.name,
+            );
+          }
+          return;
+        }
+
+        // 2. Manejo de estado de la carrera
+        if (topic == 'ride.$rideID') {
+          rideDetailsController.getRideDetails(rideID, shouldLoading: false);
+        }
+      }
+    } catch (e) {
+      printX("Error processing Realtime WS message in Pasajero: $e");
+    }
   }
 
   PusherConfig pusherConfig = PusherConfig();
@@ -251,6 +325,13 @@ class PusherRideController extends GetxController {
 
   @override
   void onClose() {
+    _realtimeWsSub?.cancel();
+    if (rideID.isNotEmpty) {
+      RealtimeManager().unsubscribe('ride.$rideID');
+    }
+    if (_subscribedDriverTopic != null) {
+      RealtimeManager().unsubscribe(_subscribedDriverTopic!);
+    }
     PusherManager().removeListener(onEvent);
     super.onClose();
   }

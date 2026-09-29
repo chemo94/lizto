@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
@@ -10,6 +11,10 @@ import 'package:lizto_store/data/controller/seller/seller_controller.dart';
 import 'package:lizto_store/data/controller/seller/seller_panel_controller.dart';
 
 import '../../../presentation/screens/seller/seller_orders_screen.dart';
+import 'package:lizto_store/core/helper/shared_preference_helper.dart';
+import 'package:lizto_store/core/utils/url_container.dart';
+import 'package:lizto_store/data/services/api_client.dart';
+import 'package:lizto_store/data/services/realtime_service.dart';
 
 class SellerNotificationService extends GetxController {
   int unreadCount = 0;
@@ -17,6 +22,8 @@ class SellerNotificationService extends GetxController {
   final Set<String> _handledEventIds = <String>{};
   String _currentChannel = '';
   void Function(PusherEvent)? _currentListener;
+  StreamSubscription? _sellerWsSub;
+  String? _currentTopic;
 
   void subscribe(int sellerId) {
     if (sellerId <= 0) {
@@ -39,6 +46,35 @@ class SellerNotificationService extends GetxController {
     PusherManager().checkAndInitIfNeeded(_currentChannel);
     PusherManager().addListener(_currentListener!);
     printX("SellerNotificationService: suscrito a $_currentChannel");
+
+    // WebSocket nativo
+    try {
+      if (Get.isRegistered<ApiClient>()) {
+        final apiClient = Get.find<ApiClient>();
+        final token = apiClient.sharedPreferences.getString(SharedPreferenceHelper.accessTokenKey) ?? '';
+        if (token.isNotEmpty) {
+          RealtimeManager().init(wsUrl: UrlContainer.wsUrl, token: token).then((_) {
+            _currentTopic = 'seller.$sellerId';
+            RealtimeManager().subscribe(_currentTopic!);
+            _sellerWsSub?.cancel();
+            _sellerWsSub = RealtimeManager().onBroadcast.listen((msg) {
+              final payload = msg['payload'];
+              if (payload is Map<String, dynamic>) {
+                final eventName = (payload['event'] ?? payload['type'] ?? '').toString();
+                if (eventName == 'new_delivery_order') {
+                  _handleNewOrder(jsonEncode(payload));
+                } else if (eventName == 'delivery_order_status_updated' || eventName == 'order_status') {
+                  _handleStatusUpdate(jsonEncode(payload));
+                }
+              }
+            });
+            printX("SellerNotificationService: WS nativo suscrito a $_currentTopic");
+          }).catchError((e) {
+            printE("SellerNotificationService: error WS nativo: $e");
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   void unsubscribe() {
@@ -48,6 +84,12 @@ class SellerNotificationService extends GetxController {
       printX("SellerNotificationService: desuscrito de $_currentChannel");
     }
     _currentChannel = '';
+
+    if (_currentTopic != null) {
+      RealtimeManager().unsubscribe(_currentTopic!);
+      _currentTopic = null;
+    }
+    _sellerWsSub?.cancel();
   }
 
   void _handleStatusUpdate(String rawData) {

@@ -180,9 +180,13 @@ class RegistrationController extends GetxController {
       SharedPreferenceHelper.userNameKey,
       responseModel.data?.user?.username ?? '',
     );
+    String mobileToSave = responseModel.data?.user?.mobile ?? '';
+    if (mobileToSave.isEmpty) {
+      mobileToSave = mobileController.text.trim();
+    }
     await preferences.setString(
       SharedPreferenceHelper.userPhoneNumberKey,
-      responseModel.data?.user?.mobile ?? '',
+      mobileToSave,
     );
     await preferences.setString(
       SharedPreferenceHelper.onboardingStepKey,
@@ -201,6 +205,7 @@ class RegistrationController extends GetxController {
       final args = Get.arguments as Map;
       if (args['mobile'] != null) {
         mobileController.text = args['mobile'].toString();
+        mobileCode = (args['dial_code'] ?? '51').toString();
         phoneToken = args['phone_token']?.toString() ?? '';
         isPhoneVerified = true;
       }

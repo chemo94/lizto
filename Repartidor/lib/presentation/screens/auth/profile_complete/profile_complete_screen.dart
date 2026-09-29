@@ -174,21 +174,49 @@ class _ProfileCompleteScreenState extends State<ProfileCompleteScreen> {
                                     hintText: "XXX-XXX-XXXX",
                                     textInputType: TextInputType.number,
                                     inputAction: TextInputAction.next,
+                                    readOnly: controller.isPhonePreFilled,
                                     focusNode: controller.countryFocusNode,
                                     controller: controller.mobileNoController,
                                     nextFocus: controller.addressFocusNode,
+                                    suffixWidget: controller.isPhonePreFilled
+                                        ? Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            margin: const EdgeInsetsDirectional.only(end: 10),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF25D366).withValues(alpha: 0.15),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: const Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.check_circle, color: Color(0xFF25D366), size: 16),
+                                                SizedBox(width: 4),
+                                                Text(
+                                                  'Registrado',
+                                                  style: TextStyle(
+                                                    color: Color(0xFF1E8E3E),
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          )
+                                        : null,
                                     prefixIcon: IntrinsicWidth(
                                       child: Padding(
                                         padding: EdgeInsetsGeometry.symmetric(
                                           horizontal: Dimensions.space10,
                                         ),
                                         child: GestureDetector(
-                                          onTap: () {
-                                            CountryBottomSheet.profileBottomSheet(
-                                              context,
-                                              controller,
-                                            );
-                                          },
+                                          onTap: controller.isPhonePreFilled
+                                              ? null
+                                              : () {
+                                                  CountryBottomSheet.profileBottomSheet(
+                                                    context,
+                                                    controller,
+                                                  );
+                                                },
                                           child: Row(
                                             crossAxisAlignment: CrossAxisAlignment.center,
                                             mainAxisAlignment: MainAxisAlignment.center,

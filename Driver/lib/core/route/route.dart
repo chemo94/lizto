@@ -314,11 +314,11 @@ class RouteHelper {
     );
     await sharedPreferences.setString(
       SharedPreferenceHelper.userPhoneNumberKey,
-      user?.mobile ?? '',
+      (user?.mobile == null || user?.mobile == 'null') ? '' : user!.mobile!,
     );
     await sharedPreferences.setString(
       SharedPreferenceHelper.userNameKey,
-      user?.username ?? '',
+      (user?.username == null || user?.username == 'null') ? '' : user!.username!,
     );
 
     if (accessToken.isNotEmpty) {

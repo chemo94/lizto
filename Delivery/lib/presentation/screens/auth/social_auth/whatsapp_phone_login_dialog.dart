@@ -33,7 +33,14 @@ Future<void> showWhatsAppPhoneLoginDialog(
     context: context,
     barrierDismissible: false,
     builder: (dialogContext) => StatefulBuilder(
-      builder: (context, setState) {
+        final SocialAuthController socialController = Get.isRegistered<SocialAuthController>()
+            ? Get.find<SocialAuthController>()
+            : Get.put(SocialAuthController(
+                authRepo: Get.isRegistered<SocialAuthRepo>()
+                    ? Get.find<SocialAuthRepo>()
+                    : Get.put(SocialAuthRepo(apiClient: Get.find())),
+              ));
+
         void startTimer() {
           countdownSeconds = 60;
           timer?.cancel();
@@ -57,29 +64,44 @@ Future<void> showWhatsAppPhoneLoginDialog(
           loading = true;
           setState(() {});
 
-          final socialController = Get.find<SocialAuthController>();
-          ResponseModel res = await socialController.sendWhatsAppOtp(
-            mobile: mobile,
-            dialCode: dialCode,
-            userType: userType,
-          );
+          try {
+            ResponseModel res = await socialController.sendWhatsAppOtp(
+              mobile: mobile,
+              dialCode: dialCode,
+              userType: userType,
+            ).timeout(
+              const Duration(seconds: 15),
+              onTimeout: () => ResponseModel(false, 'Tiempo de espera agotado. Revisa tu WhatsApp o reintenta.', 408, ''),
+            );
 
-          loading = false;
-          if (res.statusCode == 200) {
-            final json = res.responseJson is String ? jsonDecode(res.responseJson) : res.responseJson;
-            if (json['status'] == 'success') {
-              codeSent = true;
-              startTimer();
-              setState(() {});
-              CustomSnackBar.success(successList: ['Código de 6 dígitos enviado a tu WhatsApp']);
+            if (res.statusCode == 200) {
+              final dynamic rawJson = res.responseJson;
+              final dynamic json = (rawJson is String) ? jsonDecode(rawJson) : rawJson;
+              if (json is Map && json['status'] == 'success') {
+                codeSent = true;
+                startTimer();
+                CustomSnackBar.success(successList: ['Código de 6 dígitos enviado a tu WhatsApp']);
+              } else {
+                final msgs = (json is Map && json['message'] != null)
+                    ? (json['message'] is List ? List<String>.from(json['message']) : [json['message']?.toString() ?? 'Error al enviar código'])
+                    : ['Error al enviar código'];
+                CustomSnackBar.error(errorList: msgs);
+
+                final combined = msgs.join(' ').toLowerCase();
+                if (combined.contains('demasiados') || combined.contains('ingresarlo') || combined.contains('activo')) {
+                  codeSent = true;
+                  startTimer();
+                }
+              }
             } else {
-              final msgs = json['message'] is List ? List<String>.from(json['message']) : [json['message']?.toString() ?? 'Error al enviar código'];
-              CustomSnackBar.error(errorList: msgs);
+              CustomSnackBar.error(errorList: [res.message.isNotEmpty ? res.message : 'Error al enviar código']);
             }
-          } else {
-            CustomSnackBar.error(errorList: [res.message]);
+          } catch (e) {
+            CustomSnackBar.error(errorList: ['No se pudo conectar para enviar el código. Intenta nuevamente.']);
+          } finally {
+            loading = false;
+            setState(() {});
           }
-          setState(() {});
         }
 
         Future<void> verifyCode() async {
@@ -93,86 +115,99 @@ Future<void> showWhatsAppPhoneLoginDialog(
           loading = true;
           setState(() {});
 
-          final socialController = Get.find<SocialAuthController>();
-          ResponseModel res = await socialController.verifyWhatsAppOtp(
-            mobile: mobile,
-            otpCode: otp,
-            dialCode: dialCode,
-            userType: userType,
-          );
+          try {
+            ResponseModel res = await socialController.verifyWhatsAppOtp(
+              mobile: mobile,
+              otpCode: otp,
+              dialCode: dialCode,
+              userType: userType,
+            ).timeout(
+              const Duration(seconds: 15),
+              onTimeout: () => ResponseModel(false, 'Tiempo de espera agotado al verificar. Intenta nuevamente.', 408, ''),
+            );
 
-          loading = false;
-          if (res.statusCode == 200) {
-            final json = res.responseJson is String ? jsonDecode(res.responseJson) : res.responseJson;
-            if (json['status'] == 'success') {
-              timer?.cancel();
-              final data = json['data'] is Map ? Map<String, dynamic>.from(json['data']) : <String, dynamic>{};
-              final token = (data['access_token'] ?? data['token'])?.toString() ?? '';
-              final bool isNewUser = (data['is_new_user'] == true || data['is_new_user'] == 'true' || data['is_new_user'] == 1) ||
-                                     ((data['user'] == null && data['passenger'] == null) || token.isEmpty);
+            if (res.statusCode == 200) {
+              final dynamic rawJson = res.responseJson;
+              final dynamic json = (rawJson is String) ? jsonDecode(rawJson) : rawJson;
+              if (json is Map && json['status'] == 'success') {
+                timer?.cancel();
+                final data = json['data'] is Map ? Map<String, dynamic>.from(json['data']) : <String, dynamic>{};
+                final token = (data['access_token'] ?? data['token'])?.toString() ?? '';
+                final bool isNewUser = (data['is_new_user'] == true || data['is_new_user'] == 'true' || data['is_new_user'] == 1) ||
+                                       ((data['user'] == null && data['passenger'] == null) || token.isEmpty);
 
-              if (Navigator.of(dialogContext).canPop()) {
-                Navigator.of(dialogContext).pop();
-              }
-              await Future.delayed(const Duration(milliseconds: 150));
-
-              if (isNewUser) {
-                // USUARIO NUEVO -> Registro con datos prellenados
-                CustomSnackBar.success(successList: ['✓ WhatsApp verificado. Completa tu registro.']);
-                final args = {
-                  'mobile': (data['mobile'] ?? mobile).toString(),
-                  'dial_code': (data['dial_code'] ?? dialCode).toString(),
-                  'phone_token': (data['phone_token'] ?? '').toString(),
-                };
-                if (onNewUser != null) {
-                  onNewUser(args);
-                } else {
-                  Get.toNamed(
-                    RouteHelper.registrationScreen,
-                    arguments: args,
-                  );
+                if (Navigator.of(dialogContext).canPop()) {
+                  Navigator.of(dialogContext).pop();
                 }
-              } else {
-                // USUARIO ANTIGUO -> Home directo
-                CustomSnackBar.success(successList: ['¡Bienvenido de nuevo!']);
-                final userData = data['user'] ?? data['passenger'];
-                final tokenType = data['token_type'] ?? 'Bearer';
+                await Future.delayed(const Duration(milliseconds: 150));
 
-                GlobalUser? user;
-                if (userData != null && userData is Map) {
-                  try {
-                    user = GlobalUser.fromJson(Map<String, dynamic>.from(userData));
-                  } catch (e) {
-                    print('Error parsing user: $e');
+                if (isNewUser) {
+                  // USUARIO NUEVO -> Registro con datos prellenados
+                  CustomSnackBar.success(successList: ['✓ WhatsApp verificado. Completa tu registro.']);
+                  final args = {
+                    'mobile': (data['mobile'] ?? mobile).toString(),
+                    'dial_code': (data['dial_code'] ?? dialCode).toString(),
+                    'phone_token': (data['phone_token'] ?? '').toString(),
+                  };
+                  if (onNewUser != null) {
+                    onNewUser(args);
+                  } else {
+                    Get.toNamed(
+                      RouteHelper.registrationScreen,
+                      arguments: args,
+                    );
+                  }
+                } else {
+                  // USUARIO ANTIGUO -> Home directo
+                  CustomSnackBar.success(successList: ['¡Bienvenido de nuevo!']);
+                  final userData = data['user'] ?? data['passenger'];
+                  final tokenType = data['token_type'] ?? 'Bearer';
+
+                  GlobalUser? user;
+                  if (userData != null && userData is Map) {
+                    try {
+                      user = GlobalUser.fromJson(Map<String, dynamic>.from(userData));
+                    } catch (e) {
+                      print('Error parsing user: $e');
+                    }
+                  }
+                  if (user != null) {
+                    user.sv = "1";
+                    user.ev = "1";
+                  }
+
+                  await RouteMiddleware.checkNGotoNext(
+                    user: user,
+                    accessToken: token,
+                    tokenType: tokenType,
+                  );
+                  if (user?.profileComplete != '0') {
+                    Get.offAllNamed(RouteHelper.dashboard);
                   }
                 }
-                if (user != null) {
-                  user.sv = "1";
-                  user.ev = "1";
-                }
-
-                await RouteMiddleware.checkNGotoNext(
-                  user: user,
-                  accessToken: token,
-                  tokenType: tokenType,
-                );
-                if (user?.profileComplete != '0') {
-                  Get.offAllNamed(RouteHelper.dashboard);
-                }
+                return;
+              } else {
+                final msgs = (json is Map && json['message'] != null)
+                    ? (json['message'] is List ? List<String>.from(json['message']) : [json['message']?.toString() ?? 'Código inválido'])
+                    : ['Código inválido'];
+                CustomSnackBar.error(errorList: msgs);
               }
-              return;
             } else {
-              final msgs = json['message'] is List ? List<String>.from(json['message']) : [json['message']?.toString() ?? 'Código inválido'];
-              CustomSnackBar.error(errorList: msgs);
+              CustomSnackBar.error(errorList: [res.message.isNotEmpty ? res.message : 'Error al verificar']);
             }
-          } else {
-            CustomSnackBar.error(errorList: [res.message]);
+          } catch (e) {
+            CustomSnackBar.error(errorList: ['Error al verificar código. Intenta nuevamente.']);
+          } finally {
+            loading = false;
+            setState(() {});
           }
-          setState(() {});
         }
 
         return PopScope(
-          canPop: !loading,
+          canPop: true,
+          onPopInvokedWithResult: (didPop, result) {
+            timer?.cancel();
+          },
           child: Dialog(
             backgroundColor: MyColor.colorWhite,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Dimensions.space20)),
@@ -281,6 +316,31 @@ Future<void> showWhatsAppPhoneLoginDialog(
                       textColor: Colors.white,
                       press: loading ? () {} : sendCode,
                     ),
+
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: loading
+                          ? null
+                          : () {
+                              final mobile = phoneController.text.trim();
+                              if (mobile.length < 8) {
+                                CustomSnackBar.error(errorList: ['Ingresa primero tu número de celular']);
+                                return;
+                              }
+                              codeSent = true;
+                              startTimer();
+                              setState(() {});
+                            },
+                      child: Text(
+                        '¿Ya tienes un código en tu WhatsApp? Ingrésalo aquí',
+                        style: regularDefault.copyWith(
+                          color: const Color(0xFF25D366),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   ] else ...[
                     // Input de código OTP de 6 dígitos
                     OTPFieldWidget(
@@ -336,15 +396,43 @@ Future<void> showWhatsAppPhoneLoginDialog(
                     ),
                   ],
 
+                  if (loading) ...[
+                    const SizedBox(height: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Color(0xFF25D366),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            codeSent
+                                ? 'Verificando con el servidor...'
+                                : 'Conectando con WhatsApp, espera unos segundos...',
+                            style: regularDefault.copyWith(
+                              color: MyColor.bodyTextColor,
+                              fontSize: 12,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+
                   const SizedBox(height: 12),
-                  // Botón Cancelar
+                  // Botón Cancelar (siempre disponible para no atrapar al usuario)
                   TextButton(
-                    onPressed: loading
-                        ? null
-                        : () {
-                            timer?.cancel();
-                            Navigator.of(dialogContext).pop();
-                          },
+                    onPressed: () {
+                      timer?.cancel();
+                      Navigator.of(dialogContext).pop();
+                    },
                     child: Text(
                       'Cancelar',
                       style: regularDefault.copyWith(color: MyColor.colorGrey, fontSize: 14),

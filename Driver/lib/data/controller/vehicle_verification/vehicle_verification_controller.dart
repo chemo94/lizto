@@ -157,6 +157,9 @@ class VehicleVerificationController extends GetxController {
               formList.add(element);
             }
           }
+          if (selectedYear != null) {
+            _syncYearWithFormList(selectedYear?.name);
+          }
         }
         if (model.remark?.toLowerCase() == 'already_verified') {
           isAlreadyVerified = true;
@@ -200,7 +203,21 @@ class VehicleVerificationController extends GetxController {
 
   void selectYear(VerifyElement year) {
     selectedYear = year;
+    _syncYearWithFormList(year.name);
     update();
+  }
+
+  void _syncYearWithFormList(String? yearName) {
+    if (yearName == null || yearName.isEmpty) return;
+    for (var element in formList) {
+      final label = (element.label ?? '').toLowerCase();
+      final name = (element.name ?? '').toLowerCase();
+      if (label.contains('año') || label.contains('ano') || label.contains('year') ||
+          name.contains('año') || name.contains('ano') || name.contains('year')) {
+        element.selectedValue = yearName;
+        element.textEditingController?.text = yearName;
+      }
+    }
   }
 
   void selectColor(VerifyElement color) {
@@ -261,6 +278,10 @@ class VehicleVerificationController extends GetxController {
 
   bool submitLoading = false;
   Future<void> submitKycData() async {
+    if (selectedYear != null) {
+      _syncYearWithFormList(selectedYear?.name);
+    }
+
     List<String> list = hasError();
 
     if (list.isNotEmpty) {
@@ -332,21 +353,29 @@ class VehicleVerificationController extends GetxController {
     if (vehicleImageFile == null) {
       errorList.add('Image ${MyStrings.isRequired}');
     }
-    if (vehicleDocumentFile == null) {
-      errorList.add('Document ${MyStrings.isRequired}');
-    }
 
     // Validate dynamic form fields
     for (var element in formList) {
+      final label = (element.label ?? '').toLowerCase();
+      final name = (element.name ?? '').toLowerCase();
+      final isYear = label.contains('año') || label.contains('ano') || label.contains('year') ||
+                     name.contains('año') || name.contains('ano') || name.contains('year');
+      if (isYear && selectedYear != null) {
+        element.selectedValue = selectedYear?.name;
+        continue;
+      }
+
       if (element.isRequired == 'required') {
         if (element.type == 'checkbox') {
-          if (element.cbSelected == null) {
+          if (element.cbSelected == null || element.cbSelected!.isEmpty) {
             errorList.add('${element.name} ${MyStrings.isRequired}');
           }
         } else if (element.type == 'file') {
-          // Skip file validation for dynamic form - we use dedicated image picker
+          if (element.imageFile == null && vehicleImageFile == null) {
+            errorList.add('${element.name} ${MyStrings.isRequired}');
+          }
         } else {
-          if (element.selectedValue == '' || element.selectedValue == selectOne) {
+          if (element.selectedValue == '' || element.selectedValue == selectOne || element.selectedValue == null) {
             errorList.add('${element.name} ${MyStrings.isRequired}');
           }
         }

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:liztogo_pro/data/model/global/user/global_driver_model.dart';
 
 class AuthorizationResponseModel {
@@ -14,10 +15,30 @@ class AuthorizationResponseModel {
   }
 
   AuthorizationResponseModel.fromJson(dynamic json) {
-    _remark = json['remark'];
-    _status = json['status'];
-    _message = json['message'] != null ? List<String>.from(json["message"]!.map((x) => x.toString())) : [];
-    _data = json['data'] != null ? Data.fromJson(json['data']) : null;
+    dynamic parsed = json;
+    if (json is String && json.trim().startsWith('{')) {
+      try {
+        parsed = jsonDecode(json);
+      } catch (_) {}
+    }
+    if (parsed is Map) {
+      _remark = parsed['remark']?.toString();
+      _status = parsed['status']?.toString();
+      if (parsed['message'] is List) {
+        _message = List<String>.from((parsed['message'] as List).map((x) => x.toString()));
+      } else if (parsed['message'] is Map) {
+        _message = (parsed['message'] as Map).values.map((x) => x.toString()).toList();
+      } else if (parsed['message'] != null) {
+        _message = [parsed['message'].toString()];
+      } else {
+        _message = [];
+      }
+      _data = parsed['data'] != null && parsed['data'] is Map ? Data.fromJson(parsed['data']) : null;
+    } else {
+      _remark = 'error';
+      _status = 'error';
+      _message = json != null && json.toString().isNotEmpty ? [json.toString()] : [];
+    }
   }
 
   String? _remark;

@@ -116,7 +116,8 @@ class RegisterController extends Controller
         $user->email     = strtolower($data['email']);
         $user->password  = Hash::make($data['password']);
         $user->ref_by    = $referUser ? $referUser->id : 0;
-        $user->ev        = gs('ev') ? Status::UNVERIFIED : Status::VERIFIED;
+        $username        = !empty($data['username']) ? $data['username'] : (strtolower(preg_replace('/[^a-z0-9]/', '', $data['firstname'])) . '_' . rand(1000, 9999));
+        $user->username  = $username;
 
         if (!empty($data['mobile'])) {
             $user->mobile    = preg_replace('/\D+/', '', (string) $data['mobile']);

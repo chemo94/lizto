@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:lizto_delivery/core/helper/shared_preference_helper.dart';
 import 'package:lizto_delivery/core/route/route_middleware.dart';
@@ -7,7 +6,6 @@ import 'package:lizto_delivery/core/utils/my_strings.dart';
 import 'package:lizto_delivery/data/model/authorization/authorization_response_model.dart';
 import 'package:lizto_delivery/data/model/global/response_model/response_model.dart';
 import 'package:lizto_delivery/data/repo/auth/sms_email_verification_repo.dart';
-import 'package:lizto_delivery/data/services/firebase_phone_auth_service.dart';
 import 'package:lizto_delivery/presentation/components/snack_bar/show_custom_snackbar.dart';
 
 class SmsVerificationController extends GetxController {
@@ -18,7 +16,6 @@ class SmsVerificationController extends GetxController {
   bool isLoading = true;
   String currentText = '';
   String userPhone = '';
-  final FirebasePhoneAuthService firebasePhoneAuth = FirebasePhoneAuthService();
 
   final otpTextController = TextEditingController();
 
@@ -38,9 +35,8 @@ class SmsVerificationController extends GetxController {
       update();
       final response = await repo.sendAuthorizationRequest();
       userPhone = _phoneFrom(response);
-      await _sendFirebaseCode();
     } catch (error) {
-      CustomSnackBar.error(errorList: [_firebaseError(error)]);
+      CustomSnackBar.error(errorList: [error.toString()]);
     } finally {
       isLoading = false;
       update();
@@ -57,18 +53,8 @@ class SmsVerificationController extends GetxController {
     submitLoading = true;
     update();
 
-    String idToken;
-    try {
-      idToken = await firebasePhoneAuth.confirmCode(currentText);
-    } catch (error) {
-      submitLoading = false;
-      update();
-      CustomSnackBar.error(errorList: [_firebaseError(error)]);
-      return;
-    }
-
     ResponseModel responseModel = await repo.verify(
-      idToken,
+      currentText,
       isEmail: false,
       isTFA: false,
     );
@@ -98,7 +84,12 @@ class SmsVerificationController extends GetxController {
   Future<void> sendCodeAgain() async {
     resendLoading = true;
     update();
-    await _sendFirebaseCode(resend: true);
+    bool success = await repo.resendVerifyCode(isEmail: false);
+    if (success) {
+      CustomSnackBar.success(
+        successList: ['Código reenviado exitosamente a tu WhatsApp'],
+      );
+    }
     currentText = "";
     resendLoading = false;
     update();
@@ -106,24 +97,9 @@ class SmsVerificationController extends GetxController {
 
   String _phoneFrom(ResponseModel response) {
     final json = response.responseJson;
-    if (json is Map && json['data'] is Map && json['data']['phone_number'] != null) return json['data']['phone_number'].toString();
+    if (json is Map && json['data'] is Map && json['data']['phone_number'] != null) {
+      return json['data']['phone_number'].toString();
+    }
     return userPhone.startsWith('+') ? userPhone : '+$userPhone';
   }
-
-  Future<void> _sendFirebaseCode({bool resend = false}) => firebasePhoneAuth.sendCode(phoneNumber: userPhone, resend: resend, onAutoVerified: _submitFirebaseToken, onCodeSent: () {}, onError: (error) => CustomSnackBar.error(errorList: [_firebaseError(error)]));
-
-  Future<void> _submitFirebaseToken(String token) async {
-    currentText = '';
-    await _verifyToken(token);
-  }
-
-  Future<void> _verifyToken(String token) async {
-    final response = await repo.verify(token, isEmail: false);
-    if (response.statusCode == 200) {
-      final model = AuthorizationResponseModel.fromJson(response.responseJson);
-      if (model.status == MyStrings.success) RouteMiddleware.checkNGotoNext(user: model.data?.user);
-    }
-  }
-
-  String _firebaseError(Object error) => error is FirebaseAuthException ? (error.message ?? error.code) : error.toString();
 }

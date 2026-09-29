@@ -71,6 +71,12 @@ class VehicleVerificationRepo {
     fieldList.add({'color': colorValue});
     fieldList.add({'vehicle_number': vehicleNumber});
 
+    // Custom required form field from backend: año_del_vehículo
+    if (yearValue.isNotEmpty) {
+      fieldList.add({'año_del_vehículo': yearValue});
+      fieldList.add({'ano_del_vehiculo': yearValue});
+    }
+
     // Add rules
     for (int i = 0; i < ruleIds.length; i++) {
       fieldList.add({'rules[$i]': ruleIds[i]});
@@ -87,14 +93,28 @@ class VehicleVerificationRepo {
       finalMap.addAll(element);
     }
 
+    if (yearValue.isNotEmpty) {
+      finalMap['año_del_vehículo'] ??= yearValue;
+      finalMap['ano_del_vehiculo'] ??= yearValue;
+    }
+
     // Build files map directly with correct types
     Map<String, File> attachmentFiles = {};
     if (vehicleImageFile != null) {
-      attachmentFiles['imagen_del_vehiculo'] = vehicleImageFile;
       attachmentFiles['image'] = vehicleImageFile;
+      attachmentFiles['imagen_del_vehiculo'] = vehicleImageFile;
+      attachmentFiles['vehicle_image'] = vehicleImageFile;
     }
     if (vehicleDocumentFile != null) {
       attachmentFiles['documento_del_vehiculo'] = vehicleDocumentFile;
+      attachmentFiles['vehicle_document'] = vehicleDocumentFile;
+    }
+
+    // Include any files from dynamic formList
+    for (var fileItem in filesList) {
+      if (fileItem.key != null && fileItem.key!.isNotEmpty && fileItem.value is File) {
+        attachmentFiles[fileItem.key!] = fileItem.value as File;
+      }
     }
 
     ResponseModel responseModel = await apiClient.multipartRequest(
@@ -120,10 +140,12 @@ class VehicleVerificationRepo {
           }
         }
       } else if (e.type == 'file') {
-        // Skip file fields from dynamic form - we use dedicated image picker
+        if (e.imageFile != null && e.label != null && e.label!.isNotEmpty) {
+          filesList.add(ModelDynamicValue(e.label, e.imageFile!));
+        }
       } else {
         if (e.selectedValue != null && e.selectedValue.toString().isNotEmpty) {
-          fieldList.add({e.label ?? '': e.selectedValue});
+          fieldList.add({e.label ?? '': e.selectedValue.toString()});
         }
       }
     }

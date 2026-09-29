@@ -1105,11 +1105,20 @@ class PanelController extends Controller
             return apiResponse('invalid_package_mode', 'error', ['El plan no corresponde a la modalidad seleccionada']);
         }
 
-        [$seller, $store] = DB::transaction(function () use ($request, $package) {
+        $isPhoneVerified = false;
+        if (!empty($request->phone_token)) {
+            $tokenPayload = \App\Services\WhatsAppOtpService::verifyPhoneToken($request->phone_token);
+            if ($tokenPayload && ($tokenPayload['verified'] ?? false)) {
+                $isPhoneVerified = true;
+            }
+        }
+
+        [$seller, $store] = DB::transaction(function () use ($request, $package, $isPhoneVerified) {
             $seller = Seller::create($request->only(['name','email','phone','address','zone_id','business_name','trade_name']) + [
                 'password' => Hash::make($request->password), 'status' => 1,
                 'document_type' => $request->ruc_number ? 'RUC' : null,
                 'document_number' => $request->ruc_number,
+                'phone_verified_at' => $isPhoneVerified ? now() : null,
             ]);
             $subCat = \App\Models\SubCategory::first();
             $store = Store::create([

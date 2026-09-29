@@ -23,30 +23,38 @@ class AuthController extends Controller
             return apiResponse('seller_phone_not_available', 'error', ['La verificación telefónica corresponde al propietario del negocio']);
         }
 
-        return apiResponse('firebase_phone_required', 'success', ['Verifica tu teléfono con Firebase'], [
-            'phone_number' => app(FirebasePhoneAuthService::class)->phoneFor($account),
-            'verification_provider' => 'firebase',
+        $phone = $account->phone ?? '';
+        \App\Services\WhatsAppOtpService::sendOtp($phone, '51', $account->name ?? 'seller');
+
+        return apiResponse('code_sent', 'success', ['Enviamos un código de verificación por WhatsApp'], [
+            'phone_number' => $phone,
+            'verification_provider' => 'whatsapp',
         ]);
     }
 
     public function mobileVerification(Request $request)
     {
-        $request->validate(['firebase_id_token' => ['required', 'string']]);
+        $inputCode = trim((string) ($request->code ?? $request->otp_code ?? $request->verification_code ?? ''));
+
+        if (empty($inputCode) && $request->filled('firebase_id_token')) {
+            $inputCode = trim((string) $request->firebase_id_token);
+        }
+
+        if (empty($inputCode)) {
+            return apiResponse('validation_error', 'error', ['El código de verificación es obligatorio']);
+        }
+
         $account = auth()->user();
 
         if ($account instanceof PosStaff) {
             return apiResponse('seller_phone_not_available', 'error', ['La verificación telefónica corresponde al propietario del negocio']);
         }
 
-        try {
-            $matches = app(FirebasePhoneAuthService::class)->tokenMatchesAccount($request->firebase_id_token, $account);
-        } catch (Throwable $exception) {
-            report($exception);
-            return apiResponse('firebase_token_invalid', 'error', ['No se pudo validar el teléfono con Firebase']);
-        }
+        $phone = $account->phone ?? '';
+        $waVerify = \App\Services\WhatsAppOtpService::verifyOtp($phone, $inputCode, '51');
 
-        if (!$matches) {
-            return apiResponse('phone_not_match', 'error', ['El teléfono verificado no corresponde a esta cuenta']);
+        if (!($waVerify['valid'] ?? false)) {
+            return apiResponse('code_not_match', 'error', ['El código de verificación ingresado no es válido o ha expirado']);
         }
 
         $account->phone_verified_at = now();

@@ -78,42 +78,64 @@ class UserController extends Controller
             return apiResponse("already_completed", "error", $notify);
         }
 
-        $countryData  = (array)json_decode(file_get_contents(resource_path('views/partials/country.json')));
-        $countryCodes = implode(',', array_keys($countryData));
-        $mobileCodes  = implode(',', array_column($countryData, 'dial_code'));
-        $countries    = implode(',', array_column($countryData, 'country'));
+        $hasMobile = !empty($user->mobile) && $user->mobile !== 'null';
+        $hasUsername = !empty($user->username) && $user->username !== 'null';
 
+        $rules = [
+            'country_code' => 'nullable|string|max:10',
+            'country'      => 'nullable|string|max:50',
+            'mobile_code'  => 'nullable|string|max:10',
+            'username'     => [
+                $hasUsername ? 'nullable' : 'required',
+                'min:3',
+                Rule::unique('users')->ignore($user->id),
+            ],
+            'mobile'       => [
+                $hasMobile ? 'nullable' : 'required',
+                'regex:/^([0-9]*)$/',
+                Rule::unique('users')->where('dial_code', $request->mobile_code ?? $user->dial_code)->ignore($user->id),
+            ],
+        ];
 
-
-        $validator = Validator::make($request->all(), [
-            'country_code' => 'required|in:' . $countryCodes,
-            'country'      => 'required|in:' . $countries,
-            'mobile_code'  => 'required|in:' . $mobileCodes,
-            'username'     => 'required|unique:users|min:6',
-            'mobile'       => ['required', 'regex:/^([0-9]*)$/', Rule::unique('users')->where('dial_code', $request->mobile_code)],
-        ]);
+        $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
             return apiResponse("validation_error", "error", $validator->errors()->all());
         }
 
-
-        if (preg_match("/[^a-z0-9_]/", trim($request->username))) {
-            $notify[] = 'No special character, space or capital letters in username';
-            return apiResponse("validation_error", "error", $notify);
+        if ($request->filled('username') && $request->username !== 'null') {
+            if (preg_match("/[^a-z0-9_]/", trim($request->username))) {
+                $notify[] = 'No special character, space or capital letters in username';
+                return apiResponse("validation_error", "error", $notify);
+            }
+            $user->username = trim($request->username);
+        } elseif (empty($user->username) || $user->username === 'null') {
+            $base = strtolower(preg_replace('/[^a-z0-9]/', '', $user->firstname ?? 'user'));
+            if (empty($base)) $base = 'user';
+            $gen = $base . '_' . rand(1000, 9999);
+            while (User::where('username', $gen)->where('id', '!=', $user->id)->exists()) {
+                $gen = $base . '_' . rand(10000, 99999);
+            }
+            $user->username = $gen;
         }
 
+        if ($request->filled('mobile') && $request->mobile !== 'null') {
+            $user->mobile = preg_replace('/\D+/', '', (string) $request->mobile);
+        }
+        if ($request->filled('mobile_code') && $request->mobile_code !== 'null') {
+            $user->dial_code = preg_replace('/\D+/', '', (string) $request->mobile_code);
+        }
+        if ($request->filled('country_code') && $request->country_code !== 'null') {
+            $user->country_code = $request->country_code;
+        }
+        if ($request->filled('country') && $request->country !== 'null') {
+            $user->country_name = $request->country;
+        }
 
-        $user->country_code = $request->country_code;
-        $user->mobile       = $request->mobile;
-        $user->username     = $request->username;
-
-        $user->address      = $request->address;
-        $user->city         = $request->city;
-        $user->state        = $request->state;
-        $user->zip          = $request->zip;
-        $user->country_name = @$request->country;
-        $user->dial_code    = $request->mobile_code;
+        $user->address      = ($request->address !== 'null') ? ($request->address ?? $user->address) : $user->address;
+        $user->city         = ($request->city !== 'null') ? ($request->city ?? $user->city) : $user->city;
+        $user->state        = ($request->state !== 'null') ? ($request->state ?? $user->state) : $user->state;
+        $user->zip          = ($request->zip !== 'null') ? ($request->zip ?? $user->zip) : $user->zip;
 
         $user->profile_complete = Status::YES;
         $user->save();
@@ -282,9 +304,30 @@ class UserController extends Controller
 
     public function userInfo()
     {
+        $user = auth()->user();
+        if ($user) {
+            if (empty($user->username) || $user->username === 'null') {
+                $base = strtolower(preg_replace('/[^a-z0-9]/', '', $user->firstname ?? 'user'));
+                if (empty($base) && !empty($user->email)) {
+                    $base = strtolower(preg_replace('/[^a-z0-9]/', '', explode('@', $user->email)[0]));
+                }
+                if (empty($base)) $base = 'user';
+                $gen = $base . '_' . rand(1000, 9999);
+                while (User::where('username', $gen)->where('id', '!=', $user->id)->exists()) {
+                    $gen = $base . '_' . rand(10000, 99999);
+                }
+                $user->username = $gen;
+                $user->save();
+            }
+            if ($user->mobile === 'null') {
+                $user->mobile = null;
+                $user->save();
+            }
+        }
+
         $notify[] = 'User information';
         return apiResponse("user_info", "success", $notify, [
-            'user'       => auth()->user(),
+            'user'       => $user,
             'image_path' => getFilePath('user')
         ]);
     }

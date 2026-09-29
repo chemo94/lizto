@@ -35,6 +35,7 @@ class SocialAuthRepo {
 
     if (map != null && deviceToken.isNotEmpty) {
       map['device_token'] = deviceToken;
+      map['fcm_token'] = deviceToken;
     }
 
     String url = '${UrlContainer.baseUrl}${UrlContainer.socialLoginEndPoint}';
@@ -79,6 +80,7 @@ class SocialAuthRepo {
       'dial_code': dialCode,
       'user_type': userType,
       if (deviceToken.isNotEmpty) 'device_token': deviceToken,
+      if (deviceToken.isNotEmpty) 'fcm_token': deviceToken,
     };
     return await apiClient.request(url, Method.postMethod, map, passHeader: false);
   }

@@ -24,6 +24,9 @@ class ApiClient extends LocalStorageService {
       "Accept": "application/json",
       "dev-token": Environment.devToken,
     };
+    _dio.options.connectTimeout = const Duration(seconds: 15);
+    _dio.options.receiveTimeout = const Duration(seconds: 20);
+    _dio.options.sendTimeout = const Duration(seconds: 15);
     _dio.options.followRedirects = false;
     _dio.options.validateStatus = (status) {
       return status! < 500;

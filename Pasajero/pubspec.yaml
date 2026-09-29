@@ -3,7 +3,7 @@ description: LiztoGo is a complete ride-sharing solution.
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 4.1.7+36
+version: 4.1.10+39
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
@@ -46,6 +46,7 @@ dependencies:
   permission_handler: ^12.0.1
   pinput: ^5.0.2
   pusher_reverb_flutter: ^0.0.7
+  web_socket_channel: ^3.0.3
   share_plus: ^12.0.1
   shared_preferences: ^2.5.3
   sheet: ^1.0.0

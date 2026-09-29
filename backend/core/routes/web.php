@@ -6,7 +6,7 @@ Route::get('/clear', function () {
     \Illuminate\Support\Facades\Artisan::call('optimize:clear');
 });
 
-Route::get('app/deposit/confirm/{hash}', 'Gateway\PaymentController@appDepositConfirm')->name('deposit.app.confirm');
+Route::get('app/deposit/confirm/{hash}', 'Gateway\PaymentController@appDepositConfirm')->where('hash', '.*')->name('deposit.app.confirm');
 Route::get('cron', 'CronController@cron')->name('cron');
 
 // Kiosco React SPA

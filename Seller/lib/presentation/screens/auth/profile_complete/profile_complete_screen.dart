@@ -159,6 +159,7 @@ class _ProfileCompleteScreenState extends State<ProfileCompleteScreen> {
                                     height: Dimensions.space20,
                                   ),
                                   CustomTextField(
+                                    readOnly: controller.isPhonePreFilled,
                                     labelText: MyStrings.phone.tr,
                                     hintText: "XXX-XXX-XXXX",
                                     textInputType: TextInputType.number,
@@ -166,16 +167,38 @@ class _ProfileCompleteScreenState extends State<ProfileCompleteScreen> {
                                     focusNode: controller.countryFocusNode,
                                     controller: controller.mobileNoController,
                                     nextFocus: controller.addressFocusNode,
+                                    suffixWidget: controller.isPhonePreFilled
+                                        ? const Padding(
+                                            padding: EdgeInsets.symmetric(horizontal: 12),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.check_circle, color: Color(0xFF25D366), size: 18),
+                                                SizedBox(width: 4),
+                                                Text(
+                                                  'Registrado',
+                                                  style: TextStyle(
+                                                    color: Color(0xFF25D366),
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          )
+                                        : null,
                                     prefixIcon: IntrinsicWidth(
                                       child: Padding(
                                         padding: EdgeInsetsGeometry.symmetric(horizontal: Dimensions.space10),
                                         child: GestureDetector(
-                                          onTap: () {
-                                            CountryBottomSheet.profileBottomSheet(
-                                              context,
-                                              controller,
-                                            );
-                                          },
+                                          onTap: controller.isPhonePreFilled
+                                              ? null
+                                              : () {
+                                                  CountryBottomSheet.profileBottomSheet(
+                                                    context,
+                                                    controller,
+                                                  );
+                                                },
                                           child: Row(
                                             crossAxisAlignment: CrossAxisAlignment.center,
                                             mainAxisAlignment: MainAxisAlignment.center,
@@ -200,10 +223,12 @@ class _ProfileCompleteScreenState extends State<ProfileCompleteScreen> {
                                                   fontSize: Dimensions.fontOverLarge,
                                                 ),
                                               ),
-                                              Icon(
-                                                Icons.keyboard_arrow_down_rounded,
-                                                color: MyColor.getBodyTextColor(),
-                                              ),
+                                              if (!controller.isPhonePreFilled) ...[
+                                                Icon(
+                                                  Icons.keyboard_arrow_down_rounded,
+                                                  color: MyColor.getBodyTextColor(),
+                                                ),
+                                              ],
                                               spaceSide(Dimensions.space2),
                                               Container(
                                                 color: MyColor.naturalTextColor,

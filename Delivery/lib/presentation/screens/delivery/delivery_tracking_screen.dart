@@ -10,8 +10,10 @@ import 'package:lizto_delivery/data/model/delivery/delivery_models.dart';
 import 'package:lizto_delivery/data/services/directions_service.dart';
 import 'package:lizto_delivery/data/services/pusher_service.dart';
 import 'package:lizto_delivery/environment.dart';
-
-import '../../../data/model/delivery/delivery_models.dart';
+import 'package:lizto_delivery/core/helper/shared_preference_helper.dart';
+import 'package:lizto_delivery/core/utils/url_container.dart';
+import 'package:lizto_delivery/data/services/api_client.dart';
+import 'package:lizto_delivery/data/services/realtime_service.dart';
 
 class DeliveryTrackingScreen extends StatefulWidget {
   final int orderId;
@@ -33,6 +35,8 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
   String _statusText = 'Buscando repartidor...';
   String _etaText = '';
   Timer? _refreshTimer;
+  StreamSubscription? _wsSub;
+  String? _courierTopic;
 
   @override
   void initState() {
@@ -100,7 +104,64 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
       pm.addListener(_onPusherEvent);
       final channel = 'private-tracking.${widget.order.id ?? widget.orderId}';
       pm.checkAndInitIfNeeded(channel);
+
+      // WebSocket nativo
+      final apiClient = Get.find<ApiClient>();
+      final token = apiClient.sharedPreferences.getString(SharedPreferenceHelper.accessTokenKey) ?? '';
+      if (token.isNotEmpty) {
+        RealtimeManager().init(wsUrl: UrlContainer.wsUrl, token: token).then((_) {
+          final effectiveOrderId = widget.order.id ?? widget.orderId;
+          RealtimeManager().subscribe('order.$effectiveOrderId');
+
+          final courierId = widget.order.driverId ?? widget.order.driver?['id'];
+          if (courierId != null) {
+            _courierTopic = 'driver.$courierId';
+            RealtimeManager().subscribe(_courierTopic!);
+          }
+
+          _wsSub?.cancel();
+          _wsSub = RealtimeManager().onBroadcast.listen(_onRealtimeBroadcast);
+        }).catchError((e) {
+          debugPrint('Realtime init error in DeliveryTracking: $e');
+        });
+      }
     } catch (_) {}
+  }
+
+  void _onRealtimeBroadcast(Map<String, dynamic> msg) {
+    try {
+      final payload = msg['payload'];
+      if (payload is Map<String, dynamic>) {
+        if (payload['type'] == 'driver_location') {
+          final lat = (payload['lat'] as num?)?.toDouble();
+          final lng = (payload['lng'] as num?)?.toDouble();
+          final bearing = (payload['bearing'] as num?)?.toDouble() ?? 0.0;
+          if (lat != null && lng != null && mounted) {
+            setState(() {
+              _courierLocation = LatLng(lat, lng);
+              _markers.removeWhere((m) => m.markerId == const MarkerId('courier'));
+              _markers.add(Marker(
+                markerId: const MarkerId('courier'),
+                position: _courierLocation!,
+                icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+                infoWindow: const InfoWindow(title: 'Repartidor'),
+                rotation: bearing,
+              ));
+              if (_storeLocation != null && !_routeLoaded) {
+                _loadRoute();
+              }
+            });
+          }
+        } else if (payload['type'] == 'order_status' || payload['status'] != null) {
+          final status = (payload['status'] ?? payload['order']?['status'])?.toString() ?? '';
+          if (status.isNotEmpty) {
+            _updateStatusText(status);
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error onRealtimeBroadcast Delivery: $e');
+    }
   }
 
   void _onPusherEvent(PusherEvent event) {
@@ -196,6 +257,12 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
 
   @override
   void dispose() {
+    _wsSub?.cancel();
+    final effectiveOrderId = widget.order.id ?? widget.orderId;
+    RealtimeManager().unsubscribe('order.$effectiveOrderId');
+    if (_courierTopic != null) {
+      RealtimeManager().unsubscribe(_courierTopic!);
+    }
     PusherManager().removeListener(_onPusherEvent);
     _refreshTimer?.cancel();
     _mapController?.dispose();

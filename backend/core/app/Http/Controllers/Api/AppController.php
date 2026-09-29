@@ -160,13 +160,16 @@ class AppController extends Controller
 
         $user = $this->userFromBearerToken($request);
 
-        // Fallback: check web session guards (admin/seller from browser)
+        // Fallback: check web session guards (admin/seller from browser).
+        // En contexto API (stateless, token Bearer) no hay sesión: acceder a
+        // $request->session() lanza "Session store not set on request" (HTTP 500)
+        // y rompe la autenticación de Reverb para las apps móviles.
         if (!$user) {
             if (auth()->guard('admin')->check()) {
                 $user = auth()->guard('admin')->user();
             } elseif (auth()->guard('seller')->check()) {
                 $user = auth()->guard('seller')->user();
-            } elseif ($request->session() && $request->session()->has('seller_id')) {
+            } elseif ($request->hasSession() && $request->session()->has('seller_id')) {
                 $user = \App\Models\Seller::find($request->session()->get('seller_id'));
             }
         }

@@ -582,6 +582,15 @@ class CourierJobController extends Controller
             $favorId ?? 0, $request->latitude, $request->longitude, $request->bearing, $orderId, $userId
         ));
 
+        // WebSocket nativo: publicar la posición en vivo del repartidor.
+        \App\Services\RealtimePublisher::driverLocation(
+            (int) $driver->id,
+            (float) $request->latitude,
+            (float) $request->longitude,
+            $request->filled('bearing') ? (float) $request->bearing : null,
+            $request->filled('speed') ? (float) $request->speed : null,
+        );
+
         // Sprint 1: Broadcast ETA update with location
         if ($favorId) {
             try {

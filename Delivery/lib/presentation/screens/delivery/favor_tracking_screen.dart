@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -17,6 +18,9 @@ import 'package:lizto_delivery/presentation/screens/delivery/favor_review_screen
 import 'package:lizto_delivery/presentation/screens/delivery/shopping_checklist_screen.dart';
 import 'package:lizto_delivery/data/model/delivery/shopping_models.dart';
 import 'package:lizto_delivery/data/repo/delivery/shopping_repo.dart';
+import 'package:lizto_delivery/core/helper/shared_preference_helper.dart';
+import 'package:lizto_delivery/core/utils/url_container.dart';
+import 'package:lizto_delivery/data/services/realtime_service.dart';
 
 class FavorTrackingScreen extends StatefulWidget {
   final int favorId;
@@ -50,6 +54,8 @@ class _FavorTrackingScreenState extends State<FavorTrackingScreen> {
   String? _receiptUrl;
   String? _storePhotoUrl;
   ShoppingBudget? _shoppingBudget;
+  StreamSubscription? _favorWsSub;
+  String? _courierTopic;
 
   @override
   void initState() {
@@ -76,6 +82,48 @@ class _FavorTrackingScreenState extends State<FavorTrackingScreen> {
     _favorChannel = 'private-favor.${widget.favorId}';
     PusherManager().addListener(_onFavorEvent);
     PusherManager().checkAndInitIfNeeded(_favorChannel!);
+
+    // WebSocket nativo
+    try {
+      final apiClient = Get.find<ApiClient>();
+      final token = apiClient.sharedPreferences.getString(SharedPreferenceHelper.accessTokenKey) ?? '';
+      if (token.isNotEmpty) {
+        RealtimeManager().init(wsUrl: UrlContainer.wsUrl, token: token).then((_) {
+          RealtimeManager().subscribe('favor.${widget.favorId}');
+          _favorWsSub?.cancel();
+          _favorWsSub = RealtimeManager().onBroadcast.listen((msg) {
+            final topic = msg['topic']?.toString() ?? '';
+            final payload = msg['payload'];
+            if (payload is Map<String, dynamic>) {
+              if (payload['type'] == 'driver_location') {
+                final lat = (payload['lat'] as num?)?.toDouble();
+                final lng = (payload['lng'] as num?)?.toDouble();
+                final bearing = (payload['bearing'] as num?)?.toDouble() ?? 0.0;
+                if (lat != null && lng != null && mounted) {
+                  setState(() {
+                    _markers.removeWhere((m) => m.markerId == const MarkerId('courier'));
+                    _markers.add(Marker(
+                      markerId: const MarkerId('courier'),
+                      position: LatLng(lat, lng),
+                      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+                      rotation: bearing,
+                      infoWindow: const InfoWindow(title: 'Repartidor'),
+                    ));
+                  });
+                }
+              } else if (topic == 'favor.${widget.favorId}') {
+                _loadShoppingStatus();
+                if (mounted && Get.isRegistered<FavorController>()) {
+                  Get.find<FavorController>().loadFavorDetail(widget.favorId);
+                }
+              }
+            }
+          });
+        }).catchError((e) {
+          debugPrint('Realtime init error in FavorTracking: $e');
+        });
+      }
+    } catch (_) {}
   }
 
   void _onFavorEvent(PusherEvent event) {
@@ -148,6 +196,11 @@ class _FavorTrackingScreenState extends State<FavorTrackingScreen> {
 
   @override
   void dispose() {
+    _favorWsSub?.cancel();
+    RealtimeManager().unsubscribe('favor.${widget.favorId}');
+    if (_courierTopic != null) {
+      RealtimeManager().unsubscribe(_courierTopic!);
+    }
     PusherManager().removeListener(_onJobEvent);
     if (_favorChannel != null) {
       PusherManager().removeListener(_onFavorEvent);

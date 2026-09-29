@@ -293,7 +293,7 @@ class ManageDriversController extends Controller {
             'lastname'  => 'required|string|max:40',
             'email'     => 'required|email|string|max:40|unique:drivers,email,' . $driver->id,
             'mobile'    => 'required|string|max:40',
-            'service'   => 'nullable|integer|exists:drivers,id',
+            'service'   => 'nullable|integer|exists:services,id',
             'service_type' => 'nullable|string|in:ride,delivery,both',
             'country'   => 'required|in:' . $countries,
         ]);

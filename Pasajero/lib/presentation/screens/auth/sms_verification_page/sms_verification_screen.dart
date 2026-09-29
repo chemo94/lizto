@@ -79,11 +79,29 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
                               ),
                             ),
                           ),
-                          Image.asset(
-                            MyImages.phoneVerificationImage,
-                            width: Dimensions.space50 * 4,
+                          Stack(
+                            alignment: Alignment.bottomRight,
+                            children: [
+                              Image.asset(
+                                MyImages.phoneVerificationImage,
+                                width: Dimensions.space50 * 4,
+                              ),
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                margin: const EdgeInsets.only(right: 12, bottom: 4),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF25D366),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.chat_bubble_rounded,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
+                              ),
+                            ],
                           ),
-                          spaceDown(Dimensions.space40),
+                          spaceDown(Dimensions.space30),
                           Padding(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 25,
@@ -97,7 +115,7 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
                                 ),
                                 spaceDown(Dimensions.space8),
                                 DefaultText(
-                                  text: '${MyStrings.verifyCodeSendToSubText.tr} ${MyUtils.maskSensitiveInformation(controller.userPhone)}',
+                                  text: 'Enviamos un código de 6 dígitos a tu WhatsApp al número ${MyUtils.maskSensitiveInformation(controller.userPhone)}',
                                   textAlign: TextAlign.center,
                                   fontSize: Dimensions.fontLarge,
                                   textColor: MyColor.getBodyTextColor(),
@@ -148,11 +166,11 @@ class _SmsVerificationScreenState extends State<SmsVerificationScreen> {
                                               ),
                                             )
                                           : Text(
-                                              MyStrings.resendCode.tr,
+                                              'Reenviar por WhatsApp',
                                               maxLines: 2,
                                               overflow: TextOverflow.ellipsis,
                                               style: boldLarge.copyWith(
-                                                color: MyColor.getPrimaryColor(),
+                                                color: const Color(0xFF25D366),
                                               ),
                                             ),
                                     ),

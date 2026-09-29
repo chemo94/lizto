@@ -28,12 +28,18 @@ class RouteMiddleware {
       );
       await apiClient.sharedPreferences.setString(
         SharedPreferenceHelper.userPhoneNumberKey,
-        user?.mobile ?? '',
+        (user?.mobile == null || user?.mobile == 'null') ? '' : user!.mobile!,
       );
       await apiClient.sharedPreferences.setString(
         SharedPreferenceHelper.userNameKey,
-        user?.username ?? '',
+        (user?.username == null || user?.username == 'null') ? '' : user!.username!,
       );
+      if (user?.loginBy != null && user!.loginBy!.isNotEmpty) {
+        await apiClient.sharedPreferences.setString(
+          'login_by',
+          user.loginBy!,
+        );
+      }
 
       await apiClient.sharedPreferences.setString(
         SharedPreferenceHelper.userProfileKey,

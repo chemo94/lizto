@@ -285,7 +285,13 @@ class _VehicleVerificationScreenState extends State<VehicleVerificationScreen> {
                                 spaceDown(Dimensions.space20),
 
                                 // Campos del Formulario Dinámico
-                                if (controller.formList.isNotEmpty) ...[
+                                if (controller.formList.where((m) {
+                                  final label = (m.label ?? '').toLowerCase();
+                                  final name = (m.name ?? '').toLowerCase();
+                                  final isYear = label.contains('año') || label.contains('ano') || label.contains('year') ||
+                                                 name.contains('año') || name.contains('ano') || name.contains('year');
+                                  return !(isYear && controller.yearList.isNotEmpty);
+                                }).isNotEmpty) ...[
                                   CustomAppCard(
                                     width: double.infinity,
                                     child: SingleChildScrollView(
@@ -300,6 +306,13 @@ class _VehicleVerificationScreenState extends State<VehicleVerificationScreen> {
                                             itemCount: controller.formList.length,
                                             itemBuilder: (ctx, index) {
                                               GlobalFormModel? model = controller.formList[index];
+                                              final label = (model.label ?? '').toLowerCase();
+                                              final name = (model.name ?? '').toLowerCase();
+                                              final isYear = label.contains('año') || label.contains('ano') || label.contains('year') ||
+                                                             name.contains('año') || name.contains('ano') || name.contains('year');
+                                              if (isYear && controller.yearList.isNotEmpty) {
+                                                return const SizedBox.shrink();
+                                              }
                                               return Padding(
                                                 padding: const EdgeInsets.all(3),
                                                 child: Column(
@@ -331,6 +344,7 @@ class _VehicleVerificationScreenState extends State<VehicleVerificationScreen> {
                                                                 isShowInstructionWidget: true,
                                                                 instructions: model.instruction,
                                                                 labelText: model.name ?? '',
+                                                                controller: model.textEditingController,
                                                                 isRequired: model.isRequired == 'optional' ? false : true,
                                                                 textInputType: model.type == 'number'
                                                                     ? TextInputType.number
@@ -346,6 +360,9 @@ class _VehicleVerificationScreenState extends State<VehicleVerificationScreen> {
                                                                   );
                                                                 },
                                                                 validator: (value) {
+                                                                  if (isYear && controller.selectedYear != null) {
+                                                                    return null;
+                                                                  }
                                                                   if (model.isRequired != 'optional' && value.toString().isEmpty) {
                                                                     return '${model.name.toString().capitalizeFirst} ${MyStrings.isRequired}';
                                                                   } else {

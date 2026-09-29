@@ -100,6 +100,14 @@ class SocialAuthController extends GetxController {
           (responseModel.responseJson),
         );
         if (loginModel.status.toString().toLowerCase() == MyStrings.success.toLowerCase()) {
+          if (provider != null && (loginModel.data?.user?.loginBy == null || loginModel.data?.user?.loginBy?.isEmpty == true)) {
+            loginModel.data?.user?.loginBy = provider;
+          }
+          if (provider != null) {
+            try {
+              authRepo.apiClient.sharedPreferences.setString('login_by', provider);
+            } catch (_) {}
+          }
           await RouteHelper.checkUserStatusAndGoToNextStep(
             loginModel.data?.user,
             accessToken: loginModel.data?.accessToken ?? "",

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:liztogo_pro/core/helper/shared_preference_helper.dart';
 import 'package:liztogo_pro/core/helper/string_format_helper.dart';
 import 'package:liztogo_pro/core/route/route.dart';
 import 'package:liztogo_pro/core/utils/my_strings.dart';
@@ -42,17 +43,89 @@ class ProfileCompleteController extends GetxController {
   FocusNode countryFocusNode = FocusNode();
   final FocusNode mobileFocusNode = FocusNode();
   FocusNode userNameFocusNode = FocusNode();
+  bool isPhonePreFilled = false;
 
   Future<void> initialData() async {
-    // await getZoneData();
-    countryList = profileRepo.apiClient.getOperatingCountries();
+    isLoading = true;
     update();
+    countryList = profileRepo.apiClient.getOperatingCountries();
     if (countryList.isNotEmpty) {
       selectCountryData(countryList.first);
     }
+
+    String savedPhone = profileRepo.apiClient.sharedPreferences.getString(
+          SharedPreferenceHelper.userPhoneNumberKey,
+        ) ??
+        '';
+    if (savedPhone.isNotEmpty && savedPhone != 'null') {
+      mobileNoController.text = savedPhone;
+    } else {
+      mobileNoController.text = '';
+    }
+
+    String savedUsername = profileRepo.apiClient.sharedPreferences.getString(
+          SharedPreferenceHelper.userNameKey,
+        ) ??
+        '';
+    if (savedUsername.isNotEmpty && savedUsername != 'null') {
+      userNameController.text = savedUsername;
+    } else {
+      userNameController.text = '';
+    }
+
+    String loginBy = '';
+    try {
+      loginBy = profileRepo.apiClient.sharedPreferences.getString('login_by') ?? '';
+    } catch (_) {}
+
+    try {
+      profileResponseModel = await profileRepo.loadProfileInfo();
+      if (profileResponseModel.data != null && profileResponseModel.status?.toLowerCase() == MyStrings.success.toLowerCase()) {
+        final driver = profileResponseModel.data?.driver;
+        if (driver?.loginBy != null && driver!.loginBy!.isNotEmpty) {
+          loginBy = driver.loginBy!;
+        }
+        if (driver?.mobile != null && driver!.mobile!.isNotEmpty && driver.mobile != 'null') {
+          mobileNoController.text = driver.mobile!;
+          phoneData = driver.mobile!;
+        }
+        if (driver?.username != null && driver!.username!.isNotEmpty && driver.username != 'null') {
+          userNameController.text = driver.username!;
+        }
+        if (driver?.address != null && driver!.address!.isNotEmpty && driver.address != 'null') {
+          addressController.text = driver.address!;
+        }
+        if (driver?.city != null && driver!.city!.isNotEmpty && driver.city != 'null') {
+          cityController.text = driver.city!;
+        }
+        if (driver?.state != null && driver!.state!.isNotEmpty && driver.state != 'null') {
+          stateController.text = driver.state!;
+        }
+        if (driver?.zip != null && driver!.zip!.isNotEmpty && driver.zip != 'null') {
+          zipCodeController.text = driver.zip!;
+        }
+      }
+    } catch (_) {}
+
+    if (mobileNoController.text.trim() == 'null') {
+      mobileNoController.text = '';
+    }
+    if (userNameController.text.trim() == 'null') {
+      userNameController.text = '';
+    }
+
+    bool isSocialLogin = loginBy == '1' || loginBy == '2' || loginBy == 'google' || loginBy == 'apple';
+    if (isSocialLogin) {
+      if (mobileNoController.text.trim() == 'null') {
+        mobileNoController.text = '';
+      }
+      isPhonePreFilled = false;
+    } else {
+      isPhonePreFilled = mobileNoController.text.trim().isNotEmpty && mobileNoController.text.trim() != 'null';
+    }
+
     isLoading = false;
     update();
-    printX(countryList.first.toJson());
   }
 
   TextEditingController searchController = TextEditingController();

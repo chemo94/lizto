@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:get/get.dart';
@@ -14,11 +15,16 @@ import 'package:liztogo_pro/data/services/pusher_service.dart';
 
 import '../../../presentation/components/snack_bar/show_custom_snackbar.dart';
 
+import '../../../core/utils/url_container.dart';
+import '../../services/realtime_service.dart';
+
 class PusherRideController extends GetxController {
   ApiClient apiClient;
   RideMessageController rideMessageController;
   RideDetailsController rideDetailsController;
   String rideID;
+  StreamSubscription? _rideWsSub;
+
   PusherRideController({
     required this.apiClient,
     required this.rideMessageController,
@@ -30,6 +36,35 @@ class PusherRideController extends GetxController {
   void onInit() {
     super.onInit();
     PusherManager().addListener(onEvent);
+    _initRideRealtime();
+  }
+
+  void _initRideRealtime() async {
+    try {
+      final token = apiClient.sharedPreferences.getString(SharedPreferenceHelper.accessTokenKey) ?? '';
+      if (token.isNotEmpty && rideID.isNotEmpty) {
+        await RealtimeManager().init(wsUrl: UrlContainer.wsUrl, token: token);
+        RealtimeManager().subscribe('ride.$rideID');
+        _rideWsSub?.cancel();
+        _rideWsSub = RealtimeManager().onTopic('ride.$rideID').listen((msg) {
+          final payload = msg['payload'];
+          if (payload is Map<String, dynamic>) {
+            final eventName = (payload['event'] ?? payload['type'] ?? '').toString().toLowerCase();
+            printX('Realtime WS Ride Event: $eventName $payload');
+            if (eventName == "cash_payment_request") {
+              if (isRideDetailsPage()) {
+                rideDetailsController.onShowPaymentDialog(Get.context!);
+              }
+            } else if (eventName == "online_payment_received") {
+              MyUtils.vibrate();
+              CustomSnackBar.success(successList: [MyStrings.rideCompletedSuccessFully]);
+            }
+          }
+        });
+      }
+    } catch (e) {
+      printX("Error initializing ride realtime: $e");
+    }
   }
 
   void onEvent(PusherEvent event) {
@@ -131,6 +166,10 @@ class PusherRideController extends GetxController {
 
   @override
   void onClose() {
+    _rideWsSub?.cancel();
+    if (rideID.isNotEmpty) {
+      RealtimeManager().unsubscribe('ride.$rideID');
+    }
     PusherManager().removeListener(onEvent);
     super.onClose();
   }

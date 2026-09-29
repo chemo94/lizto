@@ -1,13 +1,17 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:liztogo_repartidor/core/helper/shared_preference_helper.dart';
 import 'package:liztogo_repartidor/core/helper/string_format_helper.dart';
 import 'package:liztogo_repartidor/core/utils/audio_utils.dart';
 import 'package:liztogo_repartidor/core/utils/my_color.dart';
+import 'package:liztogo_repartidor/core/utils/url_container.dart';
 import 'package:liztogo_repartidor/data/controller/delivery/courier_controller.dart';
 import 'package:liztogo_repartidor/data/services/api_client.dart';
 import 'package:liztogo_repartidor/data/services/pusher_service.dart';
+import 'package:liztogo_repartidor/data/services/realtime_service.dart';
 
 class CourierNotificationItem {
   final String id;
@@ -33,6 +37,7 @@ class CourierNotificationService extends GetxController {
   bool _subscribed = false;
   final RxList<CourierNotificationItem> liveNotifications = <CourierNotificationItem>[].obs;
   final Set<String> _handledEventIds = <String>{};
+  StreamSubscription? _realtimeWsSub;
 
   static void init() {
     if (!Get.isRegistered<CourierNotificationService>()) {
@@ -46,6 +51,7 @@ class CourierNotificationService extends GetxController {
     try {
       final apiClient = Get.find<ApiClient>();
       final userId = apiClient.getUserID();
+      final token = apiClient.sharedPreferences.getString(SharedPreferenceHelper.accessTokenKey) ?? '';
 
       PusherManager().checkAndInitIfNeeded('private-nearby-couriers');
       if (userId.isNotEmpty) {
@@ -53,9 +59,46 @@ class CourierNotificationService extends GetxController {
       }
 
       PusherManager().addListener(_onPusherEvent);
+
+      // WebSocket nativo
+      if (token.isNotEmpty) {
+        RealtimeManager().init(wsUrl: UrlContainer.wsUrl, token: token).then((_) {
+          if (userId.isNotEmpty) {
+            RealtimeManager().subscribe('driver.$userId');
+          }
+          _realtimeWsSub?.cancel();
+          _realtimeWsSub = RealtimeManager().onBroadcast.listen(_onRealtimeBroadcast);
+        }).catchError((e) {
+          printX('RealtimeManager init error: $e');
+        });
+      }
+
       _subscribed = true;
     } catch (e) {
       printX('CourierNotificationService init error: $e');
+    }
+  }
+
+  void _onRealtimeBroadcast(Map<String, dynamic> msg) {
+    try {
+      final topic = msg['topic']?.toString() ?? '';
+      final payload = msg['payload'];
+      printX('Realtime WS Courier broadcast: $topic -> $payload');
+
+      if (payload is Map<String, dynamic>) {
+        final title = payload['title']?.toString() ?? 'Nuevo Pedido';
+        final message = payload['message']?.toString() ?? 'Tienes una nueva actualización';
+        _refreshPendingJobs();
+        _addLiveNotification(
+          title: title,
+          message: message,
+          icon: Icons.delivery_dining,
+          iconColor: MyColor.primaryColor,
+          type: payload['type']?.toString(),
+        );
+      }
+    } catch (e) {
+      printX('Error processing Realtime WS in Courier: $e');
     }
   }
 
@@ -534,6 +577,7 @@ class CourierNotificationService extends GetxController {
 
   @override
   void onClose() {
+    _realtimeWsSub?.cancel();
     PusherManager().removeListener(_onPusherEvent);
     super.onClose();
   }

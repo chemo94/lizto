@@ -12,6 +12,7 @@ use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
 class RegisterController extends Controller
@@ -47,17 +48,26 @@ class RegisterController extends Controller
             $agree = 'required';
         }
 
+        $dialCode = preg_replace('/\D+/', '', (string) ($data['dial_code'] ?? '51'));
         $validate = Validator::make($data, [
-            'firstname'    => 'required',
-            'lastname'     => 'required',
+            'firstname'    => 'required|string|max:40',
+            'lastname'     => 'required|string|max:40',
             'email'        => 'required|string|email|unique:drivers',
+            'mobile'       => [
+                'required',
+                'regex:/^([0-9]*)$/',
+                Rule::unique('drivers', 'mobile')->where('dial_code', $dialCode),
+            ],
             'password'     => ['required', 'confirmed', $passwordValidation],
             'service_type' => 'nullable|in:ride,rider,delivery,both',
             'device_token' => 'nullable|string|max:500',
             'agree'        => $agree,
         ], [
-            'firstname.required' => 'The first name field is required',
-            'lastname.required'  => 'The last name field is required'
+            'firstname.required' => 'El nombre es obligatorio',
+            'lastname.required'  => 'El apellido es obligatorio',
+            'mobile.required'    => 'El número de celular es obligatorio',
+            'mobile.unique'      => 'Este número de celular ya está registrado como conductor',
+            'email.unique'       => 'Este correo electrónico ya está registrado',
         ]);
 
         return $validate;
@@ -104,6 +114,7 @@ class RegisterController extends Controller
 
         $data['access_token'] = $driver->createToken('driver_token')->plainTextToken;
         $data['driver']       = $driver;
+        $data['user']         = $driver; // compatibility for mobile app consumers
         $data['token_type']   = 'Bearer';
         $data['image_path']   = getFilePath('driver');
         $notify[]             = 'Registration successful';
@@ -128,9 +139,42 @@ class RegisterController extends Controller
         $driver->service_type = ($data['service_type'] ?? '') === 'rider' ? 'ride' : ($data['service_type'] ?? 'ride');
         $driver->password  = Hash::make($data['password']);
         $driver->ev        = gs('ev') ? Status::UNVERIFIED : Status::VERIFIED;
-        $driver->sv        = gs('sv') ? Status::UNVERIFIED : Status::VERIFIED;
-        $driver->ts        = Status::DISABLE;
-        $driver->tv        = Status::VERIFIED;
+
+        if (!empty($data['mobile'])) {
+            $driver->mobile    = preg_replace('/\D+/', '', (string) $data['mobile']);
+            $driver->dial_code = preg_replace('/\D+/', '', (string) ($data['dial_code'] ?? '51'));
+        }
+
+        // Si viene con phone_token de WhatsApp verificado
+        $isPhoneVerified = false;
+        if (!empty($data['phone_token'])) {
+            $tokenPayload = \App\Services\WhatsAppOtpService::verifyPhoneToken($data['phone_token']);
+            if ($tokenPayload && ($tokenPayload['verified'] ?? false)) {
+                $isPhoneVerified = true;
+            }
+        }
+
+        $driver->sv = $isPhoneVerified ? Status::VERIFIED : (gs('sv') ? Status::UNVERIFIED : Status::VERIFIED);
+        $driver->ts = Status::DISABLE;
+        $driver->tv = Status::VERIFIED;
+
+        // Auto-generar username único si no viene especificado
+        if (!empty($data['username'])) {
+            $driver->username = trim($data['username']);
+        } else {
+            $baseUsername = strtolower(preg_replace('/[^a-z0-9]/', '', $data['firstname'] . '.' . $data['lastname']));
+            if (strlen($baseUsername) < 6) {
+                $cleanEmail = preg_replace('/[^a-z0-9]/', '', strtolower(explode('@', $data['email'])[0]));
+                $baseUsername = strlen($cleanEmail) >= 6 ? $cleanEmail : 'driver' . rand(10000, 99999);
+            }
+            $username = $baseUsername;
+            $counter = 1;
+            while (Driver::where('username', $username)->exists()) {
+                $username = $baseUsername . $counter;
+                $counter++;
+            }
+            $driver->username = $username;
+        }
 
         $driver->save();
 

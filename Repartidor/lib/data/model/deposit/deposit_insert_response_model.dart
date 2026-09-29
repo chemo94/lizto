@@ -32,8 +32,10 @@ class DepositInsertResponseModel {
 class DepositInsertData {
   Deposit? deposit;
   String? redirectUrl;
+  String? paymentMethodName;
+  bool isManualPayment;
 
-  DepositInsertData({this.deposit, this.redirectUrl});
+  DepositInsertData({this.deposit, this.redirectUrl, this.paymentMethodName, this.isManualPayment = false});
 
   factory DepositInsertData.fromJson(Map<String, dynamic> json) => DepositInsertData(
         deposit: json["deposit"] == null ? null : Deposit.fromJson(json["deposit"]),

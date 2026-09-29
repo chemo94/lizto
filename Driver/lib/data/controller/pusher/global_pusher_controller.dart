@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:get/get.dart';
@@ -13,9 +14,13 @@ import 'package:liztogo_pro/data/services/pusher_service.dart';
 import '../../../core/helper/string_format_helper.dart';
 import '../../services/api_client.dart';
 
+import '../../../core/utils/url_container.dart';
+import '../../services/realtime_service.dart';
+
 class GlobalPusherController extends GetxController {
   ApiClient apiClient;
   DashBoardController dashBoardController;
+  StreamSubscription? _realtimeSub;
 
   GlobalPusherController({
     required this.apiClient,
@@ -27,6 +32,51 @@ class GlobalPusherController extends GetxController {
     super.onInit();
 
     PusherManager().addListener(onEvent);
+    _initRealtimeWs();
+  }
+
+  void _initRealtimeWs() async {
+    try {
+      final token = apiClient.sharedPreferences.getString(SharedPreferenceHelper.accessTokenKey) ?? '';
+      final userId = apiClient.sharedPreferences.getString(SharedPreferenceHelper.userIdKey) ?? '';
+      if (token.isNotEmpty) {
+        await RealtimeManager().init(wsUrl: UrlContainer.wsUrl, token: token);
+        if (userId.isNotEmpty) {
+          RealtimeManager().subscribe('driver.$userId');
+        }
+        _realtimeSub?.cancel();
+        _realtimeSub = RealtimeManager().onBroadcast.listen(_handleRealtimeBroadcast);
+      }
+    } catch (e) {
+      printX("Error init RealtimeManager in GlobalPusherController: $e");
+    }
+  }
+
+  void _handleRealtimeBroadcast(Map<String, dynamic> msg) {
+    try {
+      final topic = msg['topic']?.toString() ?? '';
+      final payload = msg['payload'];
+      printX("Realtime WS Broadcast Driver: $topic -> $payload");
+
+      if (payload is Map<String, dynamic>) {
+        final eventType = payload['type']?.toString().toLowerCase() ?? '';
+        final eventName = (payload['event'] ?? eventType).toString().toLowerCase();
+
+        if (eventName == "new_ride" && !isRideDetailsPage()) {
+          AudioUtils.playAudio(apiClient.getNotificationAudio());
+          dashBoardController.initialData(shouldLoad: false);
+        } else if (eventName == "bid_reject" && !isRideDetailsPage()) {
+          dashBoardController.initialData(shouldLoad: false);
+        } else if (activeEventList.contains(eventName) && !isRideDetailsPage()) {
+          final rideId = payload['ride_id']?.toString() ?? payload['ride']?['id']?.toString();
+          if (rideId != null) {
+            Get.toNamed(RouteHelper.rideDetailsScreen, arguments: rideId);
+          }
+        }
+      }
+    } catch (e) {
+      printE("Error handling Realtime WS event: $e");
+    }
   }
 
   List<String> activeEventList = [
@@ -103,6 +153,7 @@ class GlobalPusherController extends GetxController {
 
   @override
   void onClose() {
+    _realtimeSub?.cancel();
     PusherManager().removeListener(onEvent);
     super.onClose();
   }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ import 'package:liztogo_repartidor/data/services/pusher_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:liztogo_repartidor/core/utils/method.dart';
 import 'package:liztogo_repartidor/presentation/components/foreground_task_widget.dart';
+import 'package:liztogo_repartidor/data/services/realtime_service.dart';
 
 class CourierController extends GetxController {
   final CourierRepo courierRepo;
@@ -64,6 +66,7 @@ class CourierController extends GetxController {
   bool loadingMessages = false;
   bool sendingMessage = false;
   int? _subscribedChatJobId;
+  StreamSubscription? _jobRealtimeSub;
 
   void subscribeToChatChannel(int jobId) {
     if (_subscribedChatJobId == jobId) return;
@@ -71,9 +74,34 @@ class CourierController extends GetxController {
     final channel = 'private-job.$jobId';
     PusherManager().checkAndInitIfNeeded(channel);
     PusherManager().addListener(_onChatEvent);
+
+    // WebSocket nativo
+    RealtimeManager().subscribe('order.$jobId');
+    RealtimeManager().subscribe('favor.$jobId');
+    _jobRealtimeSub?.cancel();
+    _jobRealtimeSub = RealtimeManager().onBroadcast.listen((msg) {
+      final topic = msg['topic']?.toString() ?? '';
+      if (topic == 'order.$jobId' || topic == 'favor.$jobId') {
+        final payload = msg['payload'];
+        if (payload is Map<String, dynamic> && payload.containsKey('message') && payload['message'] is Map) {
+          try {
+            final msgModel = FavorMessageModel.fromJson(Map<String, dynamic>.from(payload['message']));
+            if (!messages.any((m) => m.id == msgModel.id && m.id != null)) {
+              messages.add(msgModel);
+              update();
+            }
+          } catch (_) {}
+        }
+      }
+    });
   }
 
   void unsubscribeFromChatChannel() {
+    if (_subscribedChatJobId != null) {
+      RealtimeManager().unsubscribe('order.$_subscribedChatJobId');
+      RealtimeManager().unsubscribe('favor.$_subscribedChatJobId');
+    }
+    _jobRealtimeSub?.cancel();
     _subscribedChatJobId = null;
     PusherManager().removeListener(_onChatEvent);
   }

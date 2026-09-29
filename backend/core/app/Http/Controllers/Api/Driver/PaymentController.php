@@ -76,7 +76,7 @@ class PaymentController extends Controller
         $notify[] = 'Deposit inserted';
         return apiResponse("deposit_inserted", "success", $notify, [
             'deposit'      => $data,
-            'redirect_url' => route('deposit.app.confirm', encrypt($data->id))
+            'redirect_url' => route('deposit.app.confirm', $data->trx)
         ]);
     }
 }

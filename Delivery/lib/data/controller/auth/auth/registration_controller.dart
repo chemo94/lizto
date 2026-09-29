@@ -92,6 +92,15 @@ class RegistrationController extends GetxController {
         CustomSnackBar.success(
           successList: responseModel.message ?? [MyStrings.success.tr],
         );
+        final mobile = model.mobile;
+        if (mobile.isNotEmpty) {
+          final prefs = registrationRepo.apiClient.sharedPreferences;
+          await prefs.setString(SharedPreferenceHelper.userPhoneNumberKey, mobile);
+          final mobileCode = model.mobileCode;
+          if (mobileCode.isNotEmpty) {
+            await prefs.setString(SharedPreferenceHelper.countryCode, mobileCode);
+          }
+        }
         RouteMiddleware.checkNGotoNext(
           accessToken: responseModel.data?.accessToken ?? '',
           tokenType: responseModel.data?.tokenType ?? '',

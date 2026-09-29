@@ -110,7 +110,17 @@ class AddNewDepositController extends GetxController {
       DepositInsertResponseModel insertResponseModel = DepositInsertResponseModel.fromJson((responseModel.responseJson));
 
       if (insertResponseModel.status.toString().toLowerCase() == "success") {
-        showWebView(insertResponseModel.data ?? DepositInsertData());
+        final depositData = insertResponseModel.data ?? DepositInsertData();
+        final methodCode = int.tryParse(paymentMethod?.methodCode ?? '') ?? 0;
+        depositData.paymentMethodName = paymentMethod?.name;
+        depositData.isManualPayment = methodCode >= 1000;
+        if (depositData.redirectUrl?.trim().isEmpty ?? true) {
+          CustomSnackBar.error(errorList: [MyStrings.somethingWentWrong]);
+        } else if (depositData.isManualPayment) {
+          showManualDepositForm(depositData);
+        } else {
+          showWebView(depositData);
+        }
       } else {
         CustomSnackBar.error(
           errorList: insertResponseModel.message ?? [MyStrings.somethingWentWrong],
@@ -167,5 +177,11 @@ class AddNewDepositController extends GetxController {
       RouteHelper.depositWebViewScreen,
       arguments: depositInsertData,
     );
+  }
+
+  void showManualDepositForm(DepositInsertData depositInsertData) {
+    // The backend redirect resolves the selected manual gateway and renders
+    // its configured instructions and payment confirmation fields.
+    showWebView(depositInsertData);
   }
 }

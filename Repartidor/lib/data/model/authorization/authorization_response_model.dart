@@ -52,9 +52,12 @@ class Data {
   }
 
   Data.fromJson(dynamic json) {
+    if (json is! Map<String, dynamic>) return;
     _actionId = json['action_id'] != null ? json['action_id'].toString() : '';
     _online = json['online'] != null ? json['online'].toString() : 'false';
-    _user = json['driver'] != null ? GlobalDriverInfoModel.fromJson(json['driver']) : null;
+    _user = json['driver'] != null
+        ? GlobalDriverInfoModel.fromJson(json['driver'])
+        : (json['user'] != null ? GlobalDriverInfoModel.fromJson(json['user']) : null);
   }
 
   String? _actionId;

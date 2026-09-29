@@ -8,7 +8,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart' hide Response;
 import 'package:liztogo_pro/core/helper/string_format_helper.dart';
 import 'package:liztogo_pro/data/controller/dashboard/dashboard_controller.dart';
-import 'package:liztogo_pro/data/controller/ride/ride_details/ride_details_controller.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../core/helper/shared_preference_helper.dart';
 import '../../core/utils/method.dart';
@@ -308,7 +307,11 @@ class PushNotificationService {
   }
 
   Map<String, String> deviceTokenMap(String deviceToken) {
-    Map<String, String> map = {'token': deviceToken.toString()};
+    Map<String, String> map = {
+      'token': deviceToken.toString(),
+      'device_token': deviceToken.toString(),
+      'fcm_token': deviceToken.toString(),
+    };
     return map;
   }
 }

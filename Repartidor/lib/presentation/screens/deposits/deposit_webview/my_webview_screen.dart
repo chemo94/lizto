@@ -49,7 +49,10 @@ class _MyWebViewScreenState extends State<MyWebViewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(title: MyStrings.payNow, isTitleCenter: true),
+      appBar: CustomAppBar(
+        title: widget.depositInsertData.isManualPayment ? '${MyStrings.deposit} · ${widget.depositInsertData.paymentMethodName ?? ''}' : MyStrings.payNow,
+        isTitleCenter: true,
+      ),
       body: Stack(
         children: [
           InAppWebView(
@@ -90,12 +93,8 @@ class _MyWebViewScreenState extends State<MyWebViewScreen> {
                 "javascript",
                 "about",
               ].contains(uri.scheme)) {
-                if (await canLaunchUrl(
-                  Uri.parse(widget.depositInsertData.redirectUrl ?? ""),
-                )) {
-                  await launchUrl(
-                    Uri.parse(widget.depositInsertData.redirectUrl ?? ""),
-                  );
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri);
                   return NavigationActionPolicy.CANCEL;
                 }
               }

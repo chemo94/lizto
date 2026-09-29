@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:liztogo_repartidor/core/helper/shared_preference_helper.dart';
 import 'package:liztogo_repartidor/core/helper/string_format_helper.dart';
 import 'package:liztogo_repartidor/core/route/route.dart';
 import 'package:liztogo_repartidor/core/utils/my_strings.dart';
@@ -43,16 +44,76 @@ class ProfileCompleteController extends GetxController {
   final FocusNode mobileFocusNode = FocusNode();
   FocusNode userNameFocusNode = FocusNode();
 
+  bool isPhonePreFilled = false;
+
   Future<void> initialData() async {
-    // await getZoneData();
-    countryList = profileRepo.apiClient.getOperatingCountries();
+    isLoading = true;
     update();
+    countryList = profileRepo.apiClient.getOperatingCountries();
     if (countryList.isNotEmpty) {
       selectCountryData(countryList.first);
     }
+
+    String savedPhone = profileRepo.apiClient.sharedPreferences.getString(
+          SharedPreferenceHelper.userPhoneNumberKey,
+        ) ??
+        '';
+    if (savedPhone.isNotEmpty && savedPhone != 'null') {
+      final isValidPhone = RegExp(r'^\+?[0-9]{6,}$').hasMatch(savedPhone.replaceAll(RegExp(r'[\s-]'), ''));
+      if (isValidPhone) {
+        mobileNoController.text = savedPhone;
+        phoneData = savedPhone;
+        final isSocial = loginType == 'google' || loginType == 'apple';
+        isPhonePreFilled = !isSocial;
+      }
+    }
+
+    String savedUsername = profileRepo.apiClient.sharedPreferences.getString(
+          SharedPreferenceHelper.userNameKey,
+        ) ??
+        '';
+    if (savedUsername.isNotEmpty && savedUsername != 'null') {
+      userNameController.text = savedUsername;
+    }
+
+    try {
+      profileResponseModel = await profileRepo.loadProfileInfo();
+      if (profileResponseModel.data != null && profileResponseModel.status?.toLowerCase() == MyStrings.success.toLowerCase()) {
+        final driver = profileResponseModel.data?.driver;
+        final isSocial = driver?.loginBy == 'google' || driver?.loginBy == 'apple' || loginType == 'google' || loginType == 'apple';
+        final rawMobile = driver?.mobile ?? '';
+        if (rawMobile.isNotEmpty && rawMobile != 'null') {
+          final isValidPhone = RegExp(r'^\+?[0-9]{6,}$').hasMatch(rawMobile.replaceAll(RegExp(r'[\s-]'), ''));
+          if (isValidPhone) {
+            mobileNoController.text = rawMobile;
+            phoneData = rawMobile;
+            isPhonePreFilled = !isSocial;
+          }
+        }
+        if (isSocial) {
+          isPhonePreFilled = false;
+        }
+        final rawUsername = driver?.username ?? '';
+        if (rawUsername.isNotEmpty && rawUsername != 'null' && (userNameController.text.isEmpty || userNameController.text == 'null')) {
+          userNameController.text = rawUsername;
+        }
+        if (driver?.address != null && driver!.address!.isNotEmpty && driver.address != 'null') {
+          addressController.text = driver.address!;
+        }
+        if (driver?.city != null && driver!.city!.isNotEmpty && driver.city != 'null') {
+          cityController.text = driver.city!;
+        }
+        if (driver?.state != null && driver!.state!.isNotEmpty && driver.state != 'null') {
+          stateController.text = driver.state!;
+        }
+        if (driver?.zip != null && driver!.zip!.isNotEmpty && driver.zip != 'null') {
+          zipCodeController.text = driver.zip!;
+        }
+      }
+    } catch (_) {}
+
     isLoading = false;
     update();
-    printX(countryList.first.toJson());
   }
 
   TextEditingController searchController = TextEditingController();

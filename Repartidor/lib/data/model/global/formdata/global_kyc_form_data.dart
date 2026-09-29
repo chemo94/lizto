@@ -16,41 +16,51 @@ class GlobalKYCForm {
 
       if (json is List<dynamic>) {
         for (var e in json) {
+          if (e == null) continue;
+          Map<String, dynamic> itemMap = {};
+          if (e is Map) {
+            itemMap = Map<String, dynamic>.from(e);
+          } else if (e is MapEntry) {
+            itemMap = Map<String, dynamic>.from(e.value);
+          }
+          List<String> optionsList = [];
+          if (itemMap['options'] is List) {
+            optionsList = (itemMap['options'] as List).map((x) => x.toString()).toList();
+          }
           _list?.add(
             GlobalFormModel(
-              e.value['name'],
-              e.value['label'],
-              e.value['instruction'],
-              e.value['is_required'],
-              e.value['extensions'],
-              (e.value['options'] as List).map((e) => e as String).toList(),
-              e.value['type'],
+              itemMap['name']?.toString(),
+              itemMap['label']?.toString(),
+              itemMap['instruction']?.toString(),
+              itemMap['is_required']?.toString(),
+              itemMap['extensions']?.toString(),
+              optionsList,
+              itemMap['type']?.toString(),
               '',
             ),
           );
         }
-        _list;
-      } else {
-        var map = Map.from(json).map((k, v) => MapEntry<String, dynamic>(k, v));
-        List<GlobalFormModel>? list = map.entries
-            .map(
-              (e) => GlobalFormModel(
-                e.value['name'],
-                e.value['label'],
-                e.value['instruction'],
-                e.value['is_required'],
-                e.value['extensions'],
-                (e.value['options'] as List).map((e) => e as String).toList(),
-                e.value['type'],
-                '',
-              ),
-            )
-            .toList();
-        if (list.isNotEmpty) {
-          list.removeWhere((element) => element.toString().isEmpty);
-          _list?.addAll(list);
-        }
-        _list;
+      } else if (json is Map) {
+        json.forEach((k, v) {
+          if (v == null) return;
+          Map<String, dynamic> itemMap = Map<String, dynamic>.from(v is Map ? v : {});
+          List<String> optionsList = [];
+          if (itemMap['options'] is List) {
+            optionsList = (itemMap['options'] as List).map((x) => x.toString()).toList();
+          }
+          _list?.add(
+            GlobalFormModel(
+              itemMap['name']?.toString() ?? k.toString(),
+              itemMap['label']?.toString() ?? k.toString(),
+              itemMap['instruction']?.toString(),
+              itemMap['is_required']?.toString(),
+              itemMap['extensions']?.toString(),
+              optionsList,
+              itemMap['type']?.toString(),
+              '',
+            ),
+          );
+        });
       }
     } catch (e) {
       printX(e.toString());

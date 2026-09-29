@@ -94,6 +94,15 @@ class RegistrationController extends GetxController {
         CustomSnackBar.success(
           successList: responseModel.message ?? [MyStrings.success.tr],
         );
+        final phone = model.phone;
+        if (phone.isNotEmpty) {
+          final prefs = registrationRepo.apiClient.sharedPreferences;
+          await prefs.setString(SharedPreferenceHelper.userPhoneNumberKey, phone);
+          final dialCode = model.dialCode;
+          if (dialCode != null && dialCode.isNotEmpty) {
+            await prefs.setString(SharedPreferenceHelper.countryCode, dialCode);
+          }
+        }
         RouteMiddleware.checkNGotoNext(
           accessToken: responseModel.data?.accessToken ?? '',
           tokenType: responseModel.data?.tokenType ?? '',
@@ -240,6 +249,7 @@ class RegistrationController extends GetxController {
       final args = Get.arguments as Map;
       if (args['mobile'] != null) {
         mobileController.text = args['mobile'].toString();
+        mobileCode = (args['dial_code'] ?? '51').toString();
         phoneToken = args['phone_token']?.toString() ?? '';
         isPhoneVerified = true;
       }

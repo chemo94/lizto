@@ -2,6 +2,7 @@ class UrlContainer {
   static const String domainUrl = 'https://www.liztodelivery.com'; //YOUR WEBSITE DOMAIN URL HERE
 
   static const String baseUrl = '$domainUrl/api/';
+  static const String wsUrl = 'wss://liztodelivery.com/ws';
   static const String dashBoardEndPoint = 'dashboard';
   static const String depositHistoryUrl = 'deposit/history';
   static const String depositMethodUrl = 'deposit/methods';

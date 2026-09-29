@@ -46,14 +46,57 @@ class ProfileCompleteController extends GetxController {
   FocusNode countryFocusNode = FocusNode();
 
   bool isLoading = false;
+  bool isPhonePreFilled = false;
 
   Future<void> initialData() async {
-    //    await loadProfileInfo();
+    await loadProfileInfo();
     countryList = profileRepo.apiClient.getOperatingCountries();
     update();
     if (countryList.isNotEmpty) {
       selectCountryData(countryList.first);
     }
+
+    final savedPhone = profileRepo.apiClient.sharedPreferences.getString(SharedPreferenceHelper.userPhoneNumberKey) ?? '';
+    final savedCode = profileRepo.apiClient.sharedPreferences.getString(SharedPreferenceHelper.countryCode) ?? '';
+    final savedUsername = profileRepo.apiClient.sharedPreferences.getString(SharedPreferenceHelper.userNameKey) ?? '';
+    final savedLoginBy = profileRepo.apiClient.sharedPreferences.getString('login_by') ?? '';
+
+    if (savedLoginBy.isNotEmpty && loginType.isEmpty) {
+      loginType = savedLoginBy;
+    }
+
+    if (savedPhone.isNotEmpty && savedPhone != 'null' && mobileNoController.text.isEmpty) {
+      mobileNoController.text = savedPhone;
+    }
+    if (savedUsername.isNotEmpty && savedUsername != 'null' && userNameController.text.isEmpty) {
+      userNameController.text = savedUsername;
+    }
+
+    if (mobileNoController.text.trim() == 'null') {
+      mobileNoController.text = '';
+    }
+    if (userNameController.text.trim() == 'null') {
+      userNameController.text = '';
+    }
+
+    bool isSocialLogin = loginType == '1' || loginType == '2' || loginType == 'google' || loginType == 'apple';
+    if (isSocialLogin) {
+      if (mobileNoController.text.trim() == 'null') {
+        mobileNoController.text = '';
+      }
+      isPhonePreFilled = false;
+    } else {
+      isPhonePreFilled = mobileNoController.text.trim().isNotEmpty && mobileNoController.text.trim() != 'null';
+    }
+
+    if (savedCode.isNotEmpty && countryList.isNotEmpty) {
+      final match = countryList.firstWhereOrNull((c) => c.dialCode == savedCode || c.countryCode?.toLowerCase() == savedCode.toLowerCase());
+      if (match != null) {
+        selectCountryData(match);
+      }
+    }
+    update();
+
     await detectAndSetLocation();
   }
 
@@ -113,8 +156,22 @@ class ProfileCompleteController extends GetxController {
         emailData = profileResponseModel.data?.user?.email ?? '';
         countryData = profileResponseModel.data?.user?.country ?? '';
         countryCodeData = profileResponseModel.data?.user?.countryCode ?? '';
-        phoneData = profileResponseModel.data?.user?.mobile ?? '';
+        phoneData = (profileResponseModel.data?.user?.mobile == null || profileResponseModel.data?.user?.mobile == 'null') ? '' : profileResponseModel.data!.user!.mobile!;
         loginType = profileResponseModel.data?.user?.loginBy ?? '';
+        bool isSocialLogin = loginType == '1' || loginType == '2' || loginType == 'google' || loginType == 'apple';
+
+        if (phoneData.isNotEmpty && !isSocialLogin) {
+          mobileNoController.text = phoneData;
+          isPhonePreFilled = true;
+        } else if (phoneData.isNotEmpty) {
+          mobileNoController.text = phoneData;
+          isPhonePreFilled = false;
+        }
+
+        final uname = profileResponseModel.data?.user?.username;
+        if (userNameController.text.isEmpty && uname != null && uname.isNotEmpty && uname != 'null') {
+          userNameController.text = uname;
+        }
       } else {
         isLoading = false;
         update();
@@ -146,7 +203,15 @@ class ProfileCompleteController extends GetxController {
     String city = cityController.text.toString();
     String zip = zipCodeController.text.toString();
     String state = stateController.text.toString();
-    printD("model.username");
+    
+    String username = userNameController.text.trim();
+    if (username.isEmpty) {
+      username = (profileRepo.apiClient.sharedPreferences.getString(SharedPreferenceHelper.userNameKey) ?? '').trim();
+      if (username.isEmpty) {
+        username = '${firstName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '')}_${DateTime.now().millisecondsSinceEpoch % 10000}';
+      }
+      userNameController.text = username;
+    }
 
     submitLoading = true;
     update();
@@ -157,7 +222,7 @@ class ProfileCompleteController extends GetxController {
       lastName: lastName,
       mobile: mobileNoController.text,
       email: '',
-      username: userNameController.text,
+      username: username,
       countryCode: selectedCountryData.countryCode.toString(),
       country: selectedCountryData.country.toString(),
       mobileCode: selectedCountryData.dialCode.toString(),

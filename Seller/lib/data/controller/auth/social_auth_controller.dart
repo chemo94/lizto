@@ -102,6 +102,14 @@ class SocialAuthController extends GetxController {
       if (responseModel.statusCode == 200) {
         LoginResponseModel loginModel = LoginResponseModel.fromJson((responseModel.responseJson));
         if (loginModel.status.toString().toLowerCase() == MyStrings.success.toLowerCase()) {
+          if (provider != null && (loginModel.data?.user?.loginBy == null || loginModel.data?.user?.loginBy?.isEmpty == true)) {
+            loginModel.data?.user?.loginBy = provider;
+          }
+          if (provider != null) {
+            try {
+              authRepo.apiClient.sharedPreferences.setString('login_by', provider);
+            } catch (_) {}
+          }
           RouteMiddleware.checkNGotoNext(
             user: loginModel.data?.user,
             accessToken: loginModel.data?.accessToken ?? '',

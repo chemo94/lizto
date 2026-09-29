@@ -32,6 +32,9 @@ class ApiClient extends LocalStorageService {
       "Accept": "application/json",
       "dev-token": Environment.devToken,
     };
+    _dio.options.connectTimeout = const Duration(seconds: 15);
+    _dio.options.receiveTimeout = const Duration(seconds: 20);
+    _dio.options.sendTimeout = const Duration(seconds: 15);
     _dio.options.followRedirects = false;
     _dio.options.validateStatus = (status) {
       return status! < 500;
@@ -190,7 +193,13 @@ class ApiClient extends LocalStorageService {
 
       // Add text fields
       fields?.forEach((key, value) {
-        formData.fields.add(MapEntry(key, value.toString()));
+        if (value is List) {
+          for (var item in value) {
+            formData.fields.add(MapEntry('$key[]', item.toString()));
+          }
+        } else {
+          formData.fields.add(MapEntry(key, value.toString()));
+        }
       });
 
       // Add files with dynamic keys
@@ -200,7 +209,7 @@ class ApiClient extends LocalStorageService {
             entry.key, // Dynamic key for each file
             await dioX.MultipartFile.fromFile(
               entry.value.path,
-              filename: entry.value.path.split('/').last,
+              filename: entry.value.path.split(RegExp(r'[/\\]')).last,
             ),
           ),
         );

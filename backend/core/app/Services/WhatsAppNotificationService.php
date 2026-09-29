@@ -112,7 +112,7 @@ class WhatsAppNotificationService
      * @param string $message
      * @return array
      */
-    public static function sendTextMessage(string $to, string $message): array
+    public static function sendTextMessage(string $to, string $message, bool $previewUrl = false): array
     {
         $baseUrl = rtrim(config('services.waapi.base_url', 'http://localhost/waapi'), '/');
         $apiKey  = config('services.waapi.api_key', 'wa_secret_key_change_me_12345');
@@ -123,12 +123,12 @@ class WhatsAppNotificationService
         $payload = [
             'to'          => $to,
             'message'     => $message,
-            'preview_url' => true,
+            'preview_url' => $previewUrl,
             'platform'    => $platform,
         ];
 
         try {
-            $client = Http::timeout(8);
+            $client = Http::connectTimeout(5)->timeout(12);
             if (config('app.env') === 'local' || !config('services.waapi.ssl_verify', true)) {
                 $client = $client->withoutVerifying();
             }

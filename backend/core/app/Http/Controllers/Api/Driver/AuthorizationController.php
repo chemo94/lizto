@@ -63,33 +63,42 @@ class AuthorizationController extends Controller
 
         $codeValid = $this->checkCodeValidity($driver);
 
-        if (!$codeValid && ($type != '2fa') && ($type != 'ban') && $type != 'sms') {
+        if (!$codeValid && ($type != '2fa') && ($type != 'ban')) {
             $code = verificationCode(6);
             $driver->ver_code         = $code;
             $driver->ver_code_send_at = Carbon::now();
             $driver->save();
 
-            $sendVia = [$type, 'push'];
+            if ($type === 'sms') {
+                $waResult = \App\Services\WhatsAppOtpService::sendOtp(
+                    $driver->mobile ?? '',
+                    $driver->dial_code ?? '51',
+                    'driver'
+                );
+                Log::channel('driver_otp')->info("Driver {$driver->id} WhatsApp OTP dispatch: " . json_encode($waResult));
+            } else {
+                $sendVia = [$type, 'push'];
 
-            Log::channel('driver_otp')->info("Driver {$driver->id} sending OTP", [
-                'code'      => $code,
-                'send_via'  => $sendVia,
-                'template'  => $notifyTemplate,
-                'email'     => $driver->email,
-                'mobile'    => $driver->mobile,
-            ]);
-
-            try {
-                notify($driver, $notifyTemplate, [
-                    'code' => $code
-                ], $sendVia);
-                Log::channel('driver_otp')->info("Driver {$driver->id} notify() completed OK");
-            } catch (\Exception $e) {
-                Log::channel('driver_otp')->error("Driver {$driver->id} notify() FAILED", [
-                    'error' => $e->getMessage(),
-                    'file'  => $e->getFile(),
-                    'line'  => $e->getLine(),
+                Log::channel('driver_otp')->info("Driver {$driver->id} sending OTP", [
+                    'code'      => $code,
+                    'send_via'  => $sendVia,
+                    'template'  => $notifyTemplate,
+                    'email'     => $driver->email,
+                    'mobile'    => $driver->mobile,
                 ]);
+
+                try {
+                    notify($driver, $notifyTemplate, [
+                        'code' => $code
+                    ], $sendVia);
+                    Log::channel('driver_otp')->info("Driver {$driver->id} notify() completed OK");
+                } catch (\Exception $e) {
+                    Log::channel('driver_otp')->error("Driver {$driver->id} notify() FAILED", [
+                        'error' => $e->getMessage(),
+                        'file'  => $e->getFile(),
+                        'line'  => $e->getLine(),
+                    ]);
+                }
             }
         } else {
             if ($codeValid) {
@@ -101,8 +110,9 @@ class AuthorizationController extends Controller
 
         $notify[] = 'Verify your account';
         return apiResponse("code_sent", "success", $notify, $type === 'sms' ? [
-            'phone_number' => app(FirebasePhoneAuthService::class)->phoneFor($driver),
-            'verification_provider' => 'firebase',
+            'phone_number'          => $driver->mobile,
+            'dial_code'             => $driver->dial_code ?? '51',
+            'verification_provider' => 'whatsapp',
         ] : null);
     }
 
@@ -111,11 +121,28 @@ class AuthorizationController extends Controller
     {
         $driver = auth()->user();
 
-        if ($type === 'mobile') {
-            return apiResponse('firebase_phone_required', 'success', ['Use Firebase to resend the verification code'], [
-                'phone_number' => app(FirebasePhoneAuthService::class)->phoneFor($driver),
-                'verification_provider' => 'firebase',
-            ]);
+        if ($type === 'mobile' || $type === 'sms') {
+            if ($this->checkCodeValidity($driver)) {
+                $targetTime = $driver->ver_code_send_at->addMinutes(2)->timestamp;
+                $delay      = $targetTime - time();
+                $notify[] = 'Por favor espera ' . $delay . ' segundos antes de solicitar otro código';
+                return apiResponse("try_after", "error", $notify);
+            }
+
+            $driver->ver_code_send_at = Carbon::now();
+            $driver->save();
+
+            $res = \App\Services\WhatsAppOtpService::sendOtp(
+                $driver->mobile ?? '',
+                $driver->dial_code ?? '51',
+                'driver'
+            );
+
+            if (!$res['success']) {
+                return apiResponse('send_failed', 'error', [$res['message']]);
+            }
+
+            return apiResponse('code_sent', 'success', ['Código de verificación enviado a tu WhatsApp.']);
         }
 
         Log::channel('driver_otp')->info('=== DRIVER OTP: sendVerifyCode() called ===', [
@@ -203,34 +230,61 @@ class AuthorizationController extends Controller
 
     public function mobileVerification(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'firebase_id_token' => 'required|string',
-        ]);
-
-        if ($validator->fails()) {
-            return apiResponse("validation_error", "error", $validator->errors()->all());
-        }
-
         $driver = auth()->user();
-        try {
-            $matches = app(FirebasePhoneAuthService::class)->tokenMatchesAccount($request->firebase_id_token, $driver);
-        } catch (Throwable $exception) {
-            report($exception);
-            return apiResponse('firebase_token_invalid', 'error', ['No se pudo validar el teléfono con Firebase']);
+
+        // 1. WhatsApp OTP verification (code / otp_code)
+        $code = trim((string) ($request->code ?? $request->otp_code ?? ''));
+        if (!empty($code)) {
+            $result = \App\Services\WhatsAppOtpService::verifyOtp(
+                $driver->mobile ?? '',
+                $code,
+                $driver->dial_code ?? '51',
+                'driver'
+            );
+
+            $isDirectMatch = ($driver->ver_code && trim((string)$driver->ver_code) === $code);
+
+            if ($result['success'] || $isDirectMatch) {
+                $driver->sv               = Status::VERIFIED;
+                $driver->ver_code         = null;
+                $driver->ver_code_send_at = null;
+                $driver->save();
+
+                $notify[] = 'Teléfono verificado con éxito vía WhatsApp';
+                return apiResponse("mobile_verified", "success", $notify, [
+                    'driver' => $driver,
+                    'user'   => $driver,
+                ]);
+            }
+
+            return apiResponse('code_not_match', 'error', [$result['message'] ?? 'Código de verificación incorrecto']);
         }
 
-        if ($matches) {
-            $driver->sv               = Status::VERIFIED;
-            $driver->ver_code         = null;
-            $driver->ver_code_send_at = null;
-            $driver->save();
+        // 2. Firebase ID token fallback
+        if ($request->filled('firebase_id_token')) {
+            try {
+                $matches = app(FirebasePhoneAuthService::class)->tokenMatchesAccount($request->firebase_id_token, $driver);
+            } catch (Throwable $exception) {
+                report($exception);
+                return apiResponse('firebase_token_invalid', 'error', ['No se pudo validar el teléfono con Firebase']);
+            }
 
-            $notify[]     = 'Mobile verified successfully';
-            return apiResponse("mobile_verified", "success", $notify, [
-                'driver' => $driver
-            ]);
+            if ($matches) {
+                $driver->sv               = Status::VERIFIED;
+                $driver->ver_code         = null;
+                $driver->ver_code_send_at = null;
+                $driver->save();
+
+                $notify[]     = 'Mobile verified successfully';
+                return apiResponse("mobile_verified", "success", $notify, [
+                    'driver' => $driver,
+                    'user'   => $driver,
+                ]);
+            }
+            return apiResponse('phone_not_match', 'error', ['El teléfono verificado no corresponde a esta cuenta']);
         }
-        return apiResponse('phone_not_match', 'error', ['El teléfono verificado no corresponde a esta cuenta']);
+
+        return apiResponse("validation_error", "error", ['El código de verificación es obligatorio']);
     }
 
     public function g2faVerification(Request $request)

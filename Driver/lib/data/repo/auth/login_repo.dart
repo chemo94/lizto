@@ -23,6 +23,8 @@ class LoginRepo {
       'password': password,
       'service_type': 'ride',
       if (deviceToken.isNotEmpty) 'device_token': deviceToken,
+      if (deviceToken.isNotEmpty) 'fcm_token': deviceToken,
+      if (deviceToken.isNotEmpty) 'token': deviceToken,
     };
     String url = '${UrlContainer.baseUrl}${UrlContainer.loginEndPoint}';
 
@@ -174,7 +176,11 @@ class LoginRepo {
   }
 
   Map<String, String> deviceTokenMap(String deviceToken) {
-    Map<String, String> map = {'token': deviceToken.toString()};
+    Map<String, String> map = {
+      'token': deviceToken.toString(),
+      'device_token': deviceToken.toString(),
+      'fcm_token': deviceToken.toString(),
+    };
     return map;
   }
 

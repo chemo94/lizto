@@ -10,6 +10,7 @@
                     <div class="card-body">
                         <form action="{{ route('user.deposit.manual.update') }}" method="POST" enctype="multipart/form-data">
                             @csrf
+                            <input type="hidden" name="trx" value="{{ $data->trx }}">
                             <div class="row">
                                 <div class="col-md-12">
                                     <div class="alert alert-primary">

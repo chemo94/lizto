@@ -140,6 +140,37 @@ class SocialLogin
             }
 
             $userData = $this->createUser($user, $provider);
+        } else {
+            // Repair missing or 'null' username for existing social login users/drivers
+            if (empty($userData->username) || $userData->username === 'null') {
+                if ($this->guard == "user") {
+                    $rawName = $userData->firstname ?: (explode('@', $userData->email)[0] ?? 'user');
+                    $cleanBase = strtolower(preg_replace('/[^a-z0-9]/', '', $rawName));
+                    if (empty($cleanBase)) $cleanBase = 'user';
+                    $gen = $cleanBase . '_' . rand(1000, 9999);
+                    while (User::where('username', $gen)->where('id', '!=', $userData->id)->exists()) {
+                        $gen = $cleanBase . '_' . rand(10000, 99999);
+                    }
+                    $userData->username = $gen;
+                    $userData->save();
+                } elseif ($this->guard != "seller") {
+                    $rawName = $userData->firstname ?: (explode('@', $userData->email)[0] ?? 'driver');
+                    $cleanBase = strtolower(preg_replace('/[^a-z0-9]/', '', $rawName));
+                    if (empty($cleanBase)) $cleanBase = 'driver';
+                    $gen = $cleanBase . '_' . rand(1000, 9999);
+                    while (Driver::where('username', $gen)->where('id', '!=', $userData->id)->exists()) {
+                        $gen = $cleanBase . '_' . rand(10000, 99999);
+                    }
+                    $userData->username = $gen;
+                    $userData->save();
+                }
+            }
+
+            // Clean literal string 'null' from mobile if corrupted
+            if ($userData->mobile === 'null') {
+                $userData->mobile = null;
+                $userData->save();
+            }
         }
 
         if ($this->guard == "user") {
@@ -260,12 +291,33 @@ class SocialLogin
         $newUser->firstname = $firstName;
         $newUser->lastname  = $lastName;
 
+        // Generate clean unique username
+        $rawName = $firstName ?: (explode('@', $user->email)[0] ?? 'user');
+        $cleanBase = strtolower(preg_replace('/[^a-z0-9]/', '', $rawName));
+        if (empty($cleanBase)) $cleanBase = 'user';
+        $genUsername = $cleanBase . '_' . rand(1000, 9999);
+
+        if ($this->guard == "user") {
+            while (User::where('username', $genUsername)->exists()) {
+                $genUsername = $cleanBase . '_' . rand(10000, 99999);
+            }
+            $newUser->username = $genUsername;
+        } else {
+            while (Driver::where('username', $genUsername)->exists()) {
+                $genUsername = $cleanBase . '_' . rand(10000, 99999);
+            }
+            $newUser->username = $genUsername;
+        }
+
         $newUser->status   = Status::VERIFIED;
         $newUser->ev       = Status::VERIFIED;
         $newUser->sv       = gs('sv') ? Status::UNVERIFIED : Status::VERIFIED;
         $newUser->ts       = Status::DISABLE;
         $newUser->tv       = Status::VERIFIED;
         $newUser->provider = $provider;
+        if (Schema::hasColumn($this->guard == 'user' ? 'users' : 'drivers', 'login_by')) {
+            $newUser->login_by = $provider;
+        }
         $newUser->save();
 
         $adminNotification          = new AdminNotification();
