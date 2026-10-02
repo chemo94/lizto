@@ -9,6 +9,7 @@ import 'package:lizto_delivery/core/utils/dimensions.dart';
 import 'package:lizto_delivery/core/utils/my_color.dart';
 import 'package:lizto_delivery/core/utils/style.dart';
 import 'package:lizto_delivery/data/controller/auth/social_auth_controller.dart';
+import 'package:lizto_delivery/data/repo/auth/social_auth_repo.dart';
 import 'package:lizto_delivery/data/model/global/response_model/response_model.dart';
 import 'package:lizto_delivery/data/model/global/user/global_user_model.dart';
 import 'package:lizto_delivery/presentation/components/buttons/rounded_button.dart';
@@ -33,6 +34,7 @@ Future<void> showWhatsAppPhoneLoginDialog(
     context: context,
     barrierDismissible: false,
     builder: (dialogContext) => StatefulBuilder(
+      builder: (context, setState) {
         final SocialAuthController socialController = Get.isRegistered<SocialAuthController>()
             ? Get.find<SocialAuthController>()
             : Get.put(SocialAuthController(

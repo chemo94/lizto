@@ -35,6 +35,15 @@ class CourierJobController extends Controller
     {
         $driver = $this->driver();
 
+        // Verificar condiciones económicas centralizadas de Lizto
+        $economicCheck = \App\Services\DriverEconomicPolicyService::canDriverReceiveOrders($driver);
+        if (!$economicCheck['allowed']) {
+            return apiResponse('pending_jobs', 'success', [$economicCheck['reason']], [
+                'jobs'            => [],
+                'economic_status' => $economicCheck,
+            ]);
+        }
+
         $lat = $request->latitude;
         $lng = $request->longitude;
         $radius = (float) ($request->radius ?? gs('delivery_coverage_radius') ?? 8);
@@ -70,8 +79,19 @@ class CourierJobController extends Controller
 
         $jobs = $deliveryJobs->concat($favorJobs)->sortByDesc('created_at')->values();
 
+        $batches = \App\Models\CourierBatch::where(function ($q) use ($driver) {
+                $q->where('driver_id', $driver->id)
+                  ->orWhereNull('driver_id');
+            })
+            ->whereIn('status', [\App\Models\CourierBatch::STATUS_PENDING, \App\Models\CourierBatch::STATUS_OFFERED])
+            ->with('batchOrders.order')
+            ->get()
+            ->map(fn($b) => $this->formatBatch($b));
+
         return apiResponse('pending_jobs', 'success', ['Pedidos disponibles'], [
-            'jobs' => $jobs,
+            'jobs'            => $jobs,
+            'batches'         => $batches,
+            'economic_status' => $economicCheck,
         ]);
     }
 
@@ -171,11 +191,18 @@ class CourierJobController extends Controller
             ], ['blocked_until' => $blockedUntil->toIso8601String()]);
         }
 
-        // Verificar wallet balance
-        $wallet = $driver->wallet;
-        $balance = $wallet ? $wallet->balance : 0;
-        if ($balance <= 0) {
-            return apiResponse('insufficient_balance', 'error', ['Recarga tu wallet para aceptar pedidos. Saldo actual: S/ 0.00']);
+        // Verificar condiciones económicas centralizadas de Lizto
+        $economicCheck = \App\Services\DriverEconomicPolicyService::canDriverReceiveOrders($driver);
+        if (!$economicCheck['allowed']) {
+            return apiResponse('insufficient_balance', 'error', [
+                $economicCheck['reason'] ?? 'Recarga tu wallet para aceptar pedidos.',
+            ], [
+                'economic_state'      => $economicCheck['economic_state'],
+                'min_recharge'        => $economicCheck['min_recharge'],
+                'promotional_balance' => $economicCheck['promotional_balance'],
+                'recharge_balance'    => $economicCheck['recharge_balance'],
+                'balance'             => $economicCheck['balance'],
+            ]);
         }
 
         if ($type === 'favor') {
@@ -372,27 +399,21 @@ class CourierJobController extends Controller
                 DeliveryFinancialLedger::recordCashCollection($driver, (float) ($job->total ?? 0), $job);
             }
 
-            $job->update(['commission_amount' => $commissionAmount]);
-
-            // Debit commission from driver wallet
+            // Política Económica de Lizto:
+            // Mientras el saldo promocional esté disponible, las carreras son 100% para el repartidor (sin comisión tradicional).
             if ($courierEarning->wasRecentlyCreated) {
-            $this->ensureWallet($driver);
-            $driver->wallet->debit($commissionAmount, 'commission', 'Comisión por pedido #' . ($type === 'favor' ? 'Favor-' . $job->id : $job->order_no), $job);
-
-            // Sync legacy drivers.balance + transactions table (lo que lee la app)
-            $driver->balance = $driver->wallet->balance;
-            $driver->save();
-
-            $trx = new Transaction();
-            $trx->driver_id    = $driver->id;
-            $trx->amount       = $commissionAmount;
-            $trx->post_balance = $driver->balance;
-            $trx->charge       = 0;
-            $trx->trx          = getTrx();
-            $trx->trx_type     = '-';
-            $trx->remark       = 'commission';
-            $trx->details      = 'Comisión por pedido #' . ($type === 'favor' ? 'Favor-' . $job->id : $job->order_no);
-            $trx->save();
+                $economicCheck = \App\Services\DriverEconomicPolicyService::canDriverReceiveOrders($driver);
+                if ($economicCheck['balance_type'] === 'promotional') {
+                    // Repartidor en período promocional: conserva el 100% de la ganancia
+                    $job->update(['commission_amount' => 0]);
+                } else {
+                    \App\Services\DriverEconomicPolicyService::consumeBalance(
+                        $driver,
+                        $commissionAmount,
+                        'Servicio de entrega #' . ($type === 'favor' ? 'Favor-' . $job->id : $job->order_no),
+                        $job
+                    );
+                }
             }
 
             // Seller receivable: only funds held by Lizto or its courier.
@@ -979,6 +1000,22 @@ class CourierJobController extends Controller
             $wallet = 'qr';
         }
 
+        $distKm = null;
+        if ($order->store && $order->store->latitude && $order->delivery_lat) {
+            $distKm = round(\App\Support\DeliveryPricing::distanceKm(
+                (float) $order->store->latitude, (float) $order->store->longitude,
+                (float) $order->delivery_lat, (float) $order->delivery_lng
+            ), 2);
+        }
+        $durMin = $distKm ? \App\Services\RouteOptimizationService::estimateTimeMinutes($distKm) : 10.0;
+        $fareBreakdown = \App\Services\DriverFareEngine::calculateRouteFare(
+            $distKm ?? 2.0,
+            $durMin,
+            1,
+            \App\Services\DemandEngine::TIER_NORMAL,
+            (float) ($order->tip ?? 0)
+        );
+
         return [
             'id'              => $order->id,
             'type'            => $type,
@@ -991,11 +1028,18 @@ class CourierJobController extends Controller
             'delivery_address'=> $order->delivery_address,
             'delivery_lat'    => $order->delivery_lat,
             'delivery_lng'    => $order->delivery_lng,
+            'distance_km'     => $distKm,
+            'duration_minutes'=> $durMin,
             'amount'          => $order->total,
             'subtotal'        => $order->subtotal,
             'delivery_fee'    => $order->delivery_fee,
             'tip'             => $order->tip,
-            'total_earning'   => $order->delivery_fee ?? 0,
+            'total_earning'   => $fareBreakdown['total_payout'],
+            'driver_earning'  => $fareBreakdown['driver_earning'],
+            'total_payout'    => $fareBreakdown['total_payout'],
+            'points'          => $fareBreakdown['points'],
+            'batch_id'        => $order->courier_batch_id,
+            'fare_breakdown'  => $fareBreakdown,
             'status'          => $order->status,
             'store_name'      => $order->store?->name,
             'description'     => $order->notes,
@@ -1043,7 +1087,14 @@ class CourierJobController extends Controller
             ), 2);
         }
 
-        $isShortDistance = ($distanceKm !== null && $distanceKm < 1.0) || ($favor->delivery_fee == 4.0 && $distanceKm && $distanceKm < 1.5);
+        $durMin = $distanceKm ? \App\Services\RouteOptimizationService::estimateTimeMinutes($distanceKm) : 10.0;
+        $fareBreakdown = \App\Services\DriverFareEngine::calculateRouteFare(
+            $distanceKm ?? 2.0,
+            $durMin,
+            1,
+            \App\Services\DemandEngine::TIER_NORMAL,
+            0.0
+        );
 
         return [
             'id'              => $favor->id,
@@ -1059,11 +1110,17 @@ class CourierJobController extends Controller
             'delivery_lng'    => $favor->delivery_lng,
             'stops'           => $favor->stops,
             'distance_km'     => $distanceKm,
+            'duration_minutes'=> $durMin,
             'amount'          => $favor->estimated_amount,
             'delivery_fee'    => $fee,
             'base_delivery_fee' => $baseDeliveryFee,
             'additional_charge' => (float) ($favor->estimated_amount ?? 0),
-            'total_earning'   => $fee,
+            'total_earning'   => $fareBreakdown['total_payout'],
+            'driver_earning'  => $fareBreakdown['driver_earning'],
+            'total_payout'    => $fareBreakdown['total_payout'],
+            'points'          => $fareBreakdown['points'],
+            'batch_id'        => $favor->courier_batch_id,
+            'fare_breakdown'  => $fareBreakdown,
             'status'          => $favor->status,
             'store_name'      => $favor->store_name ?? $favor->seller?->name ?? 'Punto de recojo',
             'description'     => $favor->description,
@@ -1190,27 +1247,26 @@ class CourierJobController extends Controller
     {
         $driver = $this->driver();
         $this->ensureWallet($driver);
-
-        $transactions = $driver->wallet->transactions()
-            ->latest()
-            ->limit(50)
-            ->get()
-            ->map(fn($tx) => [
-                'id'           => $tx->id,
-                'trx'          => $tx->trx,
-                'amount'       => $tx->amount,
-                'post_balance' => $tx->post_balance,
-                'charge'       => $tx->charge,
-                'trx_type'     => $tx->trx_type,
-                'remark'       => $tx->remark,
-                'details'      => $tx->details,
-                'created_at'   => $tx->created_at,
-            ]);
+        $summary = \App\Services\DriverEconomicPolicyService::getEconomicSummary($driver);
 
         return apiResponse('wallet_transactions', 'success', ['Historial de transacciones'], [
-            'wallet_balance' => $driver->wallet->balance,
-            'transactions'   => $transactions,
+            'wallet_balance'      => (float) $driver->wallet->balance,
+            'promotional_balance' => (float) ($driver->wallet->promotional_balance ?? 0),
+            'recharge_balance'    => (float) ($driver->wallet->recharge_balance ?? 0),
+            'economic_state'      => $summary['economic_state'],
+            'can_receive_orders'  => $summary['allowed'],
+            'min_recharge'        => $summary['min_recharge'],
+            'reason'              => $summary['reason'],
+            'transactions'        => $summary['recent_transactions'],
         ]);
+    }
+
+    public function economicStatus()
+    {
+        $driver = $this->driver();
+        $summary = \App\Services\DriverEconomicPolicyService::getEconomicSummary($driver);
+
+        return apiResponse('driver_economic_status', 'success', ['Estado económico del repartidor'], $summary);
     }
 
     public function heatmapData(Request $request)
@@ -1310,5 +1366,352 @@ class CourierJobController extends Controller
         return apiResponse('heatmap_data', 'success', ['Datos del mapa de calor'], [
             'hotspots' => $hotspots,
         ]);
+    }
+
+    public function currentDemand(Request $request)
+    {
+        $driver = $this->driver();
+        $lat = (float) ($request->latitude ?? $driver->latitude ?? -12.04318);
+        $lng = (float) ($request->longitude ?? $driver->longitude ?? -77.02824);
+        $radius = (float) ($request->radius ?? 5.0);
+
+        $demand = \App\Services\DemandEngine::calculateDemandTier($lat, $lng, $radius);
+
+        return apiResponse('demand_status', 'success', ['Estado de demanda actual'], $demand);
+    }
+
+    public function farePreview(Request $request)
+    {
+        $distanceKm = (float) ($request->distance_km ?? 1.0);
+        $durationMin = (float) ($request->duration_minutes ?? \App\Services\RouteOptimizationService::estimateTimeMinutes($distanceKm));
+        $orderCount = (int) ($request->order_count ?? 1);
+        $demandTier = $request->demand_tier ?? \App\Services\DemandEngine::TIER_NORMAL;
+        $tip = (float) ($request->tip ?? 0.0);
+
+        $fare = \App\Services\DriverFareEngine::calculateRouteFare($distanceKm, $durationMin, $orderCount, $demandTier, $tip);
+
+        return apiResponse('fare_preview', 'success', ['Cálculo dinámico de ganancia'], $fare);
+    }
+
+    public function activeBatch(Request $request)
+    {
+        $driver = $this->driver();
+        $batch = \App\Models\CourierBatch::where('driver_id', $driver->id)
+            ->whereIn('status', [\App\Models\CourierBatch::STATUS_ACCEPTED, \App\Models\CourierBatch::STATUS_IN_PROGRESS])
+            ->with(['batchOrders.order'])
+            ->latest('id')
+            ->first();
+
+        if (!$batch) {
+            return apiResponse('active_batch', 'success', ['No hay lotes activos actualmente'], [
+                'batch' => null,
+            ]);
+        }
+
+        return apiResponse('active_batch', 'success', ['Lote activo encontrado'], [
+            'batch' => $this->formatBatch($batch),
+        ]);
+    }
+
+    public function batchDetail(Request $request, $id)
+    {
+        $driver = $this->driver();
+        $batch = \App\Models\CourierBatch::where(function ($q) use ($driver) {
+                $q->where('driver_id', $driver->id)
+                  ->orWhere('status', \App\Models\CourierBatch::STATUS_OFFERED)
+                  ->orWhere('status', \App\Models\CourierBatch::STATUS_PENDING);
+            })
+            ->with(['batchOrders.order'])
+            ->findOrFail($id);
+
+        return apiResponse('batch_detail', 'success', ['Detalle del lote'], [
+            'batch' => $this->formatBatch($batch),
+        ]);
+    }
+
+    public function acceptBatch(Request $request, $id)
+    {
+        $driver = $this->driver();
+
+        // 1. Economic eligibility check
+        $economicCheck = \App\Services\DriverEconomicPolicyService::canDriverReceiveOrders($driver);
+        if (!$economicCheck['allowed']) {
+            return apiResponse('insufficient_balance', 'error', [
+                $economicCheck['reason'] ?? 'Recarga tu wallet para aceptar este lote.',
+            ], [
+                'economic_state' => $economicCheck['economic_state'],
+                'min_recharge'   => $economicCheck['min_recharge'],
+                'balance'        => $economicCheck['balance'],
+            ]);
+        }
+
+        $batch = \App\Models\CourierBatch::whereIn('status', [
+            \App\Models\CourierBatch::STATUS_PENDING,
+            \App\Models\CourierBatch::STATUS_OFFERED,
+        ])->findOrFail($id);
+
+        DB::transaction(function () use ($batch, $driver) {
+            $batch->update([
+                'driver_id'   => $driver->id,
+                'status'      => \App\Models\CourierBatch::STATUS_ACCEPTED,
+                'accepted_at' => now(),
+            ]);
+
+            // Assign driver to all underlying orders
+            foreach ($batch->batchOrders as $bo) {
+                $orderModel = $bo->order;
+                if ($orderModel instanceof DeliveryOrder) {
+                    $orderModel->update([
+                        'driver_id'          => $driver->id,
+                        'status'             => 'on_way',
+                        'driver_assigned_at' => now(),
+                    ]);
+                } elseif ($orderModel instanceof Favor) {
+                    $orderModel->update([
+                        'courier_id'          => $driver->id,
+                        'status'              => 'accepted',
+                        'courier_assigned_at' => now(),
+                    ]);
+                }
+            }
+        });
+
+        return apiResponse('batch_accepted', 'success', ['Lote aceptado exitosamente'], [
+            'batch' => $this->formatBatch($batch->fresh(['batchOrders.order'])),
+        ]);
+    }
+
+    public function completeBatchStop(Request $request, $id, $stopNumber)
+    {
+        $driver = $this->driver();
+        $batch = \App\Models\CourierBatch::where('driver_id', $driver->id)
+            ->whereIn('status', [\App\Models\CourierBatch::STATUS_ACCEPTED, \App\Models\CourierBatch::STATUS_IN_PROGRESS])
+            ->with('batchOrders.order')
+            ->findOrFail($id);
+
+        $stops = $batch->optimized_stops ?? [];
+        $targetStop = null;
+        foreach ($stops as $s) {
+            if ($s['stop_number'] == $stopNumber) {
+                $targetStop = $s;
+                break;
+            }
+        }
+
+        if (!$targetStop) {
+            return apiResponse('stop_not_found', 'error', ['Parada no encontrada en el itinerario.']);
+        }
+
+        $batchOrder = $batch->batchOrders()
+            ->where('order_id', $targetStop['order_id'])
+            ->first();
+
+        if (!$batchOrder) {
+            return apiResponse('order_not_found', 'error', ['Orden del lote no encontrada.']);
+        }
+
+        DB::transaction(function () use ($batch, $batchOrder, $targetStop, $driver) {
+            if ($targetStop['type'] === 'pickup') {
+                $batchOrder->update([
+                    'status'       => \App\Models\CourierBatchOrder::STATUS_PICKED_UP,
+                    'picked_up_at' => now(),
+                ]);
+                $batch->update(['status' => \App\Models\CourierBatch::STATUS_IN_PROGRESS]);
+            } else {
+                // Dropoff completed
+                \App\Services\BatchingEngine::completeOrderInBatch($batchOrder);
+
+                $order = $batchOrder->order;
+                if ($order instanceof DeliveryOrder) {
+                    $order->update(['status' => 'delivered', 'delivered_at' => now()]);
+                } elseif ($order instanceof Favor) {
+                    $order->update(['status' => 'delivered', 'delivered_at' => now()]);
+                }
+
+                // Register driver financial earning
+                $earningAmount = (float) $batchOrder->individual_earning;
+                $courierEarning = \App\Models\CourierEarning::firstOrCreate([
+                    'courier_id' => $driver->id,
+                    'job_type'   => $batchOrder->order_type,
+                    'job_id'     => $batchOrder->order_id,
+                ], [
+                    'amount'      => $earningAmount,
+                    'commission'  => 0,
+                    'description' => "Entrega de lote {$batch->batch_type} #{$batch->batch_no} (Parada {$targetStop['stop_number']})",
+                ]);
+
+                if ($courierEarning->wasRecentlyCreated) {
+                    \App\Services\DeliveryFinancialLedger::recordDriverEarning($driver, $earningAmount, $courierEarning);
+                }
+
+                // Economic Policy: If in promotional balance, 100% retained.
+                // If on standard recharge balance, consume single fee (never multiplied per batch!)
+                $economicCheck = \App\Services\DriverEconomicPolicyService::canDriverReceiveOrders($driver);
+                if ($economicCheck['balance_type'] !== 'promotional') {
+                    \App\Services\DriverEconomicPolicyService::consumeBalance(
+                        $driver,
+                        $earningAmount * 0.10, // standard nominal deduction or base
+                        "Servicio Lote {$batch->batch_no} (Parada {$targetStop['stop_number']})",
+                        $order
+                    );
+                }
+            }
+        });
+
+        return apiResponse('stop_completed', 'success', ['Parada completada con éxito'], [
+            'batch' => $this->formatBatch($batch->fresh(['batchOrders.order'])),
+        ]);
+    }
+
+    private function formatBatch(\App\Models\CourierBatch $batch): array
+    {
+        return [
+            'id'                     => $batch->id,
+            'batch_no'               => $batch->batch_no,
+            'batch_type'             => $batch->batch_type,
+            'status'                 => $batch->status,
+            'total_orders'           => (int) $batch->total_orders,
+            'total_distance_km'      => (float) $batch->total_distance_km,
+            'total_duration_minutes' => (float) $batch->total_duration_minutes,
+            'base_earning'           => (float) $batch->base_earning,
+            'distance_earning'       => (float) $batch->distance_earning,
+            'time_earning'           => (float) $batch->time_earning,
+            'batch_bonus'            => (float) $batch->batch_bonus,
+            'demand_incentive'       => (float) $batch->demand_incentive,
+            'driver_earning'         => (float) $batch->driver_earning,
+            'total_tips'             => (float) $batch->total_tips,
+            'total_payout'           => (float) $batch->total_payout,
+            'total_points'           => (int) $batch->total_points,
+            'demand_tier'            => $batch->demand_tier,
+            'demand_multiplier'      => (float) $batch->demand_multiplier,
+            'optimized_stops'        => $batch->optimized_stops ?? [],
+            'fare_breakdown'         => $batch->fare_breakdown ?? [],
+            'orders'                 => $batch->batchOrders->map(function ($bo) {
+                return [
+                    'id'                 => $bo->id,
+                    'order_id'           => $bo->order_id,
+                    'order_type'         => $bo->order_type,
+                    'sequence_order'     => $bo->sequence_order,
+                    'pickup_stop_no'     => $bo->pickup_stop_no,
+                    'dropoff_stop_no'    => $bo->dropoff_stop_no,
+                    'status'             => $bo->status,
+                    'individual_earning' => (float) $bo->individual_earning,
+                    'tip'                => (float) $bo->tip,
+                    'points'             => (int) $bo->points,
+                    'order_detail'       => $bo->order ? (
+                        $bo->order instanceof DeliveryOrder
+                            ? $this->formatJob($bo->order, 'delivery')
+                            : $this->formatFavorJob($bo->order)
+                    ) : null,
+                ];
+            })->values(),
+            'created_at'             => optional($batch->created_at)->toIso8601String(),
+        ];
+    }
+
+    public function getAutoAcceptSettings()
+    {
+        $driver = $this->driver();
+
+        return apiResponse('auto_accept_settings', 'success', ['Configuración de autoaceptación'], [
+            'auto_accept_enabled'      => (bool) $driver->auto_accept_enabled,
+            'auto_accept_min_earning'  => (float) ($driver->auto_accept_min_earning ?? 0.0),
+            'auto_accept_max_distance' => (float) ($driver->auto_accept_max_distance ?? 10.0),
+        ]);
+    }
+
+    public function updateAutoAcceptSettings(Request $request)
+    {
+        $driver = $this->driver();
+
+        $validator = Validator::make($request->all(), [
+            'auto_accept_enabled'      => 'required|boolean',
+            'auto_accept_min_earning'  => 'nullable|numeric|min:0',
+            'auto_accept_max_distance' => 'nullable|numeric|min:0',
+        ]);
+
+        if ($validator->fails()) {
+            return apiResponse('validation_error', 'error', $validator->errors()->all());
+        }
+
+        $driver->update([
+            'auto_accept_enabled'      => (bool) $request->auto_accept_enabled,
+            'auto_accept_min_earning'  => (float) ($request->auto_accept_min_earning ?? 0.0),
+            'auto_accept_max_distance' => (float) ($request->auto_accept_max_distance ?? 10.0),
+        ]);
+
+        return apiResponse('auto_accept_settings_updated', 'success', ['Preferencias de autoaceptación actualizadas correctamente'], [
+            'auto_accept_enabled'      => (bool) $driver->auto_accept_enabled,
+            'auto_accept_min_earning'  => (float) $driver->auto_accept_min_earning,
+            'auto_accept_max_distance' => (float) $driver->auto_accept_max_distance,
+        ]);
+    }
+
+    public function pendingOffers(Request $request)
+    {
+        $driver = $this->driver();
+
+        // Expire any past-due offers first
+        \App\Services\OfferDispatchService::processExpiredOffers();
+
+        $offers = \App\Models\CourierJobOffer::where('driver_id', $driver->id)
+            ->where('status', 'offered')
+            ->where('expires_at', '>', now())
+            ->with(['job', 'batch.batchOrders.order'])
+            ->latest('id')
+            ->get()
+            ->map(function ($offer) {
+                $rem = max(0, $offer->expires_at ? now()->diffInSeconds($offer->expires_at, false) : 0);
+                $job = $offer->job;
+
+                $jobData = null;
+                if ($job instanceof DeliveryOrder) {
+                    $jobData = $this->formatJob($job, 'delivery');
+                } elseif ($job instanceof Favor) {
+                    $jobData = $this->formatFavorJob($job);
+                } elseif ($job instanceof \App\Models\CourierBatch) {
+                    $jobData = $this->formatBatch($job);
+                }
+
+                return [
+                    'id'                => $offer->id,
+                    'driver_id'         => $offer->driver_id,
+                    'job_type'          => $offer->job_type,
+                    'job_id'            => $offer->job_id,
+                    'batch_id'          => $offer->batch_id,
+                    'source'            => $offer->source,
+                    'status'            => $offer->status,
+                    'offered_at'        => optional($offer->offered_at)->toIso8601String(),
+                    'expires_at'        => optional($offer->expires_at)->toIso8601String(),
+                    'remaining_seconds' => (int) $rem,
+                    'job_detail'        => $jobData,
+                ];
+            });
+
+        return apiResponse('pending_offers', 'success', ['Ofertas activas'], [
+            'offers' => $offers,
+        ]);
+    }
+
+    public function acceptOffer(Request $request, $id)
+    {
+        $driver = $this->driver();
+        $result = \App\Services\OfferDispatchService::respondToOffer($driver, (int) $id, 'accept');
+
+        if (!$result['success']) {
+            return apiResponse('offer_accept_failed', 'error', [$result['message']], $result['economic_status'] ?? []);
+        }
+
+        return apiResponse('offer_accepted', 'success', [$result['message']], [
+            'job' => $result['job'],
+        ]);
+    }
+
+    public function rejectOffer(Request $request, $id)
+    {
+        $driver = $this->driver();
+        $result = \App\Services\OfferDispatchService::respondToOffer($driver, (int) $id, 'reject');
+
+        return apiResponse('offer_rejected', 'success', [$result['message']]);
     }
 }

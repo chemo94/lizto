@@ -141,18 +141,21 @@ class DriverController extends Controller
             }
         }
 
-        if (!$driver->wallet) {
-            $wallet = Wallet::create(['holder_type' => get_class($driver), 'holder_id' => $driver->id]);
-            $driver->update(['wallet_id' => $wallet->id]);
-            $driver->setRelation('wallet', $wallet);
-        }
+        $wallet = \App\Services\DriverEconomicPolicyService::ensureWallet($driver);
+        $economicCheck = \App\Services\DriverEconomicPolicyService::canDriverReceiveOrders($driver);
 
         return  apiResponse("driver_dashboard", "success", $notify, [
-            'driver'            => $driver->makeVisible('balance'),
-            'driver_data'       => $driver->driver_data,
-            'vehicle'           => $driver->vehicle ?? null,
-            'driver_image_path' => getFilePath('driver'),
-            'wallet_balance'    => $driver->wallet->balance,
+            'driver'              => $driver->makeVisible('balance'),
+            'driver_data'         => $driver->driver_data,
+            'vehicle'             => $driver->vehicle ?? null,
+            'driver_image_path'   => getFilePath('driver'),
+            'wallet_balance'      => (float) $wallet->balance,
+            'promotional_balance' => (float) ($wallet->promotional_balance ?? 0),
+            'recharge_balance'    => (float) ($wallet->recharge_balance ?? 0),
+            'economic_state'      => $economicCheck['economic_state'],
+            'can_receive_orders'  => $economicCheck['allowed'],
+            'min_recharge'        => $economicCheck['min_recharge'],
+            'economic_reason'     => $economicCheck['reason'],
         ]);
     }
 

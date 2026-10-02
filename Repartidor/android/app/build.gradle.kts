@@ -44,21 +44,27 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = file(keystoreProperties["storeFile"] as String)
-            storePassword = keystoreProperties["storePassword"] as String
+        if (keystorePropertiesFile.exists()) {
+            create("release") {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                val rawPath = keystoreProperties["storeFile"] as String
+                val f1 = file(rawPath)
+                val f2 = rootProject.file(rawPath)
+                storeFile = if (f1.exists()) f1 else f2
+                storePassword = keystoreProperties["storePassword"] as String
+            }
         }
     }
     buildTypes {
-        debug {
-            signingConfig = signingConfigs.getByName("release")  // usa key-lizto.jks también en debug
-        }
         release {
             isMinifyEnabled = false
             isShrinkResources = false
-            signingConfig = signingConfigs.getByName("release")
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            } else {
+                throw GradleException("key.properties not found! Cannot build release without release key.")
+            }
         }
     }
 }

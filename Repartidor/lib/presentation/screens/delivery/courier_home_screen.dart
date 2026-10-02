@@ -16,8 +16,11 @@ import 'package:liztogo_repartidor/data/controller/delivery/courier_notification
 import 'package:liztogo_repartidor/data/repo/account/profile_repo.dart';
 import 'package:liztogo_repartidor/presentation/screens/delivery/courier_job_detail_screen.dart';
 import 'package:liztogo_repartidor/presentation/screens/delivery/widgets/courier_active_order_card.dart';
-import 'package:liztogo_repartidor/presentation/screens/delivery/widgets/courier_earnings_hero_card.dart';
 import 'package:liztogo_repartidor/presentation/screens/delivery/widgets/courier_order_radar_card.dart';
+import 'package:liztogo_repartidor/presentation/screens/delivery/widgets/courier_batch_radar_card.dart';
+import 'package:liztogo_repartidor/presentation/screens/delivery/widgets/courier_offer_modal.dart';
+import 'package:liztogo_repartidor/presentation/screens/delivery/widgets/auto_accept_settings_modal.dart';
+import 'package:liztogo_repartidor/presentation/screens/delivery/widgets/insufficient_balance_modal.dart';
 import 'package:liztogo_repartidor/core/route/route.dart';
 import 'package:liztogo_repartidor/data/model/delivery/courier_models.dart';
 
@@ -78,6 +81,10 @@ class _CourierHomeScreenState extends State<CourierHomeScreen> with SingleTicker
       c.loadOnlineStatus();
       c.loadPendingJobs();
       c.loadActiveJobs();
+      c.loadActiveBatch();
+      c.loadAutoAcceptSettings();
+      c.loadPendingOffers().then((_) => _checkTargetedOffers(c));
+      c.loadEconomicStatus().then((_) => _checkEconomicPolicy(c));
       Get.find<CourierNotificationService>().subscribeAll();
       AudioUtils.stop();
     });
@@ -382,6 +389,42 @@ class _CourierHomeScreenState extends State<CourierHomeScreen> with SingleTicker
     }
   }
 
+  void _checkEconomicPolicy(CourierController c) {
+    if (!mounted) return;
+    final status = c.economicStatus;
+    if (status != null && status['allowed'] == false) {
+      final currentBalance = (status['balance'] is num) ? (status['balance'] as num).toDouble() : 0.0;
+      final minRecharge = (status['min_recharge'] is num) ? (status['min_recharge'] as num).toDouble() : 8.0;
+      final reason = status['reason']?.toString();
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        InsufficientBalanceModal.show(
+          context: context,
+          currentBalance: currentBalance,
+          minRecharge: minRecharge,
+          reason: reason,
+        );
+      });
+    }
+  }
+
+  void _checkTargetedOffers(CourierController c) {
+    if (!mounted || c.pendingOffers.isEmpty) return;
+    final offer = c.pendingOffers.first;
+    if (!offer.isExpired) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        CourierOfferModal.show(
+          context: context,
+          offer: offer,
+          onAccept: (offerId) => c.acceptOffer(offerId),
+          onReject: (offerId) => c.rejectOffer(offerId),
+        );
+      });
+    }
+  }
+
   @override
   void dispose() {
     _greetingTimer.cancel();
@@ -471,6 +514,25 @@ class _CourierHomeScreenState extends State<CourierHomeScreen> with SingleTicker
                       ),
                       Row(
                         children: [
+                          IconButton(
+                            icon: Icon(
+                              Icons.bolt_rounded,
+                              color: c.autoAcceptSettings.autoAcceptEnabled ? const Color(0xFFF59E0B) : (isDark ? Colors.white70 : Colors.black54),
+                            ),
+                            tooltip: 'Autoaceptación Inteligente',
+                            onPressed: () async {
+                              await c.loadAutoAcceptSettings();
+                              if (context.mounted) {
+                                AutoAcceptSettingsModal.show(
+                                  context: context,
+                                  initialSettings: c.autoAcceptSettings,
+                                  onSave: (enabled, minEarning, maxDist) async {
+                                    await c.saveAutoAcceptSettings(enabled, minEarning, maxDist);
+                                  },
+                                );
+                              }
+                            },
+                          ),
                           IconButton(
                             icon: const Icon(Icons.verified_user_outlined),
                             color: isDark ? Colors.white : MyColor.primaryTextColor,
@@ -685,11 +747,19 @@ class _CourierHomeScreenState extends State<CourierHomeScreen> with SingleTicker
       );
     }
 
+    final hasActiveBatch = c.activeBatch != null;
+    final extraBatchItem = hasActiveBatch ? 1 : 0;
+
     return RefreshIndicator(
-      onRefresh: () => c.loadPendingJobs(),
+      onRefresh: () async {
+        await c.loadPendingJobs();
+        await c.loadActiveBatch();
+        await c.loadPendingOffers();
+        _checkTargetedOffers(c);
+      },
       child: ListView.builder(
         padding: const EdgeInsets.only(bottom: 95),
-        itemCount: c.pendingJobs.length + 1,
+        itemCount: c.pendingJobs.length + 1 + extraBatchItem,
         itemBuilder: (_, i) {
           if (i == 0) {
             return CourierRealRadarCard(
@@ -697,7 +767,14 @@ class _CourierHomeScreenState extends State<CourierHomeScreen> with SingleTicker
               pendingCount: c.pendingJobs.length,
             );
           }
-          final job = c.pendingJobs[i - 1];
+          if (hasActiveBatch && i == 1) {
+            return CourierBatchRadarCard(
+              batch: c.activeBatch!,
+              onAccept: (b) {},
+            );
+          }
+          final jobIndex = hasActiveBatch ? (i - 2) : (i - 1);
+          final job = c.pendingJobs[jobIndex];
           return CourierOrderRadarCard(
             job: job,
             onAccept: (j) => _acceptJob(c, j),

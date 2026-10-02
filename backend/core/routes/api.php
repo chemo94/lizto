@@ -330,6 +330,8 @@ Route::namespace('Api\Driver')->prefix('driver')->group(function () {
                         Route::post('cancel/{id}', 'cancel');
                         Route::post('received-cash-payment/{id}', 'receivedCashPayment');
                         Route::get('receipt/{id}', 'receipt');
+                        Route::post('accept/{id}', 'acceptRide');
+                        Route::post('reject/{id}', 'rejectRide');
                     });
                     //Bid
                     Route::controller('BidController')->prefix('bid')->group(function () {
@@ -380,7 +382,19 @@ Route::namespace('Api\Driver')->prefix('driver')->group(function () {
                     Route::post('jobs/{id}/messages/send-image', '\App\Http\Controllers\Api\Driver\CourierJobController@sendImage');
                     Route::get('earnings', '\App\Http\Controllers\Api\Driver\CourierJobController@earnings');
                     Route::get('wallet/transactions', '\App\Http\Controllers\Api\Driver\CourierJobController@walletTransactions');
+                    Route::get('wallet/economic-status', '\App\Http\Controllers\Api\Driver\CourierJobController@economicStatus');
                     Route::get('heatmap', '\App\Http\Controllers\Api\Driver\CourierJobController@heatmapData');
+                    Route::get('batches/active', '\App\Http\Controllers\Api\Driver\CourierJobController@activeBatch');
+                    Route::get('batches/{id}', '\App\Http\Controllers\Api\Driver\CourierJobController@batchDetail');
+                    Route::post('batches/{id}/accept', '\App\Http\Controllers\Api\Driver\CourierJobController@acceptBatch');
+                    Route::post('batches/{id}/stops/{stopNumber}/complete', '\App\Http\Controllers\Api\Driver\CourierJobController@completeBatchStop');
+                    Route::get('fare/preview', '\App\Http\Controllers\Api\Driver\CourierJobController@farePreview');
+                    Route::get('demand/current', '\App\Http\Controllers\Api\Driver\CourierJobController@currentDemand');
+                    Route::get('auto-accept/settings', '\App\Http\Controllers\Api\Driver\CourierJobController@getAutoAcceptSettings');
+                    Route::post('auto-accept/settings', '\App\Http\Controllers\Api\Driver\CourierJobController@updateAutoAcceptSettings');
+                    Route::get('offers/pending', '\App\Http\Controllers\Api\Driver\CourierJobController@pendingOffers');
+                    Route::post('offers/{id}/accept', '\App\Http\Controllers\Api\Driver\CourierJobController@acceptOffer');
+                    Route::post('offers/{id}/reject', '\App\Http\Controllers\Api\Driver\CourierJobController@rejectOffer');
                 });
 
                 // Shopping (driver side - buy in store)

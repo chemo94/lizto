@@ -109,6 +109,7 @@ class SellerFavorDispatchService
 
         return Driver::query()->where('status', Status::ENABLE)->where('online_status', 1)
             ->whereIn('service_type', ['delivery', 'both'])
+            ->whereHas('wallet', fn ($q) => $q->where('balance', '>', 0))
             ->whereNotNull('current_lat')->whereNotNull('current_lot')
             ->where('current_lat', '!=', 0)->where('current_lot', '!=', 0)
             ->when($attempted, fn ($q) => $q->whereNotIn('id', $attempted))
@@ -123,6 +124,7 @@ class SellerFavorDispatchService
             ->where('status', Status::ENABLE)
             ->where('online_status', 1)
             ->whereIn('service_type', ['delivery', 'both'])
+            ->whereHas('wallet', fn ($q) => $q->where('balance', '>', 0))
             ->get();
     }
 

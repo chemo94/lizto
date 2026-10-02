@@ -217,6 +217,7 @@ class RegisterController extends Controller
         $driverLogin->save();
 
         $driver = Driver::find($driver->id);
+        \App\Services\DriverEconomicPolicyService::grantInitialPromotionalCredit($driver);
 
         return $driver;
     }

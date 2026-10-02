@@ -56,6 +56,17 @@ class GeneralSetting extends Model
         'favor_surge'              => 'double',
         'favor_coverage_radius'    => 'double',
         'negative_balance_driver'  => 'double',
+        'min_driver_recharge'      => 'double',
+        'initial_promotional_credit' => 'double',
+        'driver_base_fare'         => 'double',
+        'driver_rate_per_km'       => 'double',
+        'driver_rate_per_minute'   => 'double',
+        'batch_double_bonus'       => 'double',
+        'batch_triplet_bonus'      => 'double',
+        'batch_quad_bonus'         => 'double',
+        'max_batch_pickup_distance_km' => 'double',
+        'max_batch_detour_km'      => 'double',
+        'max_batch_detour_minutes' => 'double',
         'delivery_sections_config' => 'array',
     ];
 

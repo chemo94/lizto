@@ -11,11 +11,7 @@ import 'package:liztogo_pro/data/controller/localization/localization_controller
 import 'package:liztogo_pro/data/model/general_setting/general_setting_response_model.dart';
 import 'package:liztogo_pro/data/model/global/response_model/response_model.dart';
 import 'package:liztogo_pro/data/repo/auth/general_setting_repo.dart';
-import 'package:liztogo_pro/presentation/screens/maintenance/maintanance_screen.dart';
 import 'package:liztogo_pro/presentation/components/snack_bar/show_custom_snackbar.dart';
-import 'package:liztogo_pro/presentation/screens/auth/login/login_screen.dart';
-import 'package:liztogo_pro/presentation/screens/dashboard/dashboard_screen.dart';
-import 'package:liztogo_pro/presentation/screens/onbaord/onboard_intro_screen.dart';
 
 import 'package:liztogo_pro/data/services/push_notification_service.dart';
 

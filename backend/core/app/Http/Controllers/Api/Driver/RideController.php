@@ -9,8 +9,11 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Lib\RidePaymentManager;
 use App\Models\Zone;
+use App\Models\Bid;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class RideController extends Controller
 {
@@ -338,4 +341,136 @@ class RideController extends Controller
         ['Content-Type' => 'application/pdf']
     );
 }
+
+    /**
+     * Aceptar carrera urgentemente con bloqueo transaccional atómico
+     */
+    public function acceptRide(Request $request, $id)
+    {
+        $driver = auth()->user();
+
+        if (!$driver) {
+            return apiResponse("unauthenticated", "error", ["Conductor no autenticado"]);
+        }
+
+        // 1. Validar elegibilidad del conductor
+        if ($driver->online_status != Status::YES) {
+            return apiResponse("not_online", "error", ["Debes estar conectado para aceptar carreras"]);
+        }
+
+        if ($driver->dv != Status::VERIFIED || $driver->vv != Status::VERIFIED) {
+            return apiResponse("not_verified", "error", ["Documentación o vehículo no verificados"]);
+        }
+
+        if ($driver->balance < gs('negative_balance_driver')) {
+            return apiResponse("limit", "error", ["Saldo insuficiente en billetera para tomar nuevas carreras"]);
+        }
+
+        if (class_exists(\App\Services\DriverEconomicPolicyService::class)) {
+            $check = \App\Services\DriverEconomicPolicyService::canDriverReceiveOrders($driver);
+            if (!$check['allowed']) {
+                return apiResponse("insufficient_balance", "error", [$check['reason'] ?? "Saldo de recargas insuficiente"]);
+            }
+        }
+
+        // 2. Bloqueo atómico a nivel de fila en base de datos
+        return DB::transaction(function () use ($id, $driver, $request) {
+            $ride = Ride::where('id', $id)->lockForUpdate()->first();
+
+            if (!$ride) {
+                return apiResponse("not_found", "error", ["Esta carrera no existe o ya no está disponible"]);
+            }
+
+            if ($ride->status != Status::RIDE_PENDING) {
+                return apiResponse("already_taken", "error", ["Esta carrera ya fue aceptada por otro conductor"]);
+            }
+
+            // Validar expiración si la carrera tiene más de 3 minutos de creada
+            if ($ride->created_at && $ride->created_at->diffInSeconds(now()) > 180) {
+                return apiResponse("expired", "error", ["La oferta de carrera ha expirado"]);
+            }
+
+            // Determinar monto aceptado
+            $amount = $request->amount ?? $ride->amount ?? $ride->recommend_amount;
+            if ($ride->min_amount && $amount < $ride->min_amount) {
+                $amount = $ride->min_amount;
+            }
+            if ($ride->max_amount && $amount > $ride->max_amount) {
+                $amount = $ride->max_amount;
+            }
+
+            // Crear o actualizar la puja como aceptada
+            $bid = Bid::where('ride_id', $ride->id)->where('driver_id', $driver->id)->first();
+            if (!$bid) {
+                $bid = new Bid();
+                $bid->ride_id   = $ride->id;
+                $bid->driver_id = $driver->id;
+            }
+            $bid->bid_amount  = $amount;
+            $bid->status      = Status::BID_ACCEPTED;
+            $bid->accepted_at = now();
+            $bid->save();
+
+            // Descartar otras ofertas pendientes
+            Bid::where('ride_id', $ride->id)->where('id', '!=', $bid->id)->update(['status' => Status::BID_REJECTED]);
+
+            // Asignar conductor y activar carrera
+            $ride->driver_id = $driver->id;
+            $ride->status    = Status::RIDE_ACTIVE;
+            $ride->amount    = $amount;
+            if (!$ride->otp) {
+                $ride->otp = getNumber(4);
+            }
+            if ($driver->fleet_id) {
+                $ride->fleet_id = $driver->fleet_id;
+            }
+            $ride->save();
+
+            // Cargar relaciones para eventos
+            $ride->load('driver', 'driver.vehicle', 'driver.vehicle.model', 'driver.vehicle.color', 'driver.vehicle.year', 'service', 'user');
+            $driverRideCount = Ride::where('driver_id', $driver->id)->where('id', '!=', $ride->id)->where('status', Status::RIDE_COMPLETED)->count();
+
+            // Emitir evento a canales WebSocket / Reverb
+            try {
+                event(new EventsRide("rider-driver-$driver->id", "BID_ACCEPT", [
+                    'ride'              => $ride,
+                    'driver_total_ride' => $driverRideCount
+                ]));
+
+                event(new EventsRide("rider-user-$ride->user_id", "BID_ACCEPT", [
+                    'ride'              => $ride,
+                    'driver_total_ride' => $driverRideCount
+                ]));
+            } catch (\Exception $e) {
+                \Log::error("Broadcast error on acceptRide: " . $e->getMessage());
+            }
+
+            // Notificar al pasajero
+            notify($ride->user, 'ACCEPT_RIDE', [
+                'ride_id'         => $ride->uid,
+                'amount'          => showAmount($ride->amount),
+                'driver_name'     => $driver->fullname,
+                'service'         => $ride->service->name ?? 'Taxi',
+                'pickup_location' => $ride->pickup_location,
+            ]);
+
+            return apiResponse("success", "success", ["¡Carrera asignada exitosamente!"], [
+                'ride'    => $ride,
+                'ride_id' => (string) $ride->id,
+            ]);
+        });
+    }
+
+    /**
+     * Rechazar carrera por parte del conductor
+     */
+    public function rejectRide(Request $request, $id)
+    {
+        $driver = auth()->user();
+        if ($driver) {
+            Cache::put("driver_rejected_{$driver->id}_{$id}", true, now()->addMinutes(10));
+        }
+
+        return apiResponse("success", "success", ["Carrera rechazada correctamente"]);
+    }
 }

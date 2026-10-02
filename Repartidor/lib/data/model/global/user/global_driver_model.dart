@@ -40,6 +40,12 @@ class GlobalDriverInfoModel {
   String? zip;
   String? countryName;
   String? dialCode;
+  String? promotionalBalance;
+  String? rechargeBalance;
+  String? economicState;
+  bool? canReceiveOrders;
+  double? minRecharge;
+  String? economicReason;
 
   GlobalDriverInfoModel({
     this.id,
@@ -83,6 +89,12 @@ class GlobalDriverInfoModel {
     this.zip,
     this.countryName,
     this.dialCode,
+    this.promotionalBalance,
+    this.rechargeBalance,
+    this.economicState,
+    this.canReceiveOrders,
+    this.minRecharge,
+    this.economicReason,
   });
 
   factory GlobalDriverInfoModel.fromJson(Map<String, dynamic> json) => GlobalDriverInfoModel(
@@ -118,6 +130,12 @@ class GlobalDriverInfoModel {
         updatedAt: json["updated_at"]?.toString(),
         balance: json["balance"] != null ? json["balance"].toString() : '',
         walletBalance: json["wallet_balance"]?.toString(),
+        promotionalBalance: json["promotional_balance"]?.toString(),
+        rechargeBalance: json["recharge_balance"]?.toString(),
+        economicState: json["economic_state"]?.toString(),
+        canReceiveOrders: json["can_receive_orders"] is bool ? json["can_receive_orders"] : (json["can_receive_orders"]?.toString() == '1' || json["can_receive_orders"]?.toString() == 'true'),
+        minRecharge: json["min_recharge"] != null ? double.tryParse(json["min_recharge"].toString()) : 8.0,
+        economicReason: json["economic_reason"]?.toString(),
         rules: json["rules"] == null ? [] : List<String>.from(json["rules"]!.map((x) => x)),
         imageWithPath: json["image_with_path"]?.toString(),
         image: json["image"]?.toString(),
@@ -170,6 +188,12 @@ class GlobalDriverInfoModel {
         "zip": zip,
         "country_name": countryName,
         "dial_code": dialCode,
+        "promotional_balance": promotionalBalance,
+        "recharge_balance": rechargeBalance,
+        "economic_state": economicState,
+        "can_receive_orders": canReceiveOrders,
+        "min_recharge": minRecharge,
+        "economic_reason": economicReason,
       };
   String getFullName() {
     return "${firstname ?? ""} ${lastname ?? ""}".trim();

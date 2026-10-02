@@ -24,4 +24,9 @@ class CourierJobOffer extends Model
     {
         return $this->morphTo();
     }
+
+    public function batch()
+    {
+        return $this->belongsTo(CourierBatch::class, 'batch_id');
+    }
 }

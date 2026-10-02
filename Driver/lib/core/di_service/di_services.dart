@@ -6,6 +6,7 @@ import 'package:liztogo_pro/data/controller/splash/splash_controller.dart';
 import 'package:liztogo_pro/data/repo/auth/general_setting_repo.dart';
 import 'package:liztogo_pro/data/repo/splash/splash_repo.dart';
 import 'package:liztogo_pro/data/services/api_client.dart';
+import 'package:liztogo_pro/data/controller/ride/ride_request_manager.dart';
 
 Future<Map<String, Map<String, String>>> init() async {
   final sharedPreferences = await SharedPreferences.getInstance();
@@ -33,6 +34,9 @@ Future<Map<String, Map<String, String>>> init() async {
   }
   if (!Get.isRegistered<ThemeController>()) {
     Get.lazyPut(() => ThemeController(sharedPreferences: Get.find()));
+  }
+  if (!Get.isRegistered<RideRequestManager>()) {
+    Get.put(RideRequestManager(apiClient: Get.find()), permanent: true);
   }
 
   Map<String, Map<String, String>> language = {};

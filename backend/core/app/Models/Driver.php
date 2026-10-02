@@ -62,6 +62,9 @@ class Driver extends Authenticatable {
         'tv'                => 'integer',
         'ts'                => 'integer',
         'is_deleted'        => 'integer',
+        'auto_accept_enabled'     => 'boolean',
+        'auto_accept_min_earning' => 'double',
+        'auto_accept_max_distance'=> 'double',
     ];
 
     public function exportColumns(): array {
@@ -150,6 +153,16 @@ class Driver extends Authenticatable {
     public function wallet()
     {
         return $this->morphOne(Wallet::class, 'holder');
+    }
+
+    public function canReceiveOrders(): array
+    {
+        return \App\Services\DriverEconomicPolicyService::canDriverReceiveOrders($this);
+    }
+
+    public function economicSummary(): array
+    {
+        return \App\Services\DriverEconomicPolicyService::getEconomicSummary($this);
     }
 
     public function tickets() {

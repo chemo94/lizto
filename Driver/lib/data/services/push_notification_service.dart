@@ -9,6 +9,7 @@ import 'package:get/get.dart' hide Response;
 import 'package:liztogo_pro/core/helper/string_format_helper.dart';
 import 'package:liztogo_pro/data/controller/dashboard/dashboard_controller.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:liztogo_pro/data/controller/ride/ride_request_manager.dart';
 import '../../core/helper/shared_preference_helper.dart';
 import '../../core/utils/method.dart';
 import '../../core/utils/url_container.dart';
@@ -18,8 +19,79 @@ import 'api_client.dart';
 import 'otp_auto_fill_service.dart';
 import 'package:get/get.dart' as getx;
 
+@pragma('vm:entry-point')
 Future<void> _messageHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  final data = message.data;
+  final isRide = data['template_name'] == 'NEW_RIDE' || data['type'] == 'new_ride' || (data['pickup_location'] != null && data['destination'] != null);
+
+  if (isRide) {
+    try {
+      final FlutterLocalNotificationsPlugin fln = FlutterLocalNotificationsPlugin();
+      const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const InitializationSettings initSettings = InitializationSettings(android: androidSettings);
+      await fln.initialize(initSettings);
+
+      const AndroidNotificationChannel rideChannel = AndroidNotificationChannel(
+        'ride_requests_channel',
+        'Solicitudes de Carrera',
+        description: 'Notificaciones urgentes de nuevas carreras',
+        importance: Importance.max,
+        playSound: true,
+        enableVibration: true,
+        enableLights: true,
+      );
+      await fln.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.createNotificationChannel(rideChannel);
+
+      final rideId = (data['ride_id'] ?? data['id'] ?? '0').toString();
+      final pickup = (data['pickup_location'] ?? 'Recojo').toString();
+      final destination = (data['destination'] ?? 'Destino').toString();
+      final amount = (data['amount'] ?? '').toString();
+      final distance = (data['distance'] ?? '').toString();
+
+      final title = amount.isNotEmpty ? '🚕 ¡Nueva Carrera! S/ $amount' : '🚕 ¡Nueva Carrera Disponible!';
+      final body = distance.isNotEmpty ? '$pickup ➔ $destination ($distance km)' : '$pickup ➔ $destination';
+
+      await fln.show(
+        int.tryParse(rideId) ?? (DateTime.now().millisecondsSinceEpoch ~/ 1000),
+        title,
+        body,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            rideChannel.id,
+            rideChannel.name,
+            channelDescription: rideChannel.description,
+            icon: '@mipmap/ic_launcher',
+            importance: Importance.max,
+            priority: Priority.max,
+            playSound: true,
+            enableVibration: true,
+            enableLights: true,
+            fullScreenIntent: true,
+            category: AndroidNotificationCategory.call,
+            visibility: NotificationVisibility.public,
+            ongoing: true,
+            autoCancel: true,
+            styleInformation: BigTextStyleInformation(
+              '$pickup\n➔ $destination\nTarifa: S/ $amount | Distancia: $distance',
+              contentTitle: title,
+              summaryText: 'Nueva carrera asignable',
+            ),
+          ),
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+            interruptionLevel: InterruptionLevel.timeSensitive,
+          ),
+        ),
+        payload: jsonEncode(data),
+      );
+    } catch (e) {
+      printX('Error showing fullScreen notification in background: $e');
+    }
+  }
 }
 
 class PushNotificationService {
@@ -43,10 +115,17 @@ class PushNotificationService {
       provisional: false,
       sound: true,
     );
+    await _requestPermissions();
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       printX('onMessageOpenedApp ${message.toMap()}');
       _handleOtpFromPush(message.data);
+
+      final isRide = message.data['template_name'] == 'NEW_RIDE' || message.data['type'] == 'new_ride' || (message.data['pickup_location'] != null && message.data['destination'] != null);
+      if (isRide) {
+        RideRequestManager.instance.onNewRideReceived(message.data, source: 'FCM_OPEN');
+      }
+
       try {
         if (Get.isRegistered<DashBoardController>()) {
           Get.find<DashBoardController>().initialData(shouldLoad: false);
@@ -57,6 +136,12 @@ class PushNotificationService {
     final initialMessage = await messaging.getInitialMessage();
     if (initialMessage != null) {
       _handleOtpFromPush(initialMessage.data);
+
+      final isRide = initialMessage.data['template_name'] == 'NEW_RIDE' || initialMessage.data['type'] == 'new_ride' || (initialMessage.data['pickup_location'] != null && initialMessage.data['destination'] != null);
+      if (isRide) {
+        RideRequestManager.instance.onNewRideReceived(initialMessage.data, source: 'FCM_INITIAL');
+      }
+
       try {
         if (Get.isRegistered<DashBoardController>()) {
           Get.find<DashBoardController>().initialData(shouldLoad: false);
@@ -70,8 +155,10 @@ class PushNotificationService {
 
   Future<void> registerNotificationListeners() async {
     AndroidNotificationChannel channel = androidNotificationChannel();
+    AndroidNotificationChannel rideChannel = rideRequestsNotificationChannel();
     final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
     await flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.createNotificationChannel(channel);
+    await flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.createNotificationChannel(rideChannel);
     var androidSettings = const AndroidInitializationSettings(
       '@mipmap/ic_launcher',
     );
@@ -92,15 +179,21 @@ class PushNotificationService {
           printX('remarkNotification $payloadString');
           if (payloadString != null && payloadString.isNotEmpty) {
             Map<dynamic, dynamic> payloadMap = jsonDecode(payloadString);
-            Map<String, String> payload = payloadMap.map(
-              (key, value) => MapEntry(key.toString(), value.toString()),
+            Map<String, dynamic> payload = payloadMap.map(
+              (key, value) => MapEntry(key.toString(), value),
             );
+
+            // Handle Urgent Ride Notification Taps
+            if (payload['template_name'] == 'NEW_RIDE' || payload['type'] == 'new_ride' || (payload['pickup_location'] != null && payload['destination'] != null)) {
+              RideRequestManager.instance.onNewRideReceived(payload, source: 'NOTIFICATION_RESPONSE');
+              return;
+            }
 
             printX('remarkNotification ${payload['for_app']}');
             printX('remarkNotification ${payload['ride_id']}');
-            String? remark = payload['for_app'];
+            String? remark = payload['for_app']?.toString();
 
-            if (remark != null && remark.isNotEmpty) {
+            if (remark != null && remark.isNotEmpty && remark.contains('-')) {
               String route = remark.split('-')[0];
               String id = remark.split('-')[1];
               //redirect any specific page
@@ -116,7 +209,15 @@ class PushNotificationService {
     );
 
     FirebaseMessaging.onMessage.listen((RemoteMessage? message) async {
-      _handleOtpFromPush(message!.data);
+      if (message == null) return;
+      _handleOtpFromPush(message.data);
+
+      final isRide = message.data['template_name'] == 'NEW_RIDE' || message.data['type'] == 'new_ride' || (message.data['pickup_location'] != null && message.data['destination'] != null);
+      if (isRide) {
+        // Foreground: RideRequestManager displays the RideRequestScreen directly without duplicating notifications
+        RideRequestManager.instance.onNewRideReceived(message.data, source: 'FCM_FOREGROUND');
+        return;
+      }
 
       RemoteNotification? notification = message.notification;
       AndroidNotification? android = message.notification?.android;
@@ -156,6 +257,12 @@ class PushNotificationService {
               styleInformation: android.imageUrl != null ? bigPictureStyle : const BigTextStyleInformation(''),
               importance: Importance.high,
             ),
+            iOS: const DarwinNotificationDetails(
+              presentAlert: true,
+              presentBadge: true,
+              presentSound: true,
+              interruptionLevel: InterruptionLevel.timeSensitive,
+            ),
           ),
           payload: jsonEncode(message.data),
         );
@@ -178,6 +285,11 @@ class PushNotificationService {
                 enableVibration: true,
                 priority: Priority.high,
                 importance: Importance.high,
+              ),
+              iOS: const DarwinNotificationDetails(
+                presentAlert: true,
+                presentBadge: true,
+                presentSound: true,
               ),
             ),
             payload: jsonEncode(message.data),
@@ -203,6 +315,16 @@ class PushNotificationService {
         enableVibration: true,
         enableLights: true,
         importance: Importance.high,
+      );
+
+  AndroidNotificationChannel rideRequestsNotificationChannel() => const AndroidNotificationChannel(
+        'ride_requests_channel', // id
+        'Solicitudes de Carrera', // title
+        description: 'Notificaciones urgentes de nuevas carreras para conductores.',
+        playSound: true,
+        enableVibration: true,
+        enableLights: true,
+        importance: Importance.max,
       );
 
   void _handleOtpFromPush(Map<String, dynamic> data) {

@@ -27,6 +27,15 @@ class CourierController extends GetxController {
   CourierJobModel? selectedJob;
   CourierEarningsModel? earnings;
 
+  // Phase 2, 3 & 4 State
+  List<TargetedCourierOfferModel> pendingOffers = [];
+  CourierBatchModel? activeBatch;
+  AutoAcceptSettingsModel autoAcceptSettings = AutoAcceptSettingsModel();
+  Map<String, dynamic>? economicStatus;
+  bool loadingOffers = false;
+  bool loadingBatch = false;
+  bool savingAutoAccept = false;
+
   bool isLoading = false;
   bool loadingEarnings = false;
   bool updatingStatus = false;
@@ -646,5 +655,156 @@ class CourierController extends GetxController {
     }
     loadingEarnings = false;
     update();
+  }
+
+  // ── Phase 2, 3 & 4: Offers, Batches & Economic Status ──
+
+  Future<void> loadPendingOffers() async {
+    loadingOffers = true;
+    update();
+    try {
+      ResponseModel response = await courierRepo.getPendingOffers();
+      if (response.statusCode == 200) {
+        var json = response.responseJson;
+        if (json['status'] == MyStrings.success && json['data'] != null) {
+          final list = json['data']['offers'] as List?;
+          if (list != null) {
+            pendingOffers = list
+                .map((x) => TargetedCourierOfferModel.fromJson(Map<String, dynamic>.from(x)))
+                .where((o) => !o.isExpired)
+                .toList();
+          }
+        }
+      }
+    } catch (e) {
+      printX(e);
+    }
+    loadingOffers = false;
+    update();
+  }
+
+  Future<bool> acceptOffer(int offerId) async {
+    try {
+      ResponseModel response = await courierRepo.acceptOffer(offerId);
+      if (response.statusCode == 200) {
+        var json = response.responseJson;
+        if (json['status'] == MyStrings.success) {
+          pendingOffers.removeWhere((o) => o.id == offerId);
+          await loadActiveJobs();
+          await loadActiveBatch();
+          update();
+          return true;
+        }
+      }
+    } catch (e) {
+      printX(e);
+    }
+    return false;
+  }
+
+  Future<bool> rejectOffer(int offerId) async {
+    try {
+      pendingOffers.removeWhere((o) => o.id == offerId);
+      update();
+      ResponseModel response = await courierRepo.rejectOffer(offerId);
+      return response.statusCode == 200;
+    } catch (e) {
+      printX(e);
+      return false;
+    }
+  }
+
+  Future<void> loadActiveBatch() async {
+    loadingBatch = true;
+    update();
+    try {
+      ResponseModel response = await courierRepo.getActiveBatch();
+      if (response.statusCode == 200) {
+        var json = response.responseJson;
+        if (json['status'] == MyStrings.success && json['data'] != null) {
+          final bData = json['data']['batch'];
+          activeBatch = bData != null
+              ? CourierBatchModel.fromJson(Map<String, dynamic>.from(bData))
+              : null;
+        }
+      }
+    } catch (e) {
+      printX(e);
+    }
+    loadingBatch = false;
+    update();
+  }
+
+  Future<bool> completeBatchStop(int batchId, int stopNumber) async {
+    try {
+      ResponseModel response = await courierRepo.completeBatchStop(batchId, stopNumber);
+      if (response.statusCode == 200) {
+        var json = response.responseJson;
+        if (json['status'] == MyStrings.success && json['data'] != null) {
+          final bData = json['data']['batch'];
+          if (bData != null) {
+            activeBatch = CourierBatchModel.fromJson(Map<String, dynamic>.from(bData));
+          }
+          await loadActiveJobs();
+          update();
+          return true;
+        }
+      }
+    } catch (e) {
+      printX(e);
+    }
+    return false;
+  }
+
+  Future<void> loadAutoAcceptSettings() async {
+    try {
+      ResponseModel response = await courierRepo.getAutoAcceptSettings();
+      if (response.statusCode == 200) {
+        var json = response.responseJson;
+        if (json['status'] == MyStrings.success && json['data'] != null) {
+          autoAcceptSettings = AutoAcceptSettingsModel.fromJson(Map<String, dynamic>.from(json['data']));
+          update();
+        }
+      }
+    } catch (e) {
+      printX(e);
+    }
+  }
+
+  Future<bool> saveAutoAcceptSettings(bool enabled, double minEarning, double maxDistance) async {
+    savingAutoAccept = true;
+    update();
+    try {
+      ResponseModel response = await courierRepo.updateAutoAcceptSettings(enabled, minEarning, maxDistance);
+      if (response.statusCode == 200) {
+        var json = response.responseJson;
+        if (json['status'] == MyStrings.success && json['data'] != null) {
+          autoAcceptSettings = AutoAcceptSettingsModel.fromJson(Map<String, dynamic>.from(json['data']));
+          savingAutoAccept = false;
+          update();
+          return true;
+        }
+      }
+    } catch (e) {
+      printX(e);
+    }
+    savingAutoAccept = false;
+    update();
+    return false;
+  }
+
+  Future<void> loadEconomicStatus() async {
+    try {
+      ResponseModel response = await courierRepo.getEconomicStatus();
+      if (response.statusCode == 200) {
+        var json = response.responseJson;
+        if (json['status'] == MyStrings.success && json['data'] != null) {
+          economicStatus = Map<String, dynamic>.from(json['data']);
+          update();
+        }
+      }
+    } catch (e) {
+      printX(e);
+    }
   }
 }

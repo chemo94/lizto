@@ -10,12 +10,14 @@ class CourierOfferTracker
 {
     public static function offered(Driver $driver, Model $job, string $source, bool $notificationDelivered, $expiresAt = null): CourierJobOffer
     {
+        $batchId = $job instanceof \App\Models\CourierBatch ? $job->id : ($job->courier_batch_id ?? null);
         return CourierJobOffer::create([
             'driver_id' => $driver->id,
-            'job_type' => $job::class,
-            'job_id' => $job->id,
-            'source' => $source,
-            'status' => $notificationDelivered ? 'offered' : 'failed',
+            'batch_id'  => $batchId,
+            'job_type'  => $job::class,
+            'job_id'    => $job->id,
+            'source'    => $source,
+            'status'    => $notificationDelivered ? 'offered' : 'failed',
             'notification_delivered' => $notificationDelivered,
             'offered_at' => now(),
             'expires_at' => $expiresAt,

@@ -7,7 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 class Wallet extends Model
 {
     protected $guarded = ['id'];
-    protected $casts = ['balance' => 'double', 'blocked_balance' => 'double'];
+    protected $casts = [
+        'balance'             => 'double',
+        'blocked_balance'     => 'double',
+        'promotional_balance' => 'double',
+        'recharge_balance'    => 'double',
+    ];
 
     public function holder()
     {

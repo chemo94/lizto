@@ -9,6 +9,7 @@ import 'package:liztogo/core/utils/dimensions.dart';
 import 'package:liztogo/core/utils/my_color.dart';
 import 'package:liztogo/core/utils/style.dart';
 import 'package:liztogo/data/controller/auth/social_auth_controller.dart';
+import 'package:liztogo/data/repo/auth/social_auth_repo.dart';
 import 'package:liztogo/data/model/global/response_model/response_model.dart';
 import 'package:liztogo/data/model/global/user/global_user_model.dart';
 import 'package:liztogo/presentation/components/buttons/rounded_button.dart';

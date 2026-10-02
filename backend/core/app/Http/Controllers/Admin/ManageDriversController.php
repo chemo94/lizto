@@ -235,6 +235,8 @@ class ManageDriversController extends Controller {
         $driver->dv = Status::VERIFIED;
         $driver->save();
 
+        \App\Services\DriverEconomicPolicyService::grantInitialPromotionalCredit($driver);
+
         notify($driver, 'DRIVER_DOCUMENT_APPROVE', []);
         $notify[] = ['success', __('Driver verification approved successfully')];
         return back()->withNotify($notify);

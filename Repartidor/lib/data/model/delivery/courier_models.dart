@@ -61,6 +61,15 @@ class CourierJobModel {
   bool isHeavy;
   bool isTemperatureControlled;
 
+  // Phase 2: Dynamic fare, route optimization & batching
+  double? distanceKm;
+  double? durationMinutes;
+  double? driverEarning;
+  double? totalPayout;
+  int? points;
+  int? batchId;
+  FareBreakdownModel? fareBreakdown;
+
   // Return handling
   String? returnStatus;
   String? returnReason;
@@ -122,6 +131,13 @@ class CourierJobModel {
     this.codAmount,
     this.isHeavy = false,
     this.isTemperatureControlled = false,
+    this.distanceKm,
+    this.durationMinutes,
+    this.driverEarning,
+    this.totalPayout,
+    this.points,
+    this.batchId,
+    this.fareBreakdown,
     this.returnStatus,
     this.returnReason,
     this.returnNotes,
@@ -182,7 +198,16 @@ class CourierJobModel {
         evidenceType: json["evidence_type"]?.toString(),
         codAmount: _pDouble(json["cod_amount"]),
         isHeavy: json["is_heavy"] == true || json["is_heavy"] == 1,
-        isTemperatureControlled: json["is_temperature_controlled"] == true || json["is_temperature_controlled"] == 1,
+        // Phase 2: Dynamic fare, route optimization & batching
+        distanceKm: _pDouble(json["distance_km"]),
+        durationMinutes: _pDouble(json["duration_minutes"]),
+        driverEarning: _pDouble(json["driver_earning"]),
+        totalPayout: _pDouble(json["total_payout"]),
+        points: _pInt(json["points"]),
+        batchId: _pInt(json["batch_id"]),
+        fareBreakdown: json["fare_breakdown"] != null && json["fare_breakdown"] is Map<String, dynamic>
+            ? FareBreakdownModel.fromJson(Map<String, dynamic>.from(json["fare_breakdown"]))
+            : null,
         // Return handling
         returnStatus: json["return_status"]?.toString(),
         returnReason: json["return_reason"]?.toString(),
@@ -501,3 +526,402 @@ double? _pDouble(dynamic value) {
   if (value is int) return value.toDouble();
   return double.tryParse(value.toString());
 }
+
+/// Dynamic Fare Breakdown
+class FareBreakdownModel {
+  final double? baseFare;
+  final double? distanceKm;
+  final double? distanceRate;
+  final double? distanceAmount;
+  final double? timeMinutes;
+  final double? timeRate;
+  final double? timeAmount;
+  final String? batchType;
+  final double? batchBonus;
+  final String? demandTier;
+  final double? demandMultiplier;
+  final double? demandIncentive;
+  final double? driverEarning;
+  final double? tip;
+  final double? totalPayout;
+  final int? points;
+  final String? economicPolicy;
+  final bool driverRetains100;
+
+  FareBreakdownModel({
+    this.baseFare,
+    this.distanceKm,
+    this.distanceRate,
+    this.distanceAmount,
+    this.timeMinutes,
+    this.timeRate,
+    this.timeAmount,
+    this.batchType,
+    this.batchBonus,
+    this.demandTier,
+    this.demandMultiplier,
+    this.demandIncentive,
+    this.driverEarning,
+    this.tip,
+    this.totalPayout,
+    this.points,
+    this.economicPolicy,
+    this.driverRetains100 = true,
+  });
+
+  factory FareBreakdownModel.fromJson(Map<String, dynamic> json) => FareBreakdownModel(
+        baseFare: _pDouble(json["base_fare"]),
+        distanceKm: _pDouble(json["distance_km"]),
+        distanceRate: _pDouble(json["distance_rate"]),
+        distanceAmount: _pDouble(json["distance_amount"]),
+        timeMinutes: _pDouble(json["time_minutes"]),
+        timeRate: _pDouble(json["time_rate"]),
+        timeAmount: _pDouble(json["time_amount"]),
+        batchType: json["batch_type"]?.toString(),
+        batchBonus: _pDouble(json["batch_bonus"]),
+        demandTier: json["demand_tier"]?.toString(),
+        demandMultiplier: _pDouble(json["demand_multiplier"]),
+        demandIncentive: _pDouble(json["demand_incentive"]),
+        driverEarning: _pDouble(json["driver_earning"]),
+        tip: _pDouble(json["tip"]),
+        totalPayout: _pDouble(json["total_payout"]),
+        points: _pInt(json["points"]),
+        economicPolicy: json["economic_policy"]?.toString(),
+        driverRetains100: json["driver_retains_100"] == true || json["driver_retains_100"] == 1,
+      );
+
+  Map<String, dynamic> toJson() => {
+        "base_fare": baseFare,
+        "distance_km": distanceKm,
+        "distance_rate": distanceRate,
+        "distance_amount": distanceAmount,
+        "time_minutes": timeMinutes,
+        "time_rate": timeRate,
+        "time_amount": timeAmount,
+        "batch_type": batchType,
+        "batch_bonus": batchBonus,
+        "demand_tier": demandTier,
+        "demand_multiplier": demandMultiplier,
+        "demand_incentive": demandIncentive,
+        "driver_earning": driverEarning,
+        "tip": tip,
+        "total_payout": totalPayout,
+        "points": points,
+        "economic_policy": economicPolicy,
+        "driver_retains_100": driverRetains100,
+      };
+}
+
+/// Optimized Multi-Stop Route Stop
+class OptimizedStopModel {
+  final int? stopNumber;
+  final String? type; // pickup, dropoff
+  final int? orderId;
+  final String? orderType;
+  final double? lat;
+  final double? lng;
+  final String? address;
+  final String? contactName;
+  final double? legDistanceKm;
+  final double? legTimeMinutes;
+  final double? cumulativeDistanceKm;
+  final double? cumulativeTimeMinutes;
+  final bool isCompleted;
+
+  OptimizedStopModel({
+    this.stopNumber,
+    this.type,
+    this.orderId,
+    this.orderType,
+    this.lat,
+    this.lng,
+    this.address,
+    this.contactName,
+    this.legDistanceKm,
+    this.legTimeMinutes,
+    this.cumulativeDistanceKm,
+    this.cumulativeTimeMinutes,
+    this.isCompleted = false,
+  });
+
+  factory OptimizedStopModel.fromJson(Map<String, dynamic> json) => OptimizedStopModel(
+        stopNumber: _pInt(json["stop_number"]),
+        type: json["type"]?.toString(),
+        orderId: _pInt(json["order_id"]),
+        orderType: json["order_type"]?.toString(),
+        lat: _pDouble(json["lat"]),
+        lng: _pDouble(json["lng"]),
+        address: json["address"]?.toString(),
+        contactName: json["contact_name"]?.toString(),
+        legDistanceKm: _pDouble(json["leg_distance_km"]),
+        legTimeMinutes: _pDouble(json["leg_time_minutes"]),
+        cumulativeDistanceKm: _pDouble(json["cumulative_distance_km"]),
+        cumulativeTimeMinutes: _pDouble(json["cumulative_time_minutes"]),
+        isCompleted: json["is_completed"] == true || json["is_completed"] == 1,
+      );
+
+  bool get isPickup => type == 'pickup';
+  bool get isDropoff => type == 'dropoff';
+}
+
+/// Multi-Order Batch Model (Single, Double, Triplet, Quadruple)
+class CourierBatchModel {
+  final int? id;
+  final String? batchNo;
+  final String? batchType; // SINGLE, DOUBLE, TRIPLET, QUADRUPLE
+  final String? status; // pending, offered, accepted, in_progress, completed, cancelled
+  final int? totalOrders;
+  final double? totalDistanceKm;
+  final double? totalDurationMinutes;
+  final double? baseEarning;
+  final double? distanceEarning;
+  final double? timeEarning;
+  final double? batchBonus;
+  final double? demandIncentive;
+  final double? driverEarning;
+  final double? totalTips;
+  final double? totalPayout;
+  final int? totalPoints;
+  final String? demandTier;
+  final double? demandMultiplier;
+  final List<OptimizedStopModel> optimizedStops;
+  final FareBreakdownModel? fareBreakdown;
+  final List<CourierBatchOrderModel> orders;
+  final String? createdAt;
+
+  CourierBatchModel({
+    this.id,
+    this.batchNo,
+    this.batchType,
+    this.status,
+    this.totalOrders,
+    this.totalDistanceKm,
+    this.totalDurationMinutes,
+    this.baseEarning,
+    this.distanceEarning,
+    this.timeEarning,
+    this.batchBonus,
+    this.demandIncentive,
+    this.driverEarning,
+    this.totalTips,
+    this.totalPayout,
+    this.totalPoints,
+    this.demandTier,
+    this.demandMultiplier,
+    this.optimizedStops = const [],
+    this.fareBreakdown,
+    this.orders = const [],
+    this.createdAt,
+  });
+
+  factory CourierBatchModel.fromJson(Map<String, dynamic> json) => CourierBatchModel(
+        id: _pInt(json["id"]),
+        batchNo: json["batch_no"]?.toString(),
+        batchType: json["batch_type"]?.toString(),
+        status: json["status"]?.toString(),
+        totalOrders: _pInt(json["total_orders"]),
+        totalDistanceKm: _pDouble(json["total_distance_km"]),
+        totalDurationMinutes: _pDouble(json["total_duration_minutes"]),
+        baseEarning: _pDouble(json["base_earning"]),
+        distanceEarning: _pDouble(json["distance_earning"]),
+        timeEarning: _pDouble(json["time_earning"]),
+        batchBonus: _pDouble(json["batch_bonus"]),
+        demandIncentive: _pDouble(json["demand_incentive"]),
+        driverEarning: _pDouble(json["driver_earning"]),
+        totalTips: _pDouble(json["total_tips"]),
+        totalPayout: _pDouble(json["total_payout"]),
+        totalPoints: _pInt(json["total_points"]),
+        demandTier: json["demand_tier"]?.toString(),
+        demandMultiplier: _pDouble(json["demand_multiplier"]),
+        optimizedStops: json["optimized_stops"] is List
+            ? (json["optimized_stops"] as List)
+                .map((x) => OptimizedStopModel.fromJson(Map<String, dynamic>.from(x)))
+                .toList()
+            : [],
+        fareBreakdown: json["fare_breakdown"] != null && json["fare_breakdown"] is Map<String, dynamic>
+            ? FareBreakdownModel.fromJson(Map<String, dynamic>.from(json["fare_breakdown"]))
+            : null,
+        orders: json["orders"] is List
+            ? (json["orders"] as List)
+                .map((x) => CourierBatchOrderModel.fromJson(Map<String, dynamic>.from(x)))
+                .toList()
+            : [],
+        createdAt: json["created_at"]?.toString(),
+      );
+
+  bool get isSingle => batchType == 'SINGLE';
+  bool get isDouble => batchType == 'DOUBLE';
+  bool get isTriplet => batchType == 'TRIPLET';
+  bool get isQuadruple => batchType == 'QUADRUPLE';
+  bool get isActive => status == 'accepted' || status == 'in_progress';
+}
+
+/// Order Entry inside a Batch
+class CourierBatchOrderModel {
+  final int? id;
+  final int? orderId;
+  final String? orderType;
+  final int? sequenceOrder;
+  final int? pickupStopNo;
+  final int? dropoffStopNo;
+  final String? status; // pending, picked_up, delivered, cancelled
+  final double? individualEarning;
+  final double? tip;
+  final int? points;
+  final CourierJobModel? orderDetail;
+
+  CourierBatchOrderModel({
+    this.id,
+    this.orderId,
+    this.orderType,
+    this.sequenceOrder,
+    this.pickupStopNo,
+    this.dropoffStopNo,
+    this.status,
+    this.individualEarning,
+    this.tip,
+    this.points,
+    this.orderDetail,
+  });
+
+  factory CourierBatchOrderModel.fromJson(Map<String, dynamic> json) => CourierBatchOrderModel(
+        id: _pInt(json["id"]),
+        orderId: _pInt(json["order_id"]),
+        orderType: json["order_type"]?.toString(),
+        sequenceOrder: _pInt(json["sequence_order"]),
+        pickupStopNo: _pInt(json["pickup_stop_no"]),
+        dropoffStopNo: _pInt(json["dropoff_stop_no"]),
+        status: json["status"]?.toString(),
+        individualEarning: _pDouble(json["individual_earning"]),
+        tip: _pDouble(json["tip"]),
+        points: _pInt(json["points"]),
+        orderDetail: json["order_detail"] != null && json["order_detail"] is Map<String, dynamic>
+            ? CourierJobModel.fromJson(Map<String, dynamic>.from(json["order_detail"]))
+            : null,
+      );
+}
+
+/// Real-time Demand Tier Status
+class DemandStatusModel {
+  final String? tier;
+  final double? multiplier;
+  final double? incentiveAmount;
+  final int? points;
+  final double? demandRatio;
+  final int? pendingOrders;
+  final int? availableDrivers;
+  final double? radiusKm;
+
+  DemandStatusModel({
+    this.tier,
+    this.multiplier,
+    this.incentiveAmount,
+    this.points,
+    this.demandRatio,
+    this.pendingOrders,
+    this.availableDrivers,
+    this.radiusKm,
+  });
+
+  factory DemandStatusModel.fromJson(Map<String, dynamic> json) => DemandStatusModel(
+        tier: json["tier"]?.toString(),
+        multiplier: _pDouble(json["multiplier"]),
+        incentiveAmount: _pDouble(json["incentive_amount"]),
+        points: _pInt(json["points"]),
+        demandRatio: _pDouble(json["demand_ratio"]),
+        pendingOrders: _pInt(json["pending_orders"]),
+        availableDrivers: _pInt(json["available_drivers"]),
+        radiusKm: _pDouble(json["radius_km"]),
+      );
+
+  bool get isHighDemand => tier == 'HIGH' || tier == 'VERY_HIGH';
+}
+
+/// Auto-Acceptance Settings Configuration
+class AutoAcceptSettingsModel {
+  final bool autoAcceptEnabled;
+  final double minEarning;
+  final double maxDistance;
+
+  AutoAcceptSettingsModel({
+    this.autoAcceptEnabled = false,
+    this.minEarning = 0.0,
+    this.maxDistance = 10.0,
+  });
+
+  factory AutoAcceptSettingsModel.fromJson(Map<String, dynamic> json) => AutoAcceptSettingsModel(
+        autoAcceptEnabled: json["auto_accept_enabled"] == true || json["auto_accept_enabled"] == 1,
+        minEarning: _pDouble(json["auto_accept_min_earning"]) ?? 0.0,
+        maxDistance: _pDouble(json["auto_accept_max_distance"]) ?? 10.0,
+      );
+
+  Map<String, dynamic> toJson() => {
+        "auto_accept_enabled": autoAcceptEnabled,
+        "auto_accept_min_earning": minEarning,
+        "auto_accept_max_distance": maxDistance,
+      };
+}
+
+/// 15-Second Expiring Offer Model
+class TargetedCourierOfferModel {
+  final int? id;
+  final int? driverId;
+  final String? jobType;
+  final int? jobId;
+  final int? batchId;
+  final String? source;
+  final String? status;
+  final String? offeredAt;
+  final String? expiresAt;
+  final int remainingSeconds;
+  final CourierJobModel? jobDetail;
+  final CourierBatchModel? batchDetail;
+
+  TargetedCourierOfferModel({
+    this.id,
+    this.driverId,
+    this.jobType,
+    this.jobId,
+    this.batchId,
+    this.source,
+    this.status,
+    this.offeredAt,
+    this.expiresAt,
+    this.remainingSeconds = 15,
+    this.jobDetail,
+    this.batchDetail,
+  });
+
+  factory TargetedCourierOfferModel.fromJson(Map<String, dynamic> json) {
+    CourierJobModel? job;
+    CourierBatchModel? batch;
+
+    if (json["job_detail"] is Map<String, dynamic>) {
+      final detail = Map<String, dynamic>.from(json["job_detail"]);
+      if (json["batch_id"] != null || json["job_type"]?.toString().contains('Batch') == true) {
+        batch = CourierBatchModel.fromJson(detail);
+      } else {
+        job = CourierJobModel.fromJson(detail);
+      }
+    }
+
+    return TargetedCourierOfferModel(
+      id: _pInt(json["id"]),
+      driverId: _pInt(json["driver_id"]),
+      jobType: json["job_type"]?.toString(),
+      jobId: _pInt(json["job_id"]),
+      batchId: _pInt(json["batch_id"]),
+      source: json["source"]?.toString(),
+      status: json["status"]?.toString(),
+      offeredAt: json["offered_at"]?.toString(),
+      expiresAt: json["expires_at"]?.toString(),
+      remainingSeconds: _pInt(json["remaining_seconds"]) ?? 15,
+      jobDetail: job,
+      batchDetail: batch,
+    );
+  }
+
+  bool get isExpired => remainingSeconds <= 0 || status == 'expired';
+  bool get isBatch => batchId != null || batchDetail != null;
+}
+

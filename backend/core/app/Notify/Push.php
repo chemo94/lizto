@@ -129,6 +129,9 @@ class Push extends NotifyProcess implements Notifiable
                         'priority' => 'high',
                     ];
                 } else {
+                    $isUrgentRide = in_array($this->templateName, ['NEW_RIDE', 'COURIER_OFFER']);
+                    $channelId = $isUrgentRide ? 'ride_requests_channel' : 'high_importance_channel';
+
                     if ($this->pushImage) {
                         $data['notification'] = [
                             'body' => $message,
@@ -144,8 +147,10 @@ class Push extends NotifyProcess implements Notifiable
                     $data['android'] = [
                         'priority'     => 'high',
                         'notification' => [
-                            'channel_id' => 'high_importance_channel',
+                            'channel_id' => $channelId,
                             'sound'      => 'default',
+                            'priority'   => $isUrgentRide ? 'max' : 'high',
+                            'visibility' => 'public',
                         ],
                     ];
                 }
@@ -153,12 +158,14 @@ class Push extends NotifyProcess implements Notifiable
                 $data['apns'] = [
                     'payload' => [
                         'aps' => [
-                            'sound'            => 'default',
-                            'content-available' => 1,
+                            'sound'              => 'default',
+                            'content-available'  => 1,
+                            'interruption-level' => (isset($isUrgentRide) && $isUrgentRide) ? 'time-sensitive' : 'active',
                         ],
                     ],
                     'headers' => [
-                        'apns-priority' => '10',
+                        'apns-priority'  => '10',
+                        'apns-push-type' => 'alert',
                     ],
                 ];
                 

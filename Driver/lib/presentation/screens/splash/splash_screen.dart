@@ -4,9 +4,7 @@ import 'package:liztogo_pro/core/helper/string_format_helper.dart';
 import 'package:liztogo_pro/core/utils/my_color.dart';
 import 'package:liztogo_pro/core/utils/my_images.dart';
 import 'package:liztogo_pro/core/utils/util.dart';
-import 'package:liztogo_pro/data/controller/localization/localization_controller.dart';
 import 'package:liztogo_pro/data/controller/splash/splash_controller.dart';
-import 'package:liztogo_pro/data/repo/auth/general_setting_repo.dart';
 import 'package:liztogo_pro/presentation/components/annotated_region/annotated_region_widget.dart';
 import 'package:liztogo_pro/presentation/components/custom_no_data_found_class.dart';
 

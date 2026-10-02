@@ -27,3 +27,4 @@ backend/response.txt
 **/._*
 output/
 tmp/
+*.zip

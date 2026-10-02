@@ -20,12 +20,79 @@ import '../../presentation/screens/delivery/courier_job_detail_screen.dart';
 import 'api_client.dart';
 import 'otp_auto_fill_service.dart';
 
+@pragma('vm:entry-point')
 Future<void> _messageHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   final data = message.data;
   final orderId = data['order_id']?.toString() ?? data['job_id']?.toString();
   final favorId = data['favor_id']?.toString();
-  if ((orderId != null && orderId.isNotEmpty) || (favorId != null && favorId.isNotEmpty)) {
+  final offerId = data['offer_id']?.toString();
+  final batchId = data['batch_id']?.toString();
+
+  final isUrgentDelivery = (orderId != null && orderId.isNotEmpty) ||
+      (favorId != null && favorId.isNotEmpty) ||
+      (offerId != null && offerId.isNotEmpty) ||
+      (batchId != null && batchId.isNotEmpty) ||
+      data['type'] == 'courier_offer' ||
+      data['type'] == 'new_batch' ||
+      data['template_name'] == 'COURIER_OFFER';
+
+  if (isUrgentDelivery) {
+    try {
+      final FlutterLocalNotificationsPlugin fln = FlutterLocalNotificationsPlugin();
+      const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const InitializationSettings initSettings = InitializationSettings(android: androidSettings);
+      await fln.initialize(initSettings);
+
+      const AndroidNotificationChannel rideChannel = AndroidNotificationChannel(
+        'ride_requests_channel',
+        'Ofertas de Reparto',
+        description: 'Notificaciones prioritarias de nuevos repartos y pedidos',
+        importance: Importance.max,
+        playSound: true,
+        enableVibration: true,
+        enableLights: true,
+      );
+      await fln.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.createNotificationChannel(rideChannel);
+
+      final title = data['title']?.toString() ?? '🛵 ¡Nuevo Pedido Disponible!';
+      final body = data['body']?.toString() ?? data['message']?.toString() ?? 'Tienes una nueva oferta de reparto lista para aceptar';
+      final notifId = int.tryParse(orderId ?? offerId ?? batchId ?? '0') ?? (DateTime.now().millisecondsSinceEpoch ~/ 1000);
+
+      await fln.show(
+        notifId,
+        title,
+        body,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            rideChannel.id,
+            rideChannel.name,
+            channelDescription: rideChannel.description,
+            icon: '@mipmap/ic_launcher',
+            importance: Importance.max,
+            priority: Priority.max,
+            playSound: true,
+            enableVibration: true,
+            enableLights: true,
+            fullScreenIntent: true,
+            category: AndroidNotificationCategory.call,
+            visibility: NotificationVisibility.public,
+            ongoing: true,
+            autoCancel: true,
+            styleInformation: BigTextStyleInformation(body),
+          ),
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+            interruptionLevel: InterruptionLevel.timeSensitive,
+          ),
+        ),
+        payload: jsonEncode(data),
+      );
+    } catch (e) {
+      printX('Error showing fullScreen notification in background Repartidor: $e');
+    }
     try {
       await AudioUtils.playNotificationSound();
     } catch (_) {}
@@ -75,8 +142,11 @@ class PushNotificationService {
 
   Future<void> registerNotificationListeners() async {
     AndroidNotificationChannel channel = androidNotificationChannel();
+    AndroidNotificationChannel rideChannel = rideRequestsNotificationChannel();
     final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-    await flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.createNotificationChannel(channel);
+    final androidImpl = flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    await androidImpl?.createNotificationChannel(channel);
+    await androidImpl?.createNotificationChannel(rideChannel);
     var androidSettings = const AndroidInitializationSettings(
       '@mipmap/ic_launcher',
     );
@@ -173,6 +243,12 @@ class PushNotificationService {
               styleInformation: android.imageUrl != null ? bigPictureStyle : const BigTextStyleInformation(''),
               importance: Importance.high,
             ),
+            iOS: const DarwinNotificationDetails(
+              presentAlert: true,
+              presentBadge: true,
+              presentSound: true,
+              interruptionLevel: InterruptionLevel.timeSensitive,
+            ),
           ),
           payload: jsonEncode(message.data),
         );
@@ -195,6 +271,11 @@ class PushNotificationService {
                 enableVibration: true,
                 priority: Priority.high,
                 importance: Importance.high,
+              ),
+              iOS: const DarwinNotificationDetails(
+                presentAlert: true,
+                presentBadge: true,
+                presentSound: true,
               ),
             ),
             payload: jsonEncode(message.data),
@@ -220,6 +301,16 @@ class PushNotificationService {
         enableVibration: true,
         enableLights: true,
         importance: Importance.high,
+      );
+
+  AndroidNotificationChannel rideRequestsNotificationChannel() => const AndroidNotificationChannel(
+        'ride_requests_channel',
+        'Ofertas de Reparto',
+        description: 'Notificaciones prioritarias de nuevos repartos y pedidos',
+        playSound: true,
+        enableVibration: true,
+        enableLights: true,
+        importance: Importance.max,
       );
 
   void _handleOtpFromPush(Map<String, dynamic> data) {

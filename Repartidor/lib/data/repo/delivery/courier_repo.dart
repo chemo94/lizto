@@ -110,4 +110,32 @@ class CourierRepo {
     String url = '${UrlContainer.baseUrl}driver/courier/jobs/$jobId/messages/send-image';
     return await apiClient.multipartRequest(url, Method.postMethod, {}, files: {'image': imageFile}, passHeader: true);
   }
+
+  // ── Phase 2 & 3: Batches, Offers & Auto-Acceptance ──
+
+  Future<ResponseModel> getPendingOffers() => _get('offers/pending');
+
+  Future<ResponseModel> acceptOffer(int offerId) => _post('offers/$offerId/accept');
+
+  Future<ResponseModel> rejectOffer(int offerId) => _post('offers/$offerId/reject');
+
+  Future<ResponseModel> getActiveBatch() => _get('batches/active');
+
+  Future<ResponseModel> getBatchDetail(int batchId) => _get('batches/$batchId');
+
+  Future<ResponseModel> acceptBatch(int batchId) => _post('batches/$batchId/accept');
+
+  Future<ResponseModel> completeBatchStop(int batchId, int stopNumber) =>
+      _post('batches/$batchId/stops/$stopNumber/complete');
+
+  Future<ResponseModel> getAutoAcceptSettings() => _get('auto-accept/settings');
+
+  Future<ResponseModel> updateAutoAcceptSettings(bool enabled, double minEarning, double maxDistance) =>
+      _post('auto-accept/settings', {
+        'auto_accept_enabled': enabled,
+        'auto_accept_min_earning': minEarning,
+        'auto_accept_max_distance': maxDistance,
+      });
+
+  Future<ResponseModel> getEconomicStatus() => _get('wallet/economic-status');
 }

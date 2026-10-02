@@ -152,29 +152,16 @@ class PaymentController extends Controller
                 ]));
             } else {
 
-                $driver           = Driver::find($deposit->driver_id);
-                $driver->balance += $deposit->amount;
-                $driver->save();
-
-                // Credit new wallet system
-                $wallet = Wallet::firstOrCreate(
-                    ['holder_type' => Driver::class, 'holder_id' => $driver->id]
-                );
-                $wallet->credit($deposit->amount, 'deposit', 'Recarga vía ' . $deposit->methodName(), $deposit);
-
+                $driver     = Driver::find($deposit->driver_id);
                 $methodName = $deposit->methodName();
 
-                $transaction               = new Transaction();
-                $transaction->user_id      = 0;
-                $transaction->driver_id    = $driver->id;
-                $transaction->amount       = $deposit->amount;
-                $transaction->post_balance = $driver->balance;
-                $transaction->charge       = $deposit->charge;
-                $transaction->trx_type     = '+';
-                $transaction->details      = 'Deposit Via ' . $methodName;
-                $transaction->trx          = $deposit->trx;
-                $transaction->remark       = 'deposit';
-                $transaction->save();
+                // Procesar recarga a través de la política económica centralizada de Lizto
+                \App\Services\DriverEconomicPolicyService::processRecharge(
+                    $driver,
+                    (float) $deposit->amount,
+                    $deposit,
+                    $methodName
+                );
 
                 if (!$isManual) {
                     $adminNotification            = new AdminNotification();

@@ -17,20 +17,27 @@ class PaymentController extends Controller
             $gate->where('status', Status::ENABLE);
         })->with('method')->orderby('method_code')->get();
 
+        $minRecharge = \App\Services\DriverEconomicPolicyService::getMinRechargeAmount();
         $notify[] = 'Payment Methods';
         
         return apiResponse("deposit_methods", "success", $notify, [
-            'methods'    => $gatewayCurrency,
-            'image_path' => getFilePath('gateway')
+            'methods'      => $gatewayCurrency,
+            'image_path'   => getFilePath('gateway'),
+            'min_recharge' => $minRecharge,
         ]);
     }
 
     public function depositInsert(Request $request)
     {
+        $minRecharge = \App\Services\DriverEconomicPolicyService::getMinRechargeAmount();
+
         $validator = Validator::make($request->all(), [
-            'amount'      => 'required|numeric|gt:0',
+            'amount'      => "required|numeric|gte:{$minRecharge}",
             'method_code' => 'required',
             'currency'    => 'required',
+        ], [
+            'amount.gte' => 'El monto mínimo de recarga es de S/ ' . number_format($minRecharge, 2) . '.',
+            'amount.required' => 'El monto de recarga es obligatorio.',
         ]);
 
         if ($validator->fails()) {

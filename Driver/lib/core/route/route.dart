@@ -24,6 +24,7 @@ import 'package:liztogo_pro/presentation/screens/privacy_policy/privacy_policy_s
 import 'package:liztogo_pro/presentation/screens/review/my_review_history_screen.dart';
 import 'package:liztogo_pro/presentation/screens/review/user_review_history_screen.dart';
 import 'package:liztogo_pro/presentation/screens/ride_details/ride_details_screen.dart';
+import 'package:liztogo_pro/presentation/screens/rides/ride_request/ride_request_screen.dart';
 import 'package:liztogo_pro/presentation/screens/ride_history/ride_activity_screen.dart';
 import 'package:liztogo_pro/presentation/screens/splash/splash_screen.dart';
 import 'package:liztogo_pro/presentation/screens/support_ticket/new_ticket_screen/add_new_ticket_screen.dart';
@@ -144,8 +145,15 @@ class RouteHelper {
   static const String createSupportTicketScreen = '/create_support_ticket_screen';
   static const String supportTicketDetailsScreen = '/support_ticket_details_screen';
   static const String previewImageScreen = "/preview-image-screen";
+  static const String rideRequestScreen = "/ride_request_screen";
 
   static final List<GetPage> routes = [
+    GetPage(
+      name: rideRequestScreen,
+      page: () => const RideRequestScreen(),
+      transition: Transition.downToUp,
+      transitionDuration: const Duration(milliseconds: 250),
+    ),
     GetPage(name: splashScreen, page: () => const SplashScreen()),
     GetPage(name: onboardScreen, page: () {
       printX('🔵 OnBoardIntroScreen page callback called');

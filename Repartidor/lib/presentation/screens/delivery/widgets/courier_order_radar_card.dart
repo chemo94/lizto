@@ -115,12 +115,34 @@ class _CourierOrderRadarCardState extends State<CourierOrderRadarCard> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    'Ganancia est.',
-                    style: regularDefault.copyWith(
-                      color: isDark ? Colors.grey[400] : MyColor.bodyMutedTextColor,
-                      fontSize: Dimensions.fontExtraSmall,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.job.points != null && widget.job.points! > 0) ...[
+                        Container(
+                          margin: const EdgeInsets.only(right: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '+${widget.job.points} pts',
+                            style: boldDefault.copyWith(
+                              fontSize: 10,
+                              color: const Color(0xFFD97706),
+                            ),
+                          ),
+                        ),
+                      ],
+                      Text(
+                        'Ganancia est.',
+                        style: regularDefault.copyWith(
+                          color: isDark ? Colors.grey[400] : MyColor.bodyMutedTextColor,
+                          fontSize: Dimensions.fontExtraSmall,
+                        ),
+                      ),
+                    ],
                   ),
                   Text(
                     'S/ ${totalEarning.toStringAsFixed(2)}',
@@ -129,6 +151,14 @@ class _CourierOrderRadarCardState extends State<CourierOrderRadarCard> {
                       fontSize: 20,
                     ),
                   ),
+                  if (widget.job.fareBreakdown?.tip != null && widget.job.fareBreakdown!.tip! > 0)
+                    Text(
+                      '+ S/ ${widget.job.fareBreakdown!.tip!.toStringAsFixed(2)} propina',
+                      style: semiBoldDefault.copyWith(
+                        fontSize: 10,
+                        color: const Color(0xFFCA8A04),
+                      ),
+                    ),
                 ],
               ),
             ],
