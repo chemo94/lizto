@@ -101,48 +101,21 @@
         </form>
     </div>
 
-    {{-- QUICK NAVIGATION & CATEGORIES SUBBAR --}}
-    <nav class="lz-services-bar" aria-label="Navegación rápida de servicios y categorías">
-        <div class="lz-services-bar-inner">
-            <a href="{{ route('delivery.marketplace', ['category' => 'restaurantes']) }}" class="lz-service-pill {{ request('category') == 'restaurantes' ? 'active' : '' }}">
-                <span class="lz-pill-icon"><i class="las la-utensils"></i></span>
-                <span>Restaurantes</span>
-            </a>
-            <a href="{{ route('delivery.marketplace', ['category' => 'super-mini-markets']) }}" class="lz-service-pill {{ request('category') == 'super-mini-markets' ? 'active' : '' }}">
-                <span class="lz-pill-icon"><i class="las la-shopping-basket"></i></span>
-                <span>Mercados & Bodegas</span>
-            </a>
-            <a href="{{ route('delivery.marketplace', ['category' => 'farmacia']) }}" class="lz-service-pill {{ request('category') == 'farmacia' ? 'active' : '' }}">
-                <span class="lz-pill-icon"><i class="las la-prescription-bottle-alt"></i></span>
-                <span>Farmacias</span>
-            </a>
-            <a href="{{ route('delivery.marketplace', ['category' => 'licorerias']) }}" class="lz-service-pill {{ request('category') == 'licorerias' ? 'active' : '' }}">
-                <span class="lz-pill-icon"><i class="las la-glass-cheers"></i></span>
-                <span>Licores & Bebidas</span>
-            </a>
-            <a href="{{ route('delivery.marketplace') }}#seccion-ofertas" class="lz-service-pill lz-pill-badge-highlight">
-                <span class="lz-pill-icon text-warning"><i class="las la-bolt"></i></span>
-                <span>Ofertas del Día</span>
-                <span class="lz-mini-badge">PROMO</span>
-            </a>
-            <a href="{{ route('favor') }}" class="lz-service-pill {{ request()->routeIs('favor*') ? 'active' : '' }}">
-                <span class="lz-pill-icon text-info"><i class="las la-hand-holding-heart"></i></span>
-                <span>Lizto Favor</span>
-            </a>
-            <a href="{{ route('taxi') }}" class="lz-service-pill {{ request()->routeIs('taxi*') ? 'active' : '' }}">
-                <span class="lz-pill-icon text-warning"><i class="las la-taxi"></i></span>
-                <span>Taxi Seguro</span>
-            </a>
-            <a href="{{ route('delivery.marketplace') }}#seccion-cupones" class="lz-service-pill">
-                <span class="lz-pill-icon text-danger"><i class="las la-tag"></i></span>
-                <span>Cupones</span>
-            </a>
-            <a href="{{ route('seller.login') }}" class="lz-service-pill lz-pill-partner">
-                <span class="lz-pill-icon"><i class="las la-store"></i></span>
-                <span>Vender en Lizto</span>
-            </a>
-        </div>
-    </nav>
+    {{-- SERVICES PILL BAR (DESKTOP) --}}
+    <div class="lz-services-bar">
+        <a href="{{ route('delivery.marketplace') }}" class="lz-service-pill {{ request()->routeIs('delivery.marketplace', 'delivery.store') && !request('category') ? 'active' : '' }}">
+            <i class="las la-utensils"></i> Delivery de Comida
+        </a>
+        <a href="{{ route('delivery.marketplace', ['category' => 'markets']) }}" class="lz-service-pill {{ request('category') == 'markets' ? 'active' : '' }}">
+            <i class="las la-shopping-basket"></i> Mercados & Tiendas
+        </a>
+        <a href="{{ route('favor') }}" class="lz-service-pill {{ request()->routeIs('favor*') ? 'active' : '' }}">
+            <i class="las la-hand-holding-heart"></i> Lizto Favor
+        </a>
+        <a href="{{ route('taxi') }}" class="lz-service-pill {{ request()->routeIs('taxi*') ? 'active' : '' }}">
+            <i class="las la-taxi"></i> Taxi Seguro
+        </a>
+    </div>
 </header>
 
 {{-- GLOBAL REAL CART DRAWER --}}
@@ -547,82 +520,6 @@
     align-items: center !important;
     justify-content: center !important;
     border: 2px solid #ffffff !important;
-}
-
-/* Quick Navigation Services Bar */
-.lz-services-bar {
-    display: flex !important;
-    background: #ffffff !important;
-    border-top: 1px solid #f1f5f9 !important;
-    padding: 6px 12px !important;
-    overflow-x: auto !important;
-    white-space: nowrap !important;
-    -webkit-overflow-scrolling: touch !important;
-    scrollbar-width: none !important;
-}
-.lz-services-bar::-webkit-scrollbar {
-    display: none !important;
-}
-.lz-services-bar-inner {
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-    max-width: 1400px !important;
-    margin: 0 auto !important;
-    padding: 0 4px !important;
-}
-.lz-service-pill {
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 6px !important;
-    padding: 5px 12px !important;
-    border-radius: 9999px !important;
-    font-size: 12.5px !important;
-    font-weight: 600 !important;
-    color: #475569 !important;
-    background: #f8fafc !important;
-    border: 1px solid #e2e8f0 !important;
-    text-decoration: none !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    flex-shrink: 0 !important;
-}
-.lz-service-pill:hover {
-    color: #0f172a !important;
-    background: #f1f5f9 !important;
-    border-color: #cbd5e1 !important;
-    transform: translateY(-1px) !important;
-}
-.lz-service-pill.active {
-    color: #047857 !important;
-    background: #ecfdf5 !important;
-    border-color: #6ee7b7 !important;
-    font-weight: 700 !important;
-}
-.lz-pill-icon {
-    font-size: 14px !important;
-    line-height: 1 !important;
-    display: inline-flex !important;
-    align-items: center !important;
-}
-.lz-pill-badge-highlight {
-    background: #fffbeb !important;
-    border-color: #fde68a !important;
-    color: #b45309 !important;
-}
-.lz-mini-badge {
-    background: #f59e0b !important;
-    color: #ffffff !important;
-    font-size: 9px !important;
-    font-weight: 800 !important;
-    padding: 1px 5px !important;
-    border-radius: 6px !important;
-    letter-spacing: 0.5px !important;
-    margin-left: 2px !important;
-}
-.lz-pill-partner {
-    color: #ea580c !important;
-    border-color: #ffedd5 !important;
-    background: #fff7ed !important;
 }
 
 /* ==========================================================================

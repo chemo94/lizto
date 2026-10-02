@@ -67,300 +67,61 @@
 <main class="lz-marketplace-page">
     <div class="container">
 
-        {{-- 1. HERO SUPERAPP BANNER --}}
+        {{-- 1. HERO & UNIVERSAL SEARCH (MOBILE-FIRST) --}}
         <section class="lz-hero-section" id="buscar">
-            <div class="lz-hero-banner">
-                <div class="lz-hero-content">
-                    <div class="lz-hero-pill-badge">
-                        <span class="lz-pulse-dot"></span>
-                        <span>Superapp Oficial de Tarapoto · Todo a tu puerta en minutos</span>
-                    </div>
+            <div class="row align-items-center mb-3">
+                <div class="col-12 col-md-8">
+                    <span class="lz-brand-city mb-2"><i class="las la-bolt"></i> Superapp de Tarapoto</span>
                     <h1 class="lz-hero-main-title">
-                        ¿Qué quieres pedir hoy en <span class="lz-hero-city-highlight">Tarapoto</span>?
+                        ¿Qué quieres pedir hoy?
                     </h1>
                     <p class="lz-hero-main-sub">
-                        Comida de tus restaurantes favoritos, compras de minimarkets, favores urgentes y viajes en taxi seguro en una sola plataforma.
+                        Restaurantes, compras, favores y movilidad en un solo lugar.
                     </p>
-                    <div class="lz-hero-value-props">
-                        <div class="lz-prop-chip">
-                            <i class="las la-bolt text-warning"></i>
-                            <span>Entregas en 25 - 40 min</span>
-                        </div>
-                        <div class="lz-prop-chip">
-                            <i class="las la-shield-alt text-success"></i>
-                            <span>Conductores & Repartidores Verificados</span>
-                        </div>
-                        <div class="lz-prop-chip">
-                            <i class="las la-map-marker-alt text-danger"></i>
-                            <span>Tarapoto · Morales · La Banda</span>
-                        </div>
-                        <div class="lz-prop-chip">
-                            <i class="las la-wallet text-info"></i>
-                            <span>Yape, Plin o Efectivo</span>
-                        </div>
-                    </div>
                 </div>
             </div>
 
-            {{-- 2. 4 SUPERAPP HUB CARDS --}}
+            {{-- 2. HIGH HIERARCHY SERVICE SHORTCUTS --}}
             <div class="lz-services-grid">
-                <a href="javascript:void(0)" onclick="selectCategoryDirect('1', 'restaurantes', 'Comida'); document.getElementById('restaurantes').scrollIntoView({behavior:'smooth'});" class="lz-service-card lz-svc-food">
-                    <div class="lz-svc-badge">🔥 +50 Restaurantes</div>
+                <a href="javascript:void(0)" onclick="selectCategoryDirect('1', 'restaurantes', 'Comida')" class="lz-service-card lz-svc-food">
                     <div class="lz-service-icon">
                         <i class="las la-utensils"></i>
                     </div>
-                    <div class="lz-svc-info">
-                        <span class="lz-service-title">Comida</span>
-                        <span class="lz-service-sub">Pollerías, Chifas & Pizzas</span>
-                    </div>
-                    <div class="lz-svc-action">
-                        <span>Explorar menú</span>
-                        <i class="las la-arrow-right"></i>
-                    </div>
+                    <span class="lz-service-title">Comida</span>
+                    <span class="lz-service-sub">Restaurantes</span>
                 </a>
 
-                <a href="javascript:void(0)" onclick="selectCategoryDirect('markets', 'markets', 'Tiendas'); document.getElementById('restaurantes').scrollIntoView({behavior:'smooth'});" class="lz-service-card lz-svc-stores">
-                    <div class="lz-svc-badge lz-badge-green">🥦 Precios de Tienda</div>
+                <a href="javascript:void(0)" onclick="selectCategoryDirect('markets', 'markets', 'Tiendas')" class="lz-service-card lz-svc-stores">
                     <div class="lz-service-icon">
                         <i class="las la-shopping-basket"></i>
                     </div>
-                    <div class="lz-svc-info">
-                        <span class="lz-service-title">Mercados & Tiendas</span>
-                        <span class="lz-service-sub">Bodegas, Bebidas & Boticas</span>
-                    </div>
-                    <div class="lz-svc-action">
-                        <span>Hacer compras</span>
-                        <i class="las la-arrow-right"></i>
-                    </div>
+                    <span class="lz-service-title">Tiendas</span>
+                    <span class="lz-service-sub">Markets & Farmacias</span>
                 </a>
 
                 <a href="{{ route('favor') }}" class="lz-service-card lz-svc-favor">
-                    <div class="lz-svc-badge lz-badge-purple">⚡ Envíos Express</div>
                     <div class="lz-service-icon">
                         <i class="las la-hand-holding-heart"></i>
                     </div>
-                    <div class="lz-svc-info">
-                        <span class="lz-service-title">Lizto Favor</span>
-                        <span class="lz-service-sub">Mandados, Llaves & Envíos</span>
-                    </div>
-                    <div class="lz-svc-action">
-                        <span>Pedir mandado</span>
-                        <i class="las la-arrow-right"></i>
-                    </div>
+                    <span class="lz-service-title">Lizto Favor</span>
+                    <span class="lz-service-sub">Mandados & Envíos</span>
                 </a>
 
                 <a href="{{ route('taxi') }}" class="lz-service-card lz-svc-taxi">
-                    <div class="lz-svc-badge lz-badge-amber">🚕 Viajes Directos</div>
                     <div class="lz-service-icon">
                         <i class="las la-taxi"></i>
                     </div>
-                    <div class="lz-svc-info">
-                        <span class="lz-service-title">Taxi Seguro</span>
-                        <span class="lz-service-sub">Viajes rápidos y confiables</span>
-                    </div>
-                    <div class="lz-svc-action">
-                        <span>Pedir taxi</span>
-                        <i class="las la-arrow-right"></i>
-                    </div>
+                    <span class="lz-service-title">Taxi Seguro</span>
+                    <span class="lz-service-sub">Viajes directos</span>
                 </a>
             </div>
         </section>
 
-        {{-- 3. EXPLORA POR ANTOJO (CRAVING BUBBLES) --}}
-        <section class="lz-cravings-section mb-4" id="seccion-antojos">
-            <div class="lz-section-head mb-2">
-                <h2 class="lz-section-title">
-                    <span>🍽️</span> ¿Qué se te antoja hoy?
-                </h2>
-                <span class="lz-section-sub-tag">Descubre por plato favorito</span>
-            </div>
-            <div class="lz-cravings-scroll">
-                <a href="javascript:void(0)" onclick="filterByCraving('pollo', '🍗 Pollerías')" class="lz-craving-item">
-                    <div class="lz-craving-avatar" style="background: linear-gradient(135deg, #fef3c7, #fde68a); color: #d97706;">🍗</div>
-                    <span class="lz-craving-label">Pollerías</span>
-                </a>
-                <a href="javascript:void(0)" onclick="filterByCraving('pizza', '🍕 Pizzas')" class="lz-craving-item">
-                    <div class="lz-craving-avatar" style="background: linear-gradient(135deg, #fee2e2, #fecaca); color: #dc2626;">🍕</div>
-                    <span class="lz-craving-label">Pizzas</span>
-                </a>
-                <a href="javascript:void(0)" onclick="filterByCraving('hamburguesa', '🍔 Burgers')" class="lz-craving-item">
-                    <div class="lz-craving-avatar" style="background: linear-gradient(135deg, #ffedd5, #fed7aa); color: #ea580c;">🍔</div>
-                    <span class="lz-craving-label">Burgers</span>
-                </a>
-                <a href="javascript:void(0)" onclick="filterByCraving('chifa', '🥡 Chifa')" class="lz-craving-item">
-                    <div class="lz-craving-avatar" style="background: linear-gradient(135deg, #fce7f3, #fbcfe8); color: #db2777;">🥡</div>
-                    <span class="lz-craving-label">Chifa</span>
-                </a>
-                <a href="javascript:void(0)" onclick="filterByCraving('parrilla', '🥩 Parrillas')" class="lz-craving-item">
-                    <div class="lz-craving-avatar" style="background: linear-gradient(135deg, #f3e8ff, #e9d5ff); color: #9333ea;">🥩</div>
-                    <span class="lz-craving-label">Parrillas</span>
-                </a>
-                <a href="javascript:void(0)" onclick="filterByCraving('postre', '🍰 Postres')" class="lz-craving-item">
-                    <div class="lz-craving-avatar" style="background: linear-gradient(135deg, #e0e7ff, #c7d2fe); color: #4f46e5;">🍰</div>
-                    <span class="lz-craving-label">Postres</span>
-                </a>
-                <a href="javascript:void(0)" onclick="filterByCraving('café', '☕ Cafés')" class="lz-craving-item">
-                    <div class="lz-craving-avatar" style="background: linear-gradient(135deg, #fae8ff, #f5d0fe); color: #a21caf;">☕</div>
-                    <span class="lz-craving-label">Cafés</span>
-                </a>
-                <a href="javascript:void(0)" onclick="selectCategoryDirect('licorerias', 'licorerias', 'Licores'); document.getElementById('restaurantes').scrollIntoView({behavior:'smooth'});" class="lz-craving-item">
-                    <div class="lz-craving-avatar" style="background: linear-gradient(135deg, #ccfbf1, #99f6e4); color: #0d9488;">🍾</div>
-                    <span class="lz-craving-label">Licores</span>
-                </a>
-                <a href="javascript:void(0)" onclick="selectCategoryDirect('farmacia', 'farmacia', 'Farmacia'); document.getElementById('restaurantes').scrollIntoView({behavior:'smooth'});" class="lz-craving-item">
-                    <div class="lz-craving-avatar" style="background: linear-gradient(135deg, #dcfce7, #bbf7d0); color: #16a34a;">💊</div>
-                    <span class="lz-craving-label">Farmacias</span>
-                </a>
-                <a href="javascript:void(0)" onclick="selectCategoryDirect('super-mini-markets', 'super-mini-markets', 'Supermercados'); document.getElementById('restaurantes').scrollIntoView({behavior:'smooth'});" class="lz-craving-item">
-                    <div class="lz-craving-avatar" style="background: linear-gradient(135deg, #e0f2fe, #bae6fd); color: #0284c7;">🛒</div>
-                    <span class="lz-craving-label">Markets</span>
-                </a>
-            </div>
-        </section>
-
-        {{-- 4. BANNERS Y PROMOCIONES DESTACADAS --}}
-        @if(isset($banners) && $banners->count() > 0)
-        <section class="mb-4">
-            <div class="mp-banners-slider">
-                @foreach($banners as $banner)
-                <a href="{{ $banner->link ?: route('delivery.marketplace') }}" class="mp-banner-slide">
-                    <img src="{{ getImage(getFilePath('banner') . '/' . $banner->image) }}" alt="{{ $banner->title ?? 'Promoción Lizto' }}" loading="lazy">
-                </a>
-                @endforeach
-            </div>
-        </section>
-        @else
-        {{-- FALLBACK PROMO CARDS (SIEMPRE ATRACTIVAS) --}}
-        <section class="lz-curated-promos mb-5">
-            <div class="lz-promo-grid">
-                <div class="lz-promo-card lz-promo-welcome">
-                    <div class="lz-promo-content">
-                        <span class="lz-promo-tag"><i class="las la-gift"></i> Exclusivo</span>
-                        <h3 class="lz-promo-title">¡Tu 1er Pedido con Delivery GRATIS!</h3>
-                        <p class="lz-promo-desc">Disfruta de Tarapoto a tu puerta sin costo de envío usando tu cupón.</p>
-                        <div class="lz-promo-action">
-                            <span class="lz-promo-code">BIENVENIDO</span>
-                            <button type="button" class="lz-promo-btn" onclick="copyCouponCode('BIENVENIDO', this)">
-                                <i class="las la-copy"></i> Copiar
-                            </button>
-                        </div>
-                    </div>
-                    <div class="lz-promo-visual">
-                        <i class="las la-shipping-fast"></i>
-                    </div>
-                </div>
-
-                <div class="lz-promo-card lz-promo-favor">
-                    <div class="lz-promo-content">
-                        <span class="lz-promo-tag"><i class="las la-motorcycle"></i> Express</span>
-                        <h3 class="lz-promo-title">¿Necesitas un mandado o encargo urgente?</h3>
-                        <p class="lz-promo-desc">Compramos o recogemos lo que necesites en cualquier punto de Tarapoto.</p>
-                        <div class="lz-promo-action">
-                            <a href="{{ route('favor') }}" class="lz-promo-btn-link">
-                                <span>Pedir Lizto Favor</span>
-                                <i class="las la-arrow-right"></i>
-                            </a>
-                        </div>
-                    </div>
-                    <div class="lz-promo-visual">
-                        <i class="las la-hand-holding-heart"></i>
-                    </div>
-                </div>
-
-                <div class="lz-promo-card lz-promo-food">
-                    <div class="lz-promo-content">
-                        <span class="lz-promo-tag"><i class="las la-fire"></i> Sabores Locales</span>
-                        <h3 class="lz-promo-title">Lo mejor de la gastronomía de Tarapoto</h3>
-                        <p class="lz-promo-desc">Pollo a la brasa, tacacho con cecina, pizzas y hamburguesas listas.</p>
-                        <div class="lz-promo-action">
-                            <a href="javascript:void(0)" onclick="selectCategoryDirect('1', 'restaurantes', 'Comida'); document.getElementById('restaurantes').scrollIntoView({behavior:'smooth'});" class="lz-promo-btn-link">
-                                <span>Ver Restaurantes</span>
-                                <i class="las la-arrow-right"></i>
-                            </a>
-                        </div>
-                    </div>
-                    <div class="lz-promo-visual">
-                        <i class="las la-hamburger"></i>
-                    </div>
-                </div>
-            </div>
-        </section>
-        @endif
-
-        {{-- 5. LOS MÁS PEDIDOS DE TARAPOTO (TOP TENDENCIA) --}}
-        @if(isset($mostOrdered) && $mostOrdered->count() > 0)
-        <section class="mb-5" id="seccion-mas-pedidos">
-            <div class="lz-section-head">
-                <h2 class="lz-section-title">
-                    🔥 Los Más Pedidos de Tarapoto
-                    <span class="lz-brand-city" style="font-size:10.5px;">TOP FAVORITOS</span>
-                </h2>
-                <span class="lz-section-sub-tag d-none d-md-inline">Platos y productos más solicitados en la ciudad</span>
-            </div>
-            <div class="lz-products-grid">
-                @foreach($mostOrdered->take(8) as $item)
-                @php
-                    $prod = $item->product;
-                    if (!$prod) continue;
-                    $finalPrice = $prod->finalPrice();
-                    $hasDiscount = $prod->discount_price > 0 && $prod->price > $prod->discount_price;
-                    $saving = $hasDiscount ? ($prod->price - $prod->discount_price) : 0;
-                    $prodImage = $prod->image ? getImage(getFilePath('product') . '/' . $prod->image) : '';
-                    $storeName = $prod->store ? $prod->store->name : 'Tienda Lizto';
-                    $storeId = $prod->store_id;
-                    $storeUrl = $prod->store ? route('delivery.store', $prod->store) : '#';
-                @endphp
-                <div class="lz-product-card" 
-                     data-product-id="{{ $prod->id }}"
-                     data-product-name="{{ htmlspecialchars($prod->name) }}"
-                     data-product-desc="{{ htmlspecialchars($prod->description ?? '') }}"
-                     data-product-price="{{ number_format($finalPrice, 2, '.', '') }}"
-                     data-product-old-price="{{ $hasDiscount ? number_format($prod->price, 2, '.', '') : '' }}"
-                     data-product-saving="{{ number_format($saving, 2, '.', '') }}"
-                     data-product-image="{{ $prodImage }}"
-                     data-store-id="{{ $storeId }}"
-                     data-store-name="{{ htmlspecialchars($storeName) }}"
-                     data-store-url="{{ $storeUrl }}"
-                     onclick="openProductQuickView(this)">
-                    <div class="lz-product-info">
-                        <div>
-                            <span class="lz-product-store-tag">
-                                <i class="las la-store"></i> {{ $storeName }}
-                            </span>
-                            <h3 class="lz-product-name">{{ $prod->name }}</h3>
-                            <p class="lz-product-desc">{{ $prod->description ? \Illuminate\Support\Str::limit($prod->description, 55) : 'El favorito de los usuarios en Tarapoto.' }}</p>
-                        </div>
-                        <div class="lz-product-price-row">
-                            <span class="lz-product-price">S/ {{ number_format($finalPrice, 2) }}</span>
-                            @if($hasDiscount)
-                                <span class="lz-product-old-price">S/ {{ number_format($prod->price, 2) }}</span>
-                                <span class="lz-product-save-pill">-S/ {{ number_format($saving, 2) }}</span>
-                            @endif
-                        </div>
-                    </div>
-                    <div class="lz-product-thumb">
-                        @if($prod->image)
-                            <img src="{{ $prodImage }}" alt="{{ $prod->name }}" loading="lazy">
-                        @else
-                            <div class="lz-product-placeholder-icon">
-                                <i class="las la-utensils"></i>
-                            </div>
-                        @endif
-                        <button type="button" class="lz-product-add-btn" title="Pedir producto" onclick="event.stopPropagation(); openProductQuickView(this.closest('.lz-product-card'))">
-                            <i class="las la-plus"></i>
-                        </button>
-                    </div>
-                </div>
-                @endforeach
-            </div>
-        </section>
-        @endif
-
-        {{-- 6. HORIZONTAL CATEGORIES CAROUSEL --}}
+        {{-- 3. HORIZONTAL CATEGORIES CAROUSEL --}}
         <section class="lz-categories-strip" id="seccion-categorias">
             <div class="lz-section-head">
                 <h2 class="lz-section-title">
-                    <i class="las la-th-large" style="color:var(--lz-primary)"></i> Todas las Categorías
+                    <i class="las la-th-large" style="color:var(--lz-primary)"></i> Categorías
                 </h2>
                 <a href="javascript:void(0)" onclick="selectCategoryDirect('', '', 'Todo')" id="btnVerTodasCategorias" class="lz-section-link {{ request('category') || request('subcategory') || request('q') ? '' : 'd-none' }}">Ver todas</a>
             </div>
@@ -399,7 +160,7 @@
             </div>
         </section>
 
-        {{-- 7. SUBCATEGORÍAS DINÁMICAS POR CATEGORÍA --}}
+        {{-- 4. ¿QUÉ SE TE ANTOJA? (SUBCATEGORÍAS DINÁMICAS POR CATEGORÍA) --}}
         @php
             $hasSubcats = false;
             foreach($categories as $c) {
@@ -412,7 +173,7 @@
         <section class="lz-categories-strip lz-subcategories-section" id="seccion-subcategorias">
             <div class="lz-section-head">
                 <h2 class="lz-section-title" id="subCategoryHeaderTitle" style="font-size:16px;">
-                    ✨ Subcategorías
+                    ✨ ¿Qué se te antoja hoy?
                 </h2>
                 <div class="d-flex align-items-center gap-2">
                     <span id="activeSubCatBadge" class="lz-filter-active-pill d-none">
@@ -428,6 +189,7 @@
                     <i class="las la-angle-left"></i>
                 </button>
                 <div class="lz-chips-scroll" id="subcategoriesScroll">
+                    {{-- Render all subcategories with their parent general_category_id --}}
                     @foreach($categories as $cat)
                         @foreach($cat->subCategories as $subCat)
                             <a href="javascript:void(0)" 
@@ -454,15 +216,27 @@
         </section>
         @endif
 
-        {{-- 8. CUPONES DE DESCUENTO --}}
+        {{-- 5. BANNERS PROMOCIONALES --}}
+        @if(isset($banners) && $banners->count() > 0)
+        <section class="mb-4">
+            <div class="mp-banners-slider">
+                @foreach($banners as $banner)
+                <a href="{{ $banner->link ?: route('delivery.marketplace') }}" class="mp-banner-slide">
+                    <img src="{{ getImage(getFilePath('banner') . '/' . $banner->image) }}" alt="{{ $banner->title ?? 'Promoción Lizto' }}" loading="lazy">
+                </a>
+                @endforeach
+            </div>
+        </section>
+        @endif
+
+        {{-- 6. CUPONES DE DESCUENTO --}}
         @if(isset($coupons) && $coupons->count() > 0)
-        <section class="mb-5" id="seccion-cupones">
+        <section class="mb-5">
             <div class="lz-section-head">
                 <h2 class="lz-section-title">
-                    🎁 Cupones y Descuentos
+                    🎁 Cupones y Promociones
                     <span class="lz-brand-city" style="font-size:10.5px;">{{ $coupons->count() }} ACTIVOS</span>
                 </h2>
-                <span class="lz-section-sub-tag">Haz clic en Copiar para usarlo en tu pedido</span>
             </div>
             <div class="mp-coupons-grid">
                 @foreach($coupons as $coupon)
@@ -497,13 +271,13 @@
         </section>
         @endif
 
-        {{-- 9. OFERTAS DEL DÍA (PRODUCTOS CON DESCUENTO) --}}
+        {{-- 7. OFERTAS DEL DÍA (PRODUCTOS CON DESCUENTO / ACCIÓN RÁPIDA) --}}
         @if(isset($discountedProducts) && $discountedProducts->count() > 0)
         <section class="mb-5" id="seccion-ofertas">
             <div class="lz-section-head">
                 <h2 class="lz-section-title">
                     ⚡ Ofertas del Día
-                    <span class="mp-badge-tag">AHORRA HOY</span>
+                    <span class="mp-badge-tag">AHORRA</span>
                 </h2>
             </div>
             <div class="lz-products-grid">
@@ -563,60 +337,7 @@
         </section>
         @endif
 
-        {{-- 10. BANNER ESPECIAL LIZTO FAVOR (FEATURE CALLOUT) --}}
-        <section class="lz-feature-favor-section mb-5">
-            <div class="lz-favor-showcase-box">
-                <div class="lz-favor-left">
-                    <span class="lz-favor-pill"><i class="las la-hand-holding-heart"></i> Lizto Favor · Mandados Express</span>
-                    <h3 class="lz-favor-title">¿Necesitas que compremos, recojamos o enviemos algo por ti?</h3>
-                    <p class="lz-favor-desc">
-                        Olvídate del tráfico. Desde medicamentos en farmacias hasta llaves, documentos o compras de mercado: un repartidor de Lizto se encarga de inmediato.
-                    </p>
-                    <div class="lz-favor-steps">
-                        <div class="lz-fstep">
-                            <span class="lz-fstep-num">1</span>
-                            <div>
-                                <strong>Pide lo que sea</strong>
-                                <span>Dinos qué y dónde recoger</span>
-                            </div>
-                        </div>
-                        <div class="lz-fstep">
-                            <span class="lz-fstep-num">2</span>
-                            <div>
-                                <strong>Repartidor Asignado</strong>
-                                <span>Rastreo en tiempo real</span>
-                            </div>
-                        </div>
-                        <div class="lz-fstep">
-                            <span class="lz-fstep-num">3</span>
-                            <div>
-                                <strong>Entrega Directa</strong>
-                                <span>En tus manos sin demoras</span>
-                            </div>
-                        </div>
-                    </div>
-                    <a href="{{ route('favor') }}" class="lz-btn-cta lz-favor-cta-btn">
-                        <span>Solicitar Mandado Express</span>
-                        <i class="las la-arrow-right"></i>
-                    </a>
-                </div>
-                <div class="lz-favor-right d-none d-lg-flex">
-                    <div class="lz-favor-badge-float top-badge">
-                        <i class="las la-clock text-warning"></i>
-                        <span>Envíos en menos de 35 min</span>
-                    </div>
-                    <div class="lz-favor-illustration">
-                        <i class="las la-motorcycle"></i>
-                    </div>
-                    <div class="lz-favor-badge-float bottom-badge">
-                        <i class="las la-check-circle text-success"></i>
-                        <span>Repartidores 100% verificados</span>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        {{-- 11. RESTAURANTES Y TIENDAS ABIERTAS --}}
+        {{-- 8. TIENDAS Y RESTAURANTES (ABIERTOS AHORA) --}}
         <section class="mb-5" id="restaurantes">
             <div class="lz-section-head">
                 <h2 class="lz-section-title" id="storesSectionTitle">
@@ -624,7 +345,7 @@
                     <span class="lz-brand-city" id="openStoresCounter">{{ $openStores->count() }} ABIERTOS</span>
                 </h2>
                 <div class="d-none d-sm-flex align-items-center gap-2">
-                    <span style="font-size:12.5px;color:var(--lz-text-muted);">En Tarapoto, Morales y La Banda</span>
+                    <span style="font-size:12.5px;color:var(--lz-text-muted);">En Tarapoto</span>
                 </div>
             </div>
 
@@ -719,7 +440,7 @@
             </div>
         </section>
 
-        {{-- 12. TIENDAS CERRADAS (VISUALMENTE SEPARADAS) --}}
+        {{-- 9. TIENDAS CERRADAS (VISUALMENTE SEPARADAS) --}}
         @if($closedStores->count() > 0)
         <section class="mb-5" id="seccion-cerrados" style="opacity: 0.85;">
             <div class="lz-section-head">
@@ -769,78 +490,6 @@
             </div>
         </section>
         @endif
-
-        {{-- 13. BANNER ESPECIAL TAXI SEGURO (MOBILITY SHOWCASE) --}}
-        <section class="lz-feature-taxi-section mb-5">
-            <div class="lz-taxi-showcase-box">
-                <div class="lz-taxi-content">
-                    <span class="lz-taxi-pill"><i class="las la-taxi"></i> LiztoGo Taxi · Movilidad Segura</span>
-                    <h3 class="lz-taxi-title">Viaja cómodo y seguro por toda la ciudad de Tarapoto</h3>
-                    <p class="lz-taxi-desc">
-                        Conecta con conductores verificados, autos y mototaxis autorizados. Conoce tu precio antes de subir y viaja sin sorpresas ni sobrecostos.
-                    </p>
-                    <div class="lz-taxi-perks">
-                        <div class="lz-perk-item">
-                            <i class="las la-check-circle"></i>
-                            <span>Tarifas justas y transparentes</span>
-                        </div>
-                        <div class="lz-perk-item">
-                            <i class="las la-id-card"></i>
-                            <span>Conductores 100% identificados</span>
-                        </div>
-                        <div class="lz-perk-item">
-                            <i class="las la-map-marked-alt"></i>
-                            <span>Cobertura en Tarapoto, Morales y La Banda</span>
-                        </div>
-                    </div>
-                    <a href="{{ route('taxi') }}" class="lz-btn-cta lz-taxi-cta-btn">
-                        <i class="las la-taxi"></i>
-                        <span>Solicitar Taxi Seguro Ahora</span>
-                    </a>
-                </div>
-                <div class="lz-taxi-icon-art d-none d-md-flex">
-                    <i class="las la-car-side"></i>
-                </div>
-            </div>
-        </section>
-
-        {{-- 14. B2B & APPS DOWNLOAD SECTION --}}
-        <section class="lz-apps-business-section mb-5">
-            <div class="row g-3">
-                <div class="col-12 col-md-6">
-                    <div class="lz-b2b-card lz-b2b-merchant">
-                        <div class="lz-b2b-icon">
-                            <i class="las la-store-alt"></i>
-                        </div>
-                        <div class="lz-b2b-body">
-                            <span class="lz-mini-badge" style="background:rgba(16,185,129,0.15);color:#059669;">Para Negocios</span>
-                            <h4 class="lz-b2b-title">¿Tienes un restaurante o tienda?</h4>
-                            <p class="lz-b2b-text">Vende a miles de clientes en Tarapoto con nuestra plataforma de pedidos y POS integrado.</p>
-                            <a href="{{ route('seller.login') }}" class="lz-b2b-link">
-                                <span>Vender en Lizto</span>
-                                <i class="las la-arrow-right"></i>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-md-6">
-                    <div class="lz-b2b-card lz-b2b-driver">
-                        <div class="lz-b2b-icon">
-                            <i class="las la-motorcycle"></i>
-                        </div>
-                        <div class="lz-b2b-body">
-                            <span class="lz-mini-badge" style="background:rgba(245,158,11,0.15);color:#d97706;">Gana Dinero</span>
-                            <h4 class="lz-b2b-title">¿Quieres conducir o repartir?</h4>
-                            <p class="lz-b2b-text">Genera ingresos diarios con tu moto o auto con horarios flexibles y pagos garantizados.</p>
-                            <a href="{{ route('taxi') }}" class="lz-b2b-link">
-                                <span>Únete a Lizto Conductor</span>
-                                <i class="las la-arrow-right"></i>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
 
     </div>
 </main>
@@ -933,79 +582,20 @@
     overflow-x: hidden;
 }
 
-/* Typography & Superapp Hero */
-.lz-hero-banner {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.07) 0%, rgba(255, 255, 255, 0.98) 50%, rgba(59, 130, 246, 0.05) 100%);
-    border: 1.5px solid rgba(16, 185, 129, 0.18);
-    border-radius: 20px;
-    padding: 26px 22px 22px;
-    margin-bottom: 18px;
-    box-shadow: 0 6px 24px -4px rgba(0, 0, 0, 0.04);
-}
-.lz-hero-pill-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(16, 185, 129, 0.12);
-    border: 1px solid rgba(16, 185, 129, 0.28);
-    color: #047857;
-    font-size: 11.5px;
-    font-weight: 800;
-    padding: 4px 12px;
-    border-radius: 9999px;
-    margin-bottom: 10px;
-}
-.lz-pulse-dot {
-    width: 8px;
-    height: 8px;
-    background: #10b981;
-    border-radius: 50%;
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-    animation: pulseGreen 1.8s infinite;
-}
-@keyframes pulseGreen {
-    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-}
+/* Typography & Hero Fixes */
 .lz-hero-main-title {
-    font-size: clamp(22px, 3.4vw, 34px);
-    font-weight: 900;
-    color: #0f172a;
-    margin: 0 0 8px;
-    letter-spacing: -0.6px;
-    line-height: 1.18;
-}
-.lz-hero-city-highlight {
-    background: linear-gradient(135deg, #059669 0%, #10b981 60%, #0284c7 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    font-size: clamp(22px, 3.2vw, 32px);
+    font-weight: 800;
+    color: var(--lz-text);
+    margin: 0 0 6px;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
 }
 .lz-hero-main-sub {
     font-size: 14.5px;
-    color: #64748b;
-    margin: 0 0 16px;
-    max-width: 680px;
-    line-height: 1.45;
-}
-.lz-hero-value-props {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 12px;
-    align-items: center;
-}
-.lz-prop-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #475569;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    padding: 5px 11px;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    color: var(--lz-text-muted);
+    margin: 0;
+    line-height: 1.4;
 }
 
 /* Universal Search */
@@ -1031,529 +621,24 @@
     color: var(--lz-danger);
 }
 
-/* Enhanced 4 Superapp Hub Cards */
-.lz-services-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin-bottom: 28px;
-}
-@media (min-width: 992px) {
-    .lz-services-grid {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 16px;
-    }
-}
+/* Services Grid Text Bounds Protection */
 .lz-service-card {
-    display: flex;
-    flex-direction: column;
-    background: #ffffff;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 18px;
-    padding: 16px 15px;
-    position: relative;
-    text-decoration: none !important;
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
-    overflow: hidden;
     min-width: 0;
-}
-.lz-service-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 28px -4px rgba(0,0,0,0.08);
-    border-color: var(--lz-primary);
-}
-.lz-svc-food { border-bottom: 3.5px solid #f97316; }
-.lz-svc-stores { border-bottom: 3.5px solid #10b981; }
-.lz-svc-favor { border-bottom: 3.5px solid #8b5cf6; }
-.lz-svc-taxi { border-bottom: 3.5px solid #f59e0b; }
-
-.lz-svc-badge {
-    font-size: 10px;
-    font-weight: 800;
-    background: #fff7ed;
-    color: #c2410c;
-    border: 1px solid #ffedd5;
-    padding: 2px 8px;
-    border-radius: 9999px;
-    align-self: flex-start;
-    margin-bottom: 12px;
-}
-.lz-badge-green { background: #ecfdf5; color: #047857; border-color: #d1fae5; }
-.lz-badge-purple { background: #f5f3ff; color: #6d28d9; border-color: #ede9fe; }
-.lz-badge-amber { background: #fffbeb; color: #b45309; border-color: #fef3c7; }
-
-.lz-service-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 13px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    margin-bottom: 12px;
-    transition: transform 0.2s ease;
-}
-.lz-svc-food .lz-service-icon { background: linear-gradient(135deg, #ffedd5, #fed7aa); color: #ea580c; }
-.lz-svc-stores .lz-service-icon { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #059669; }
-.lz-svc-favor .lz-service-icon { background: linear-gradient(135deg, #ede9fe, #ddd6fe); color: #7c3aed; }
-.lz-svc-taxi .lz-service-icon { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #d97706; }
-.lz-service-card:hover .lz-service-icon {
-    transform: scale(1.1);
+    overflow: hidden;
 }
 .lz-service-title {
-    font-size: 15.5px;
-    font-weight: 800;
-    color: #0f172a;
-    margin-bottom: 2px;
-    display: block;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    display: block;
+    max-width: 100%;
 }
 .lz-service-sub {
-    font-size: 11.5px;
-    color: #64748b;
-    line-height: 1.35;
-    margin-bottom: 12px;
-    display: block;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-}
-.lz-svc-action {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--lz-primary-dark);
-    margin-top: auto;
-    padding-top: 10px;
-    border-top: 1px solid #f1f5f9;
-    transition: gap 0.2s;
-}
-.lz-svc-action i {
-    transition: transform 0.2s;
-}
-.lz-service-card:hover .lz-svc-action i {
-    transform: translateX(4px);
-}
-
-/* Craving Bubbles */
-.lz-cravings-section {
-    position: relative;
-}
-.lz-cravings-scroll {
-    display: flex;
-    gap: 14px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    padding: 6px 2px 14px;
-    scroll-behavior: smooth;
-}
-.lz-cravings-scroll::-webkit-scrollbar {
-    display: none;
-}
-.lz-craving-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 7px;
-    text-decoration: none !important;
-    flex-shrink: 0;
-    width: 68px;
-    transition: transform 0.2s;
-}
-.lz-craving-item:hover {
-    transform: translateY(-3px);
-}
-.lz-craving-avatar {
-    width: 54px;
-    height: 54px;
-    border-radius: 17px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 25px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    border: 1px solid rgba(0,0,0,0.04);
-}
-.lz-craving-label {
-    font-size: 11px;
-    font-weight: 700;
-    color: #334155;
-    text-align: center;
-    white-space: nowrap;
-}
-
-/* Curated Promos */
-.lz-curated-promos {
-    position: relative;
-}
-.lz-promo-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 14px;
-}
-@media (min-width: 768px) {
-    .lz-promo-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-}
-.lz-promo-card {
-    border-radius: 18px;
-    padding: 22px 20px;
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.06);
-    min-height: 150px;
-}
-.lz-promo-welcome { background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: #ffffff; }
-.lz-promo-favor { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: #ffffff; }
-.lz-promo-food { background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); color: #ffffff; }
-
-.lz-promo-content {
-    position: relative;
-    z-index: 2;
-    max-width: 80%;
-}
-.lz-promo-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 9.5px;
-    font-weight: 800;
-    text-transform: uppercase;
-    background: rgba(255,255,255,0.22);
-    color: #fff;
-    padding: 3px 8px;
-    border-radius: 9999px;
-    margin-bottom: 8px;
-    letter-spacing: 0.5px;
-}
-.lz-promo-title {
-    font-size: 15.5px;
-    font-weight: 800;
-    line-height: 1.25;
-    margin-bottom: 6px;
-    color: #ffffff;
-}
-.lz-promo-desc {
-    font-size: 11px;
-    opacity: 0.92;
-    margin-bottom: 12px;
-    line-height: 1.35;
-    color: #ffffff;
-}
-.lz-promo-action {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.lz-promo-code {
-    font-family: monospace;
-    font-size: 11.5px;
-    font-weight: 800;
-    background: rgba(0,0,0,0.25);
-    padding: 4px 9px;
-    border-radius: 6px;
-    letter-spacing: 0.5px;
-    color: #ffffff;
-}
-.lz-promo-btn, .lz-promo-btn-link {
-    background: #ffffff;
-    color: #0f172a !important;
-    font-size: 11.5px;
-    font-weight: 800;
-    border: none;
-    padding: 6px 14px;
-    border-radius: 9999px;
-    cursor: pointer;
-    text-decoration: none !important;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    transition: transform 0.15s;
-}
-.lz-promo-btn:hover, .lz-promo-btn-link:hover {
-    transform: scale(1.04);
-}
-.lz-promo-visual {
-    font-size: 68px;
-    opacity: 0.18;
-    position: absolute;
-    right: 10px;
-    bottom: 6px;
-    pointer-events: none;
-    color: #ffffff;
-}
-
-/* Feature Showcase Lizto Favor */
-.lz-favor-showcase-box {
-    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
-    border-radius: 20px;
-    padding: 32px 26px;
-    color: #ffffff;
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-    box-shadow: 0 10px 30px -5px rgba(49, 46, 129, 0.3);
-}
-.lz-favor-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(139, 92, 246, 0.25);
-    border: 1px solid rgba(139, 92, 246, 0.4);
-    color: #c4b5fd;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 4px 12px;
-    border-radius: 9999px;
-    margin-bottom: 12px;
-}
-.lz-favor-title {
-    font-size: clamp(19px, 2.4vw, 25px);
-    font-weight: 800;
-    color: #ffffff;
-    margin-bottom: 10px;
-    line-height: 1.25;
-}
-.lz-favor-desc {
-    font-size: 13.5px;
-    color: #cbd5e1;
-    line-height: 1.5;
-    margin-bottom: 20px;
-    max-width: 580px;
-}
-.lz-favor-steps {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-bottom: 22px;
-}
-.lz-fstep {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: rgba(255,255,255,0.08);
-    padding: 8px 14px;
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,0.1);
-}
-.lz-fstep-num {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: #8b5cf6;
-    color: #fff;
-    font-size: 12px;
-    font-weight: 800;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-.lz-fstep strong {
     display: block;
-    font-size: 12px;
-    color: #ffffff;
-    line-height: 1.2;
-}
-.lz-fstep span {
-    font-size: 10px;
-    color: #94a3b8;
-}
-.lz-favor-cta-btn {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-    color: #ffffff !important;
-    font-size: 13.5px;
-    font-weight: 800;
-    padding: 11px 22px;
-    border-radius: 9999px;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none !important;
-    box-shadow: 0 4px 18px rgba(124, 58, 237, 0.4);
-    transition: transform 0.15s;
-}
-.lz-favor-cta-btn:hover {
-    transform: scale(1.04);
-}
-.lz-favor-right {
-    position: relative;
-    width: 220px;
-    height: 180px;
-    align-items: center;
-    justify-content: center;
-}
-.lz-favor-illustration {
-    font-size: 96px;
-    color: rgba(255,255,255,0.15);
-}
-.lz-favor-badge-float {
-    position: absolute;
-    background: rgba(15, 23, 42, 0.88);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255,255,255,0.15);
-    color: #fff;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 6px 12px;
-    border-radius: 9999px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
-}
-.lz-favor-badge-float.top-badge { top: 0; right: 0; }
-.lz-favor-badge-float.bottom-badge { bottom: 0; left: 0; }
-
-/* Feature Showcase Taxi Seguro */
-.lz-taxi-showcase-box {
-    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-    border: 1.5px solid #fde68a;
-    border-radius: 20px;
-    padding: 30px 26px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-    box-shadow: 0 4px 20px rgba(245, 158, 11, 0.08);
-}
-.lz-taxi-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: #fef08a;
-    border: 1px solid #facc15;
-    color: #854d0e;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 4px 12px;
-    border-radius: 9999px;
-    margin-bottom: 12px;
-}
-.lz-taxi-title {
-    font-size: clamp(19px, 2.4vw, 25px);
-    font-weight: 800;
-    color: #78350f;
-    margin-bottom: 10px;
-    line-height: 1.25;
-}
-.lz-taxi-desc {
-    font-size: 13.5px;
-    color: #92400e;
-    line-height: 1.5;
-    margin-bottom: 18px;
-    max-width: 580px;
-}
-.lz-taxi-perks {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 20px;
-}
-.lz-perk-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    font-weight: 700;
-    color: #78350f;
-}
-.lz-perk-item i {
-    color: #059669;
-    font-size: 16px;
-}
-.lz-taxi-cta-btn {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    color: #ffffff !important;
-    font-size: 13.5px;
-    font-weight: 800;
-    padding: 11px 22px;
-    border-radius: 9999px;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none !important;
-    box-shadow: 0 4px 18px rgba(217, 119, 6, 0.35);
-    transition: transform 0.15s;
-}
-.lz-taxi-cta-btn:hover {
-    transform: scale(1.04);
-}
-.lz-taxi-icon-art {
-    font-size: 100px;
-    color: #fbbf24;
-    opacity: 0.55;
-}
-
-/* B2B / Driver Section */
-.lz-b2b-card {
-    background: #ffffff;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 18px;
-    padding: 22px 20px;
-    display: flex;
-    gap: 16px;
-    align-items: flex-start;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-    height: 100%;
-}
-.lz-b2b-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-    border-color: var(--lz-primary);
-}
-.lz-b2b-icon {
-    width: 50px;
-    height: 50px;
-    border-radius: 14px;
-    background: #f1f5f9;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 26px;
-    color: #334155;
-    flex-shrink: 0;
-}
-.lz-b2b-title {
-    font-size: 15.5px;
-    font-weight: 800;
-    color: #0f172a;
-    margin: 6px 0 4px;
-}
-.lz-b2b-text {
-    font-size: 12px;
-    color: #64748b;
-    margin-bottom: 12px;
-    line-height: 1.4;
-}
-.lz-b2b-link {
-    font-size: 13px;
-    font-weight: 800;
-    color: var(--lz-primary-dark);
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    text-decoration: none !important;
-}
-.lz-section-sub-tag {
-    font-size: 12.5px;
-    color: var(--lz-text-muted);
-    font-weight: 500;
-    margin-left: 10px;
+    max-width: 100%;
 }
 
 /* Horizontal Chip Scroller With Nav Buttons & Edge Protection */
@@ -2326,41 +1411,6 @@ window.addEventListener('DOMContentLoaded', function () {
         })
         .catch(() => {});
 });
-
-// Craving Quick Filter
-function filterByCraving(term, label) {
-    currentCategory = '';
-    currentSubcategory = '';
-    currentSearch = (term || '').trim().toLowerCase();
-
-    // Reset Category and Subcategory active UI
-    document.querySelectorAll('#categoriesScroll .cat-btn').forEach(c => c.classList.remove('active'));
-    const allBtn = document.querySelector('#categoriesScroll .cat-btn[data-category-id=""]');
-    if (allBtn) allBtn.classList.add('active');
-    document.querySelectorAll('#subcategoriesScroll .subcat-chip').forEach(c => c.classList.remove('active'));
-
-    const activeBadge = document.getElementById('activeSubCatBadge');
-    if (activeBadge) activeBadge.classList.add('d-none');
-
-    // Sync search input
-    ['headerUniversalSearchInput', 'mobileHeaderSearchInput'].forEach(id => {
-        const inp = document.getElementById(id);
-        if (inp) inp.value = term;
-    });
-
-    filterStoresDOM();
-    updateURLQuery();
-
-    const btnVerTodas = document.getElementById('btnVerTodasCategorias');
-    if (btnVerTodas) btnVerTodas.classList.remove('d-none');
-
-    showToast('Buscando: ' + label, 'success');
-
-    const target = document.getElementById('restaurantes');
-    if (target) {
-        target.scrollIntoView({ behavior: 'smooth' });
-    }
-}
 
 // Category Switcher
 function selectCategoryDirect(catId, catSlug, catName) {
