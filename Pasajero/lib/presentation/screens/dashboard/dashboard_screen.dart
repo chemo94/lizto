@@ -130,47 +130,61 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
                   children: [
                     IndexedStack(index: selectedIndex, children: _widgets),
                     // Floating hamburger menu button (visible on main tabs except Comida/Delivery)
-                    if (selectedIndex <= 2 && selectedIndex != 1)
-                      Positioned(
-                        top: MediaQuery.of(context).padding.top + 12,
-                        left: 16,
-                        child: GestureDetector(
-                          onTap: () => _dashBoardScaffoldKey.currentState?.openDrawer(),
-                          child: Container(
-                            height: 44,
-                            width: 44,
-                            decoration: BoxDecoration(
-                              color: MyColor.cardBgColor,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.18),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.menu_rounded,
-                              color: MyColor.primaryColor,
-                              size: 22,
+                    GetBuilder<HomeController>(
+                      builder: (homeController) {
+                        final isSelectingRide = selectedIndex == 0 && homeController.selectedLocations.length >= 2;
+                        if (selectedIndex > 2 || selectedIndex == 1 || isSelectingRide) {
+                          return const SizedBox.shrink();
+                        }
+                        return Positioned(
+                          top: MediaQuery.of(context).padding.top + 12,
+                          left: 16,
+                          child: GestureDetector(
+                            onTap: () => _dashBoardScaffoldKey.currentState?.openDrawer(),
+                            child: Container(
+                              height: 44,
+                              width: 44,
+                              decoration: BoxDecoration(
+                                color: MyColor.cardBgColor,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.18),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.menu_rounded,
+                                color: MyColor.primaryColor,
+                                size: 22,
+                              ),
                             ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
-              bottomNavigationBar: CustomerBottomNavigation(
-                currentIndex: selectedIndex == 4 ? 4 : selectedIndex,
-                onChanged: changeScreen,
-                items: const [
-                  CustomerNavItem(icon: Icons.local_taxi_outlined, label: 'Taxi'),
-                  CustomerNavItem(icon: Icons.shopping_bag_outlined, label: 'Delivery'),
-                  CustomerNavItem(icon: Icons.volunteer_activism_outlined, label: 'Favor'),
-                  CustomerNavItem(icon: Icons.receipt_long_outlined, label: 'Actividad'),
-                  CustomerNavItem(icon: Icons.person_outline_rounded, label: 'Perfil'),
-                ],
+              bottomNavigationBar: GetBuilder<HomeController>(
+                builder: (homeController) {
+                  if (selectedIndex == 0 && homeController.selectedLocations.length >= 2) {
+                    return const SizedBox.shrink();
+                  }
+                  return CustomerBottomNavigation(
+                    currentIndex: selectedIndex == 4 ? 4 : selectedIndex,
+                    onChanged: changeScreen,
+                    items: const [
+                      CustomerNavItem(icon: Icons.local_taxi_outlined, label: 'Taxi'),
+                      CustomerNavItem(icon: Icons.shopping_bag_outlined, label: 'Delivery'),
+                      CustomerNavItem(icon: Icons.volunteer_activism_outlined, label: 'Favor'),
+                      CustomerNavItem(icon: Icons.receipt_long_outlined, label: 'Actividad'),
+                      CustomerNavItem(icon: Icons.person_outline_rounded, label: 'Perfil'),
+                    ],
+                  );
+                },
               ),
             );
           },

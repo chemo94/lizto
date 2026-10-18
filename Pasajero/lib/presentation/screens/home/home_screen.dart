@@ -25,7 +25,6 @@ import 'package:liztogo/environment.dart';
 
 import 'package:liztogo/presentation/screens/home/section/ride_create_form.dart';
 import 'package:liztogo/presentation/screens/home/section/ride_service_section.dart';
-import 'package:liztogo/presentation/screens/home/widgets/location_pickup_widget.dart';
 import 'package:liztogo/presentation/screens/home/widgets/banner_slider.dart';
 
 
@@ -131,36 +130,48 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 Positioned.fill(
                   child: GetBuilder<HomeMapController>(
                     builder: (mapCtrl) {
-                      return GoogleMap(
-                        mapType: MapType.normal,
-                        initialCameraPosition: CameraPosition(
-                          target: controller.currentPosition != null ? LatLng(controller.currentPosition!.latitude - 0.0035, controller.currentPosition!.longitude) : const LatLng(-12.1333 - 0.0035, -77.0000),
-                          zoom: Environment.mapDefaultZoom,
-                        ),
-                        onMapCreated: mapCtrl.onMapCreated,
-                        myLocationEnabled: true,
-                        myLocationButtonEnabled: false,
-                        zoomControlsEnabled: false,
-                        markers: {
-                          ...mapCtrl.getDriverMarkers(),
-                          ...mapCtrl.routeMarkers.values,
+                      return ValueListenableBuilder<double>(
+                        valueListenable: _sheetSizeNotifier,
+                        builder: (context, _, child) {
+                          final hasDestination = controller.selectedLocations.length >= 2;
+                          final bookingSheetSize = _dssController.isAttached ? _dssController.size : 0.64;
+                          final bottomMapPadding = hasDestination
+                              ? MediaQuery.of(context).size.height * bookingSheetSize
+                              : 0.0;
+                          return GoogleMap(
+                            padding: EdgeInsets.only(bottom: bottomMapPadding),
+                            mapType: MapType.normal,
+                            initialCameraPosition: CameraPosition(
+                              target: controller.currentPosition != null ? LatLng(controller.currentPosition!.latitude - 0.0035, controller.currentPosition!.longitude) : const LatLng(-12.1333 - 0.0035, -77.0000),
+                              zoom: Environment.mapDefaultZoom,
+                            ),
+                            onMapCreated: mapCtrl.onMapCreated,
+                            myLocationEnabled: true,
+                            myLocationButtonEnabled: false,
+                            zoomControlsEnabled: false,
+                            markers: {
+                              ...mapCtrl.getDriverMarkers(),
+                              ...mapCtrl.routeMarkers.values,
+                            },
+                            polylines: mapCtrl.homePolylines.values.toSet(),
+                          );
                         },
-                        polylines: mapCtrl.homePolylines.values.toSet(),
                       );
                     },
                   ),
                 ),
-                Positioned(
+                if (controller.selectedLocations.length < 2)
+                  Positioned(
                   left: 16,
                   bottom: 0,
                   child: ValueListenableBuilder<double>(
                     valueListenable: _sheetSizeNotifier,
                     builder: (context, sheetSize, child) {
-                      final bottomNavBarHeight = 60.0;
+                      final bottomNavBarHeight = controller.selectedLocations.length >= 2 ? 0.0 : 60.0;
                       final remainingHeight = MediaQuery.of(context).size.height - bottomNavBarHeight;
                       final bottomOffset = controller.selectedLocations.length < 2
                           ? bottomNavBarHeight + (remainingHeight * sheetSize) + 12
-                          : bottomNavBarHeight + 325 + 12;
+                          : (remainingHeight * sheetSize) + 12;
                       return Padding(
                         padding: EdgeInsets.only(bottom: bottomOffset),
                         child: GestureDetector(
@@ -227,11 +238,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   child: ValueListenableBuilder<double>(
                     valueListenable: _sheetSizeNotifier,
                     builder: (context, sheetSize, child) {
-                      final bottomNavBarHeight = 60.0;
+                      final bottomNavBarHeight = controller.selectedLocations.length >= 2 ? 0.0 : 60.0;
                       final remainingHeight = MediaQuery.of(context).size.height - bottomNavBarHeight;
                       final bottomOffset = controller.selectedLocations.length < 2
                           ? bottomNavBarHeight + (remainingHeight * sheetSize) + 12
-                          : bottomNavBarHeight + 325 + 12;
+                          : (remainingHeight * sheetSize) + 12;
                       return Padding(
                         padding: EdgeInsets.only(bottom: bottomOffset),
                         child: GetBuilder<HomeMapController>(
@@ -257,45 +268,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       );
                     },
                   ),
-                ),  // 3. Floating Back Button (Overlays hamburger menu in State 2)
+                ),
                 if (controller.selectedLocations.length >= 2)
                   Positioned(
                     top: MediaQuery.of(context).padding.top + 12,
                     left: 16,
-                    child: GestureDetector(
-                      onTap: () {
-                        if (controller.selectedLocations.length > 1) {
-                          controller.selectedLocations.removeAt(1);
-                        }
-                        controller.clearData();
-                        try {
-                          Get.find<HomeMapController>().clearRoute();
-                        } catch (_) {}
-                        controller.update();
-                      },
-                      child: Container(
-                        height: 44,
-                        width: 44,
-                        decoration: BoxDecoration(
-                          color: MyColor.cardBgColor,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.15),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          color: MyColor.primaryColor,
-                          size: 18,
-                        ),
-                      ),
-                    ),
+                    right: 16,
+                    child: _buildRouteSummary(context, controller),
                   ),
-  
+
                 // 4. Conditional Bottom Panel (DiDi Home vs Booking Draggable Sheet)
                 if (controller.selectedLocations.length < 2)
                   Positioned(
@@ -309,7 +290,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   Positioned(
                     left: 0,
                     right: 0,
-                    bottom: 60,
+                    top: 0,
+                    bottom: 0,
                     child: _buildRideBookingSheet(context, controller),
                   ),
               ],
@@ -543,53 +525,173 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   // ── Ride Booking Sheet (State 2) ──
   Widget _buildRideBookingSheet(BuildContext context, HomeController controller) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: MyColor.cardBgColor,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(32),
-          topRight: Radius.circular(32),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 24,
-            offset: Offset(0, -8),
+    final safeBottom = MediaQuery.of(context).padding.bottom;
+    return DraggableScrollableSheet(
+      controller: _dssController,
+      initialChildSize: 0.64,
+      minChildSize: 0.46,
+      maxChildSize: 0.92,
+      expand: true,
+      snap: true,
+      snapSizes: const [0.46, 0.64, 0.92],
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: MyColor.screenBgColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            boxShadow: [
+              BoxShadow(
+                color: MyColor.primaryTextColor.withValues(alpha: 0.12),
+                blurRadius: 22,
+                offset: const Offset(0, -5),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Center(
-            child: Container(
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              height: 4,
-              width: 36,
-              decoration: BoxDecoration(
-                color: MyColor.neutral200,
-                borderRadius: BorderRadius.circular(2),
+          child: Column(
+            children: [
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.only(bottom: 10),
+                  children: [
+                    Center(
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 11),
+                        height: 4,
+                        width: 36,
+                        decoration: BoxDecoration(
+                          color: MyColor.neutral300,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                    const RideServiceSection(),
+                  ],
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.fromLTRB(16, 10, 16, 12 + safeBottom),
+                decoration: BoxDecoration(
+                  color: MyColor.cardBgColor,
+                  border: Border(top: BorderSide(color: MyColor.neutral200.withValues(alpha: 0.8))),
+                ),
+                child: const RideCreateForm(),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRouteSummary(BuildContext context, HomeController controller) {
+    final pickupLocation = controller.selectedLocations.isNotEmpty ? controller.selectedLocations.first : null;
+    final destination = controller.selectedLocations[1];
+    final pickup = pickupLocation?.placeName?.trim().isNotEmpty == true
+        ? pickupLocation!.placeName!
+        : pickupLocation?.address ?? controller.currentAddress;
+    final destinationLabel = destination.placeName?.trim().isNotEmpty == true
+        ? destination.placeName!
+        : destination.address ?? destination.fullAddress ?? 'Destino';
+
+    return Row(
+      children: [
+        Material(
+          color: MyColor.cardBgColor,
+          shape: const CircleBorder(),
+          elevation: 3,
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: () {
+              controller.selectedLocations.removeAt(1);
+              controller.clearData();
+              try {
+                Get.find<HomeMapController>().clearRoute();
+              } catch (_) {}
+              controller.update();
+            },
+            child: const SizedBox(
+              width: 48,
+              height: 48,
+              child: Icon(Icons.arrow_back_ios_new_rounded, size: 19, color: MyColor.primaryTextColor),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Material(
+            color: MyColor.cardBgColor,
+            elevation: 3,
+            borderRadius: BorderRadius.circular(18),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: () {
+                controller.updateIsServiceShake(false);
+                Get.toNamed(RouteHelper.locationPickUpScreen, arguments: [1])?.then((_) {
+                  if (controller.selectedLocations.length > 1) {
+                    controller.getRideFare(defaultToCheapest: true);
+                    final selectedDestination = controller.selectedLocations[1];
+                    final lat = selectedDestination.latitude;
+                    final lng = selectedDestination.longitude;
+                    if (lat != null && lng != null && lat != 0 && lng != 0) {
+                      Get.find<HomeMapController>().drawRouteTo(LatLng(lat, lng));
+                    }
+                  }
+                });
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _RouteAddressLine(icon: Icons.trip_origin_rounded, label: pickup),
+                          const SizedBox(height: 5),
+                          _RouteAddressLine(icon: Icons.flag_rounded, label: destinationLabel, isDestination: true),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('Cambiar', style: semiBoldSmall.copyWith(fontSize: 13, color: MyColor.primaryColor)),
+                  ],
+                ),
               ),
             ),
           ),
-          LocationPickUpHomeWidget(controller: controller),
-          const SizedBox(height: Dimensions.space8),
-          Divider(height: 1, color: MyColor.naturalTextColor.withValues(alpha: 0.15), indent: Dimensions.space16, endIndent: Dimensions.space16),
-          const RideServiceSection(),
-          Divider(height: 1, color: MyColor.naturalTextColor.withValues(alpha: 0.15), indent: Dimensions.space16, endIndent: Dimensions.space16),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(
-              Dimensions.space16,
-              Dimensions.space12,
-              Dimensions.space16,
-              Dimensions.space16,
-            ),
-            child: RideCreateForm(),
+        ),
+      ],
+    );
+  }
+
+}
+
+
+
+class _RouteAddressLine extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isDestination;
+
+  const _RouteAddressLine({required this.icon, required this.label, this.isDestination = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 15, color: isDestination ? MyColor.primaryColor : MyColor.bodyMutedTextColor),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: semiBoldSmall.copyWith(fontSize: 13, color: MyColor.primaryTextColor),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
-

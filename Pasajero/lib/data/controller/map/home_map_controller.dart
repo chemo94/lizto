@@ -1,19 +1,21 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:liztogo/core/helper/shared_preference_helper.dart';
 import 'package:liztogo/core/helper/string_format_helper.dart';
 import 'package:liztogo/core/utils/helper.dart';
 import 'package:liztogo/core/utils/my_color.dart';
 import 'package:liztogo/core/utils/my_images.dart';
+import 'package:liztogo/core/utils/url_container.dart';
 import 'package:liztogo/data/controller/home/home_controller.dart';
 import 'package:liztogo/data/model/home/nearby_drivers_response_model.dart';
 import 'package:liztogo/data/repo/home/home_repo.dart';
-import 'package:liztogo/data/services/pusher_service.dart';
+import 'package:liztogo/data/services/realtime_service.dart';
 import 'package:liztogo/environment.dart';
 import 'package:liztogo/presentation/packages/flutter_polyline_points/flutter_polyline_points.dart';
 
@@ -41,11 +43,10 @@ class HomeMapController extends GetxController with GetSingleTickerProviderState
   GoogleMapController? mapController;
   final Map<String, NearbyDriverMarker> _driverMarkers = {};
   late final AnimationController _animationController;
-  Timer? _pollTimer;
+  StreamSubscription<Map<String, dynamic>>? _realtimeWsSub;
   Uint8List? carIcon;
   Uint8List? motoIcon;
   bool isMapReady = false;
-  String? _nearbyChannel;
   List<NearbyDriver> nearbyDrivers = [];
 
   // ── Route polyline ─────────────────────────────────────────────────────
@@ -58,66 +59,64 @@ class HomeMapController extends GetxController with GetSingleTickerProviderState
     super.onInit();
     _animationController = AnimationController(vsync: this, duration: const Duration(seconds: 2));
     _loadIcons();
-    _subscribeToNearbyDrivers();
+    _initRealtimeNearbyDrivers();
   }
 
-  void _subscribeToNearbyDrivers() {
+  Future<void> _initRealtimeNearbyDrivers() async {
     try {
       final userId = homeRepo.apiClient.getUserID();
-      if (userId.isEmpty) return;
-      _nearbyChannel = 'private-nearby-drivers';
-      PusherManager().addListener(_onNearbyDriverEvent);
-      PusherManager().checkAndInitIfNeeded(_nearbyChannel!);
-      printX('HomeMapController: subscribed to $_nearbyChannel');
+      final token = homeRepo.apiClient.sharedPreferences.getString(SharedPreferenceHelper.accessTokenKey) ?? '';
+      if (userId.isEmpty || token.isEmpty) return;
+
+      final connection = RealtimeManager().init(wsUrl: UrlContainer.wsUrl, token: token);
+      _realtimeWsSub?.cancel();
+      _realtimeWsSub = RealtimeManager().onTopic('nearby.ride').listen(_onNearbyRealtimeMessage);
+      RealtimeManager().subscribe('nearby.ride');
+      await connection;
+      printX('HomeMapController: subscribed to native nearby.ride');
     } catch (e) {
-      printE('HomeMapController subscribe error: $e');
+      printE('HomeMapController native realtime init error: $e');
     }
   }
 
-  void _onNearbyDriverEvent(PusherEvent event) {
-    if (event.channelName != _nearbyChannel) return;
-    if (event.eventName != 'driver_location_updated' && event.eventName != 'nearby_driver_update') return;
+  void _onNearbyRealtimeMessage(Map<String, dynamic> message) {
     try {
-      final data = jsonDecode(event.data);
-      final driverId = data['driver_id']?.toString() ?? '';
-      final lat = StringConverter.formatDouble(data['latitude']?.toString() ?? '0', precision: 10);
-      final lng = StringConverter.formatDouble(data['longitude']?.toString() ?? '0', precision: 10);
-      if (lat == 0 || lng == 0 || driverId.isEmpty) return;
-      final latLng = LatLng(lat, lng);
-      final bearing = StringConverter.formatDouble(data['bearing']?.toString() ?? '0', precision: 10);
-      final serviceName = data['service_name']?.toString();
+      final payload = message['payload'];
+      if (payload is! Map) return;
+      final data = Map<String, dynamic>.from(payload);
+      if (data['type'] != 'driver_location' && data['type'] != 'driver_location_updated') return;
 
-      if (_driverMarkers.containsKey(driverId)) {
-        final existing = _driverMarkers[driverId]!;
-        existing.oldLatLng = existing.latLng;
-        existing.targetLatLng = latLng;
-        existing.oldRotation = existing.rotation;
-        double newRotation = existing.rotation;
-        if (existing.oldLatLng.latitude != latLng.latitude ||
-            existing.oldLatLng.longitude != latLng.longitude) {
-          newRotation = _getRotation(
-            existing.oldLatLng.latitude,
-            existing.oldLatLng.longitude,
-            latLng.latitude,
-            latLng.longitude,
-          );
-        } else if (bearing != 0) {
-          newRotation = bearing;
-        }
-        existing.targetRotation = newRotation;
-        if (serviceName != null) existing.serviceName = serviceName;
+      final driverId = data['driver_id']?.toString() ?? '';
+      final lat = _readCoordinate(data['lat'] ?? data['latitude']);
+      final lng = _readCoordinate(data['lng'] ?? data['longitude']);
+      if (driverId.isEmpty || lat == 0 || lng == 0) return;
+
+      final currentPosition = homeController.currentPosition;
+      final distanceKm = currentPosition == null ? 0.0 : Geolocator.distanceBetween(currentPosition.latitude, currentPosition.longitude, lat, lng) / 1000;
+      final driver = NearbyDriver(
+        id: driverId,
+        latitude: lat,
+        longitude: lng,
+        bearing: _readCoordinate(data['bearing']),
+        serviceName: (data['service_name'] ?? data['service_type'])?.toString(),
+        distanceKm: distanceKm,
+        image: data['image']?.toString(),
+      );
+
+      final driverIndex = nearbyDrivers.indexWhere((item) => item.id == driverId);
+      if (driverIndex == -1) {
+        nearbyDrivers.add(driver);
       } else {
-        _driverMarkers[driverId] = NearbyDriverMarker(
-          latLng: latLng,
-          rotation: bearing,
-          serviceName: serviceName,
-        );
+        nearbyDrivers[driverIndex] = driver;
       }
+      _upsertDriverMarker(driver);
       _animateAllMarkers();
     } catch (e) {
-      printE('HomeMapController event error: $e');
+      printE('HomeMapController nearby realtime event error: $e');
     }
   }
+
+  double _readCoordinate(dynamic value) => value is num ? value.toDouble() : double.tryParse(value?.toString() ?? '') ?? 0;
 
   Future<void> _loadIcons() async {
     carIcon = await Helper.getBytesFromAsset(MyImages.mapDriverMarker, 80);
@@ -145,8 +144,7 @@ class HomeMapController extends GetxController with GetSingleTickerProviderState
   }
 
   void _startPolling() {
-    _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 15), (_) => _fetchNearbyDrivers());
+    // REST supplies an initial snapshot; subsequent driver positions arrive over nearby.ride.
     _fetchNearbyDrivers();
   }
 
@@ -176,37 +174,40 @@ class HomeMapController extends GetxController with GetSingleTickerProviderState
     }
 
     for (final driver in drivers) {
-      final id = driver.id ?? '';
-      final latLng = LatLng(driver.latitude, driver.longitude);
-      if (_driverMarkers.containsKey(id)) {
-        final existing = _driverMarkers[id]!;
-        existing.oldLatLng = existing.latLng;
-        existing.targetLatLng = latLng;
-        existing.oldRotation = existing.rotation;
-        double newRotation = existing.rotation;
-        if (existing.oldLatLng.latitude != latLng.latitude ||
-            existing.oldLatLng.longitude != latLng.longitude) {
-          newRotation = _getRotation(
-            existing.oldLatLng.latitude,
-            existing.oldLatLng.longitude,
-            latLng.latitude,
-            latLng.longitude,
-          );
-        } else if (driver.bearing != 0) {
-          newRotation = driver.bearing;
-        }
-        existing.targetRotation = newRotation;
-        if (driver.serviceName != null) existing.serviceName = driver.serviceName;
-      } else {
-        _driverMarkers[id] = NearbyDriverMarker(
-          latLng: latLng,
-          rotation: driver.bearing,
-          serviceName: driver.serviceName,
-        );
-      }
+      _upsertDriverMarker(driver);
     }
 
     _animateAllMarkers();
+  }
+
+  void _upsertDriverMarker(NearbyDriver driver) {
+    final id = driver.id ?? '';
+    final latLng = LatLng(driver.latitude, driver.longitude);
+    if (_driverMarkers.containsKey(id)) {
+      final existing = _driverMarkers[id]!;
+      existing.oldLatLng = existing.latLng;
+      existing.targetLatLng = latLng;
+      existing.oldRotation = existing.rotation;
+      double newRotation = existing.rotation;
+      if (existing.oldLatLng.latitude != latLng.latitude || existing.oldLatLng.longitude != latLng.longitude) {
+        newRotation = _getRotation(
+          existing.oldLatLng.latitude,
+          existing.oldLatLng.longitude,
+          latLng.latitude,
+          latLng.longitude,
+        );
+      } else if (driver.bearing != 0) {
+        newRotation = driver.bearing;
+      }
+      existing.targetRotation = newRotation;
+      if (driver.serviceName != null) existing.serviceName = driver.serviceName;
+    } else {
+      _driverMarkers[id] = NearbyDriverMarker(
+        latLng: latLng,
+        rotation: driver.bearing,
+        serviceName: driver.serviceName,
+      );
+    }
   }
 
   void _animateAllMarkers() {
@@ -221,12 +222,9 @@ class HomeMapController extends GetxController with GetSingleTickerProviderState
       final val = animation.value;
       bool needsRebuild = false;
       for (var data in _driverMarkers.values) {
-        if (data.oldLatLng.latitude != data.targetLatLng.latitude ||
-            data.oldLatLng.longitude != data.targetLatLng.longitude) {
-          final lat = data.oldLatLng.latitude +
-              (data.targetLatLng.latitude - data.oldLatLng.latitude) * val;
-          final lng = data.oldLatLng.longitude +
-              (data.targetLatLng.longitude - data.oldLatLng.longitude) * val;
+        if (data.oldLatLng.latitude != data.targetLatLng.latitude || data.oldLatLng.longitude != data.targetLatLng.longitude) {
+          final lat = data.oldLatLng.latitude + (data.targetLatLng.latitude - data.oldLatLng.latitude) * val;
+          final lng = data.oldLatLng.longitude + (data.targetLatLng.longitude - data.oldLatLng.longitude) * val;
           data.latLng = LatLng(lat, lng);
           needsRebuild = true;
         }
@@ -326,7 +324,7 @@ class HomeMapController extends GetxController with GetSingleTickerProviderState
 
     try {
       final origin = LatLng(pos.latitude, pos.longitude);
-      
+
       // Clear previous route polylines and markers first
       homePolylines.clear();
       homePolylineCoords.clear();
@@ -342,9 +340,7 @@ class HomeMapController extends GetxController with GetSingleTickerProviderState
         googleApiKey: Environment.mapKey,
       );
 
-      homePolylineCoords = result.points
-          .map((p) => LatLng(p.latitude, p.longitude))
-          .toList();
+      homePolylineCoords = result.points.map((p) => LatLng(p.latitude, p.longitude)).toList();
 
       if (homePolylineCoords.isNotEmpty) {
         const polylineId = PolylineId('home_route');
@@ -421,9 +417,9 @@ class HomeMapController extends GetxController with GetSingleTickerProviderState
 
   @override
   void onClose() {
-    _pollTimer?.cancel();
+    _realtimeWsSub?.cancel();
     _animationController.dispose();
-    PusherManager().removeListener(_onNearbyDriverEvent);
+    RealtimeManager().unsubscribe('nearby.ride');
     super.onClose();
   }
 }

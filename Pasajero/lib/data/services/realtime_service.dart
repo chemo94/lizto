@@ -12,7 +12,7 @@ class RealtimeAuth {
 
 /// Servicio de tiempo real sobre WebSocket nativo con reconexión automática y re-suscripción.
 class RealtimeService {
-  final String wsUrl; // wss://liztodelivery.com/ws
+  final String wsUrl; // wss://liztodelivery.com:8085
   final String token; // Token Sanctum
 
   WebSocketChannel? _channel;
@@ -24,6 +24,7 @@ class RealtimeService {
 
   final Set<String> _activeTopics = {};
   bool _isConnected = false;
+  bool _authSent = false;
   bool _isDisposed = false;
   Timer? _reconnectTimer;
   Timer? _pingTimer;
@@ -52,6 +53,7 @@ class RealtimeService {
 
   void _initSocket() {
     try {
+      _authSent = false;
       _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
       _channel!.stream.listen(
         _handleMessage,
@@ -60,8 +62,6 @@ class RealtimeService {
         cancelOnError: true,
       );
 
-      // Enviar token Sanctum (action=auth)
-      _send({'action': 'auth', 'token': token});
       _startPing();
     } catch (e) {
       debugPrint('[RealtimeService] Error al conectar: $e');
@@ -113,10 +113,24 @@ class RealtimeService {
           }
           break;
 
+        case 'error':
+          final message = data['message']?.toString() ?? 'Error del servidor WebSocket';
+          debugPrint('[RealtimeService] Error del servidor: $message');
+          if (!_isConnected && _authCompleter != null && !_authCompleter!.isCompleted) {
+            _authCompleter!.completeError(Exception(message));
+          }
+          break;
+
+        case 'ready':
+          if (!_authSent) {
+            _authSent = true;
+            _send({'action': 'auth', 'token': token});
+          }
+          break;
+
         case 'subscribed':
         case 'unsubscribed':
         case 'pong':
-        case 'ready':
           break;
       }
     } catch (e) {
@@ -194,30 +208,61 @@ class RealtimeManager {
   RealtimeManager._internal();
 
   RealtimeService? _service;
+  Future<RealtimeAuth>? _initializing;
+  final Set<String> _pendingTopics = {};
+  final _broadcastController = StreamController<Map<String, dynamic>>.broadcast();
+  StreamSubscription<Map<String, dynamic>>? _serviceBroadcastSub;
 
   RealtimeService? get service => _service;
   bool get isConnected => _service?.isConnected ?? false;
-  Stream<Map<String, dynamic>> get onBroadcast =>
-      _service?.onBroadcast ?? const Stream.empty();
+  Stream<Map<String, dynamic>> get onBroadcast => _broadcastController.stream;
 
   Future<RealtimeAuth?> init({required String wsUrl, required String token}) async {
-    if (_service != null && _service!.isConnected && _service!.token == token) {
-      return _service!.auth;
+    if (_service != null && _service!.token == token) {
+      if (_service!.isConnected) return _service!.auth;
+      if (_initializing != null) return _initializing;
     }
+    _serviceBroadcastSub?.cancel();
     _service?.dispose();
     _service = RealtimeService(wsUrl: wsUrl, token: token);
-    return await _service!.connect();
+    final service = _service!;
+    _serviceBroadcastSub = service.onBroadcast.listen(
+      _broadcastController.add,
+      onError: _broadcastController.addError,
+    );
+    for (final topic in _pendingTopics) {
+      service.subscribe(topic);
+    }
+    final initialization = service.connect();
+    _initializing = initialization;
+    try {
+      return await initialization;
+    } finally {
+      if (identical(_initializing, initialization)) _initializing = null;
+    }
   }
 
-  void subscribe(String topic) => _service?.subscribe(topic);
-  void unsubscribe(String topic) => _service?.unsubscribe(topic);
+  void subscribe(String topic) {
+    _pendingTopics.add(topic);
+    _service?.subscribe(topic);
+  }
+
+  void unsubscribe(String topic) {
+    _pendingTopics.remove(topic);
+    _service?.unsubscribe(topic);
+    if (_pendingTopics.isEmpty) dispose();
+  }
 
   Stream<Map<String, dynamic>> onTopic(String topic) {
     return onBroadcast.where((event) => event['topic'] == topic);
   }
 
   void dispose() {
+    _serviceBroadcastSub?.cancel();
+    _serviceBroadcastSub = null;
     _service?.dispose();
     _service = null;
+    _initializing = null;
+    _pendingTopics.clear();
   }
 }

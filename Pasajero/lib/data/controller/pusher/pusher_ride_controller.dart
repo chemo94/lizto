@@ -23,7 +23,6 @@ class PusherRideController extends GetxController {
   RideDetailsController rideDetailsController;
   String rideID;
   StreamSubscription? _realtimeWsSub;
-  String? _subscribedDriverTopic;
 
   PusherRideController({
     required this.apiClient,
@@ -43,31 +42,15 @@ class PusherRideController extends GetxController {
     try {
       final token = apiClient.sharedPreferences.getString(SharedPreferenceHelper.accessTokenKey) ?? '';
       if (token.isNotEmpty && rideID.isNotEmpty) {
-        await RealtimeManager().init(wsUrl: UrlContainer.wsUrl, token: token);
-        RealtimeManager().subscribe('ride.$rideID');
-
-        // Si ya hay conductor asignado, suscribirse a su posición
-        final driverId = rideDetailsController.ride.driver?.id?.toString() ??
-            rideDetailsController.ride.driverId?.toString();
-        if (driverId != null && driverId.isNotEmpty && driverId != '0') {
-          _subscribeDriverTopic(driverId);
-        }
-
+        final connection = RealtimeManager().init(wsUrl: UrlContainer.wsUrl, token: token);
         _realtimeWsSub?.cancel();
         _realtimeWsSub = RealtimeManager().onBroadcast.listen(_handleRealtimeMessage);
+        RealtimeManager().subscribe('ride.$rideID');
+        await connection;
       }
     } catch (e) {
       printX("Error init Realtime WS in Pasajero: $e");
     }
-  }
-
-  void _subscribeDriverTopic(String driverId) {
-    if (_subscribedDriverTopic == 'driver.$driverId') return;
-    if (_subscribedDriverTopic != null) {
-      RealtimeManager().unsubscribe(_subscribedDriverTopic!);
-    }
-    _subscribedDriverTopic = 'driver.$driverId';
-    RealtimeManager().subscribe(_subscribedDriverTopic!);
   }
 
   void _handleRealtimeMessage(Map<String, dynamic> msg) {
@@ -77,13 +60,13 @@ class PusherRideController extends GetxController {
 
       if (payload is Map<String, dynamic>) {
         // 1. Manejo de ubicación en vivo del taxista
-        if (payload['type'] == 'driver_location') {
-          final lat = (payload['lat'] as num?)?.toDouble() ?? 0.0;
-          final lng = (payload['lng'] as num?)?.toDouble() ?? 0.0;
-          final bearing = (payload['bearing'] as num?)?.toDouble() ?? 0.0;
-          final driverId = payload['driver_id']?.toString() ??
-              rideDetailsController.ride.driver?.id?.toString() ??
-              'driver';
+        final userTopic = 'user.${apiClient.getUserID()}';
+        final isRideOrUserTopic = topic == 'ride.$rideID' || topic == userTopic;
+        if (isRideOrUserTopic && (payload['type'] == 'driver_location' || payload['type'] == 'driver_location_updated')) {
+          final lat = _readRealtimeNumber(payload['lat'] ?? payload['latitude']);
+          final lng = _readRealtimeNumber(payload['lng'] ?? payload['longitude']);
+          final bearing = _readRealtimeNumber(payload['bearing']);
+          final driverId = payload['driver_id']?.toString() ?? rideDetailsController.ride.driver?.id?.toString() ?? 'driver';
 
           if (lat != 0 && lng != 0) {
             rideDetailsController.mapController.updateDriverLocation(
@@ -107,12 +90,13 @@ class PusherRideController extends GetxController {
     }
   }
 
+  double _readRealtimeNumber(dynamic value) => value is num ? value.toDouble() : double.tryParse(value?.toString() ?? '') ?? 0;
+
   PusherConfig pusherConfig = PusherConfig();
 
   /// Handle incoming Pusher events
   void onEvent(PusherEvent event) {
     try {
-
       if (event.eventName.startsWith('pusher:')) {
         return;
       }
@@ -148,7 +132,7 @@ class PusherRideController extends GetxController {
           final firstname = driverData['firstname']?.toString() ?? '';
           final lastname = driverData['lastname']?.toString() ?? '';
           final image = driverData['image']?.toString() ?? '';
-          
+
           if (driverId.isNotEmpty) {
             rideDetailsController.addViewingDriver(driverId, firstname, lastname, image);
           }
@@ -166,7 +150,6 @@ class PusherRideController extends GetxController {
       );
 
       updateEvent(modifiedEvent);
-
     } catch (e) {
       printX('onEvent error: $e');
     }
@@ -284,7 +267,7 @@ class PusherRideController extends GetxController {
         totalRideCompleted: eventResponse.data?.driverTotalRide ?? '0',
       );
     }
-    
+
     final lat = StringConverter.formatDouble(eventResponse.data?.driverLatitude ?? '0', precision: 10);
     final lng = StringConverter.formatDouble(eventResponse.data?.driverLongitude ?? '0', precision: 10);
     final driverId = eventResponse.data?.bid?.driverId?.toString() ?? eventResponse.data?.driverId ?? 'unknown';
@@ -298,7 +281,7 @@ class PusherRideController extends GetxController {
         serviceName: serviceName,
       );
     }
-    
+
     rideDetailsController.updateBidCount(false);
   }
 
@@ -328,9 +311,6 @@ class PusherRideController extends GetxController {
     _realtimeWsSub?.cancel();
     if (rideID.isNotEmpty) {
       RealtimeManager().unsubscribe('ride.$rideID');
-    }
-    if (_subscribedDriverTopic != null) {
-      RealtimeManager().unsubscribe(_subscribedDriverTopic!);
     }
     PusherManager().removeListener(onEvent);
     super.onClose();

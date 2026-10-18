@@ -26,32 +26,31 @@ class RideServiceSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                MyStrings.selectService.tr,
-                style: boldLarge.copyWith(
-                  color: MyColor.getRideTitleColor(),
-                  fontWeight: FontWeight.w500,
-                  fontSize: Dimensions.fontLarge,
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 8),
+                child: Text(
+                  MyStrings.selectService.tr,
+                  style: boldLarge.copyWith(
+                    color: MyColor.getRideTitleColor(),
+                    fontWeight: FontWeight.w600,
+                    fontSize: Dimensions.fontLarge,
+                  ),
                 ),
               ),
-              SizedBox(height: Dimensions.space10),
               if (controller.isLoading) ...[
                 const RideServiceShimmer(),
               ] else if (services.isNotEmpty) ...[
-                SizedBox(
-                  height: 108,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: services.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: Dimensions.space10),
-                    itemBuilder: (context, index) {
-                      return ServiceCard(
+                Column(
+                  children: [
+                    for (var index = 0; index < services.length; index++) ...[
+                      ServiceCard(
+                        key: ValueKey(services[index].id),
                         service: services[index],
                         controller: controller,
-                      );
-                    },
-                  ),
+                      ),
+                      if (index < services.length - 1) const SizedBox(height: 8),
+                    ],
+                  ],
                 ),
               ] else ...[
                 Text(
