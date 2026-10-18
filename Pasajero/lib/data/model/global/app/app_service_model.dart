@@ -17,6 +17,10 @@ class AppService {
   String? recommendAmount;
   String? createdAt;
   String? updatedAt;
+  String? vehicleType;
+  bool allowOffer;
+  String? minVehicleCapacity;
+  String? maxPassengers;
 
   AppService({
     this.id,
@@ -37,6 +41,10 @@ class AppService {
     this.recommendAmount,
     this.createdAt,
     this.updatedAt,
+    this.vehicleType,
+    this.allowOffer = true,
+    this.minVehicleCapacity,
+    this.maxPassengers,
   });
 
   factory AppService.fromJson(Map<String, dynamic> json) => AppService(
@@ -58,6 +66,10 @@ class AppService {
         recommendAmount: json["recommend_amount"]?.toString(),
         createdAt: json["created_at"]?.toString(),
         updatedAt: json["updated_at"]?.toString(),
+        vehicleType: json["vehicle_type"]?.toString(),
+        allowOffer: json["allow_offer"] == true || json["allow_offer"] == 1 || json["allow_offer"]?.toString() == '1',
+        minVehicleCapacity: json["min_vehicle_capacity"]?.toString(),
+        maxPassengers: json["max_passengers"]?.toString(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -79,5 +91,9 @@ class AppService {
         "recommend_amount": recommendAmount,
         "created_at": createdAt,
         "updated_at": updatedAt,
+        "vehicle_type": vehicleType,
+        "allow_offer": allowOffer,
+        "min_vehicle_capacity": minVehicleCapacity,
+        "max_passengers": maxPassengers,
       };
 }

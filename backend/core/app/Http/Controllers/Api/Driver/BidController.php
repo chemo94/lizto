@@ -30,14 +30,26 @@ class BidController extends Controller
             return apiResponse("invalid", "error", $notify);
         }
 
+        $rideService = $ride->service;
         $driver = Driver::where('online_status', Status::YES)
+            ->whereIn('service_type', ['ride', 'both'])
             ->where('zone_id', $ride->pickup_zone_id)
-            ->where("service_id", $ride->service_id)
+            ->whereHas('service', function ($query) use ($rideService) {
+                $query->where('vehicle_type', $rideService?->vehicle_type ?? 'auto');
+            })
+            ->whereHas('vehicle', function ($query) use ($ride) {
+                $requiredCapacity = max((int) $ride->number_of_passenger, (int) ($ride->service?->min_vehicle_capacity ?? 1));
+                $query->where('passenger_capacity', '>=', $requiredCapacity);
+            })
             ->where('dv', Status::VERIFIED)
             ->where('vv', Status::VERIFIED)
             ->notRunning()
             ->where('id', auth()->id())
             ->first();
+
+        if ($driver && (int) ($driver->service?->min_vehicle_capacity ?? 1) > (int) ($driver->vehicle?->passenger_capacity ?? 4)) {
+            $driver = null;
+        }
 
         if (!$driver) {
             $notify[] = "You are not eligible to place a bid on this ride.";
@@ -81,6 +93,15 @@ class BidController extends Controller
         } catch (\Exception $e) {
             \Log::error('NEW_BID broadcast failed: ' . $e->getMessage());
         }
+
+        // WebSocket nativo: avisar al pasajero en tiempo real de la nueva oferta.
+        \App\Services\RealtimePublisher::rideEvent(
+            (int) $ride->id,
+            'NEW_BID',
+            $data,
+            (int) $driver->id,
+            (int) $ride->user_id,
+        );
 
         notify($ride->user, 'NEW_BID', [
             'ride_id'         => $ride->uid,

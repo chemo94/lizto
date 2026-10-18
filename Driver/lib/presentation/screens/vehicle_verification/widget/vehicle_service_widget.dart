@@ -8,7 +8,7 @@ import 'package:liztogo_pro/presentation/components/image/my_network_image_widge
 
 class VehicleServiceWidget extends StatelessWidget {
   final bool isSelected;
-  final String image, name;
+  final String image, name, serviceType;
   final VoidCallback onTap;
 
   const VehicleServiceWidget({
@@ -16,6 +16,7 @@ class VehicleServiceWidget extends StatelessWidget {
     this.isSelected = false,
     required this.image,
     required this.name,
+    this.serviceType = 'Auto',
     required this.onTap,
   });
 
@@ -64,6 +65,7 @@ class VehicleServiceWidget extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
               ),
+              Text(serviceType, style: regularDefault.copyWith(fontSize: Dimensions.fontSmall, color: MyColor.bodyTextColor)),
             ],
           ),
         ),

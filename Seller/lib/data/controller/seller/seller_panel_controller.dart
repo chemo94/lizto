@@ -177,6 +177,17 @@ class SellerPanelController extends GetxController {
     }
   }
 
+  Future<bool> deleteKitchenItem(int orderId, int itemId) async {
+    try {
+      final r = await repo.deleteKitchenItem(orderId, itemId);
+      if (r.statusCode != 200 || r.responseJson['status'] != MyStrings.success) return false;
+      await loadKitchenSilent();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   String cashError = '';
   bool cashLoadFailed = false;
 

@@ -8,6 +8,7 @@ import 'package:lizto_store/data/controller/seller/seller_panel_controller.dart'
 import 'package:lizto_store/data/model/seller/panel_models.dart';
 import 'package:lizto_store/data/repo/seller/seller_panel_repo.dart';
 import 'package:lizto_store/presentation/screens/seller/mozo_order_screen.dart';
+import 'package:lizto_store/presentation/screens/seller/subscription_guard.dart';
 
 class MozoTablesScreen extends StatefulWidget {
   const MozoTablesScreen({super.key});
@@ -27,7 +28,10 @@ class _MozoTablesScreenState extends State<MozoTablesScreen> {
     Get.put(SellerPanelRepo(apiClient: Get.find()));
     panelCtrl = Get.put(SellerPanelController(repo: Get.find()));
     sellerCtrl = Get.find<SellerController>();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadData());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final allowed = await SubscriptionGuard.guardModuleEntry(context);
+      if (allowed && mounted) await _loadData();
+    });
   }
 
   Future<void> _loadData() async {

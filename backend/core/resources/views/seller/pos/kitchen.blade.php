@@ -141,6 +141,7 @@
                         </div>
                         @endif
                     </div>
+                    <button type="button" onclick="deleteKitchenItem({{ $order->id }}, {{ $item->id }})" title="Eliminar plato" style="width: 26px; height: 26px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 7px; color: var(--s-danger); padding: 0; font-size: 13px; cursor: pointer; line-height: 1; flex-shrink: 0; touch-action: manipulation;">✕</button>
                 </div>
                 @endforeach
             </div>
@@ -263,6 +264,7 @@ function refreshKitchen() {
                                 '<div style="font-size: 14px; font-weight: 700; color: var(--s-text-primary); text-decoration: ' + (isDone ? 'line-through' : 'none') + ';"><span style="color: var(--s-primary); margin-right: 4px;">' + i.qty + 'x</span> ' + i.name + (i.is_takeaway ? ' <span style="font-size: 10px; background: #f97316; color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: 800; margin-left: 6px; display: inline-flex; align-items: center; gap: 3px;"><i class="las la-shopping-bag"></i> LLEVAR</span>' : '') + '</div>' +
                                 (i.notes ? '<div style="font-size: 11px; color: var(--s-warning); font-weight: 600; margin-top: 2px;">Nota: ' + i.notes + '</div>' : '') +
                             '</div>' +
+                            '<button type="button" onclick="deleteKitchenItem(' + o.id + ',' + i.id + ')" title="Eliminar plato" style="width: 26px; height: 26px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 7px; color: var(--s-danger); padding: 0; font-size: 13px; cursor: pointer; line-height: 1; flex-shrink: 0; touch-action: manipulation;">✕</button>' +
                         '</div>';
                     }).join('') +
                 '</div>' +
@@ -462,6 +464,33 @@ function toggleItem(orderId, itemId, btn, source) {
         })
     }).then(function() { 
         refreshKitchen(); 
+    });
+}
+
+function deleteKitchenItem(orderId, itemId) {
+    if(!confirm('¿Eliminar este plato de la comanda? Se revertirá su stock y monto.')){ return; }
+    fetch('/seller/pos/order/' + orderId + '/item/' + itemId + '/delete', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        }
+    })
+    .then(function(r){ return r.json().then(function(d){ return { ok: r.ok, data: d }; }); })
+    .then(function(res){
+        if(res.ok && res.data.success){
+            if(res.data.order && res.data.order.closed){
+                window.location.reload();
+            } else {
+                refreshKitchen();
+            }
+        } else {
+            alert(res.data.message || 'Error al eliminar el plato');
+        }
+    })
+    .catch(function(e){
+        alert('Error de red: ' + e.message);
     });
 }
 

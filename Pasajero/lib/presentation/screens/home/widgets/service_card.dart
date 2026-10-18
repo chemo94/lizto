@@ -22,15 +22,16 @@ class ServiceCard extends StatelessWidget {
     final bool isSelected = service.id == controller.selectedService.id;
     final String price = service.recommendAmount ?? service.cityRecommendFare ?? '';
     final String currency = controller.homeRepo.apiClient.getCurrency(isSymbol: true);
+    final String vehicleTypeLabel = service.vehicleType == 'moto' ? 'Moto' : 'Auto';
+    final String detail = service.subTitle?.tr.trim() ?? '';
 
     return GestureDetector(
       onTap: () async {
         await controller.selectService(service, shouldLoadFare: false);
       },
       child: Container(
-        width: 104,
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        alignment: Alignment.center,
+        width: 205,
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: isSelected ? MyColor.primaryColor.withValues(alpha: 0.10) : MyColor.neutral50,
           borderRadius: BorderRadius.circular(16),
@@ -48,44 +49,64 @@ class ServiceCard extends StatelessWidget {
                 ]
               : null,
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Row(
           children: [
-            MyImageWidget(
-              imageUrl: '${UrlContainer.domainUrl}/${controller.serviceImagePath}/${service.image}',
-              height: 44,
-              width: 44,
-              radius: 6,
-              boxFit: BoxFit.contain,
-            ),
-            const SizedBox(height: Dimensions.space6),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Dimensions.space6),
-              child: Text(
-                service.name?.tr ?? '',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: semiBoldSmall.copyWith(
-                  fontSize: 11,
-                  color: isSelected ? MyColor.primaryColor : MyColor.primaryTextColor,
-                ),
+            Container(
+              width: 54,
+              height: 54,
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(color: isSelected ? MyColor.primaryColor.withValues(alpha: .1) : MyColor.neutral100, borderRadius: BorderRadius.circular(14)),
+              child: MyImageWidget(
+                imageUrl: '${UrlContainer.domainUrl}/${controller.serviceImagePath}/${service.image}',
+                height: 44,
+                width: 44,
+                radius: 6,
+                boxFit: BoxFit.contain,
               ),
             ),
-            if (price.isNotEmpty) ...[
-              const SizedBox(height: 2),
-              Text(
-                () {
-                  final base = double.tryParse(price) ?? 0.0;
-                  final isMercadoPago = controller.selectedPaymentMethod.name?.toLowerCase() == 'mercadopago' || controller.selectedPaymentMethod.name?.toLowerCase() == 'mercado pago';
-                  final finalPrice = isMercadoPago ? (base * 1.05) : base;
-                  return "$currency${finalPrice.toStringAsFixed(2)}";
-                }(),
-                style: boldDefault.copyWith(
-                  fontSize: 12,
-                  color: isSelected ? MyColor.primaryColor : MyColor.primaryTextColor,
-                ),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(service.name?.tr ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: semiBoldSmall.copyWith(fontSize: 12, color: isSelected ? MyColor.primaryColor : MyColor.primaryTextColor)),
+                  const SizedBox(height: 3),
+                  Text('$vehicleTypeLabel • ${detail.isNotEmpty ? detail : (service.allowOffer ? 'Puedes ofrecer tu precio' : 'Tarifa fija')}', maxLines: 1, overflow: TextOverflow.ellipsis, style: regularDefault.copyWith(fontSize: 10, color: MyColor.bodyTextColor)),
+                  if (price.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(() {
+                      final base = isSelected && service.allowOffer ? controller.mainAmount : (double.tryParse(price) ?? 0.0);
+                      final isMercadoPago = controller.selectedPaymentMethod.name?.toLowerCase() == 'mercadopago' || controller.selectedPaymentMethod.name?.toLowerCase() == 'mercado pago';
+                      final priceToShow = isMercadoPago && !(isSelected && service.allowOffer) ? base * 1.05 : base;
+                      return "$currency${priceToShow.toStringAsFixed(2)}";
+                    }(), style: boldDefault.copyWith(fontSize: 12, color: isSelected ? MyColor.primaryColor : MyColor.primaryTextColor)),
+                  ],
+                ],
               ),
+            ),
+            if (isSelected && service.allowOffer) ...[
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints.tightFor(width: 27, height: 24),
+                    padding: EdgeInsets.zero,
+                    onPressed: () => controller.adjustSelectedServiceOffer(1),
+                    icon: const Icon(Icons.add_circle_outline, size: 18, color: MyColor.primaryColor),
+                  ),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints.tightFor(width: 27, height: 24),
+                    padding: EdgeInsets.zero,
+                    onPressed: () => controller.adjustSelectedServiceOffer(-1),
+                    icon: const Icon(Icons.remove_circle_outline, size: 18, color: MyColor.primaryColor),
+                  ),
+                ],
+              ),
+            ] else if (isSelected) ...[
+              const Icon(Icons.check_circle, size: 18, color: MyColor.primaryColor),
             ],
           ],
         ),

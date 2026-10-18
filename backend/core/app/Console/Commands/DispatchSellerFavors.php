@@ -12,7 +12,9 @@ class DispatchSellerFavors extends Command
 
     public function handle(): int
     {
-        $this->info('Processed ' . SellerFavorDispatchService::processDueRequests() . ' seller favor request(s).');
+        $favors = SellerFavorDispatchService::processDueRequests();
+        $orders = \App\Services\SellerDeliveryOrderDispatchService::processDueOrders();
+        $this->info("Processed {$favors} seller favor request(s) and {$orders} delivery order(s).");
         return self::SUCCESS;
     }
 }

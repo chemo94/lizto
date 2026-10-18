@@ -13,6 +13,7 @@ import 'package:lizto_store/data/model/location/prediction.dart';
 import 'package:lizto_store/data/model/location/place_details.dart';
 import 'package:lizto_store/environment.dart';
 import 'package:lizto_store/presentation/screens/seller/seller_favor_search_screen.dart';
+import 'package:lizto_store/presentation/screens/seller/subscription_guard.dart';
 
 class SellerFavorCreateScreen extends StatefulWidget {
   const SellerFavorCreateScreen({super.key});
@@ -195,8 +196,9 @@ class _SellerFavorCreateScreenState extends State<SellerFavorCreateScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _autocompletePickupCurrentLocation();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final allowed = await SubscriptionGuard.guardModuleEntry(context);
+      if (allowed && mounted) _autocompletePickupCurrentLocation();
     });
   }
 

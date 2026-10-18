@@ -625,6 +625,7 @@
 
 <!-- Main Form -->
 <form id="store-main-form" method="POST" action="{{ route('admin.delivery.store.save', $store->id ?? null) }}" enctype="multipart/form-data" novalidate>
+    <input type="hidden" name="schedules_configured" value="1">
     @csrf
 
     <!-- Sticky Navigation & Action Bar -->
@@ -863,7 +864,7 @@
                                                 </div>
                                                 @endforeach
                                             @else
-                                                <span class="text-muted small fst-italic no-slots-label">Usa horario general</span>
+                                                <span class="text-muted small fst-italic no-slots-label">{{ $hasSchedules ? 'Día inactivo (sin horario)' : 'Usa horario general' }}</span>
                                             @endif
                                         </div>
                                     </div>
@@ -1496,6 +1497,17 @@
     $('input[name="seller_option"]').on('change', toggleSellerFields);
 
     // ── 2. Horarios Dinámicos ──
+    function updateNoScheduleLabels() {
+        var hasAnySlot = $('#schedules-container .slot-row').length > 0;
+        $('#schedules-container .slots').each(function() {
+            var container = $(this);
+            if (container.find('.slot-row').length === 0) {
+                var label = hasAnySlot ? 'Día inactivo (sin horario)' : 'Usa horario general';
+                container.html('<span class="text-muted small fst-italic no-slots-label">' + label + '</span>');
+            }
+        });
+    }
+
     $('.add-slot').on('click', function(e) {
         e.preventDefault();
         var day = $(this).data('day');
@@ -1509,15 +1521,14 @@
             '<button type="button" class="btn btn-sm btn-link text-danger p-0 remove-slot" title="Quitar"><i class="las la-times fs-6"></i></button>' +
             '</div>';
         container.append(html);
+        updateNoScheduleLabels();
     });
 
     $('#schedules-container').on('click', '.remove-slot', function(e) {
         e.preventDefault();
         var container = $(this).closest('.slots');
         $(this).closest('.slot-row').remove();
-        if (container.find('.slot-row').length === 0) {
-            container.html('<span class="text-muted small fst-italic no-slots-label">Usa horario general</span>');
-        }
+        updateNoScheduleLabels();
     });
 
     // ── 3. Filtro de Subcategorías ──

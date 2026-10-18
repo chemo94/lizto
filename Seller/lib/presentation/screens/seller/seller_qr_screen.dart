@@ -30,7 +30,11 @@ class _SellerQrScreenState extends State<SellerQrScreen> {
   }
 
   Future<void> _init() async {
-    final ok = await SubscriptionGuard.canProceed(context, storeId: widget.storeId);
+    final ok = await SubscriptionGuard.canProceed(
+      context,
+      storeId: widget.storeId,
+      closeModuleOnDenied: true,
+    );
     if (ok) {
       _c.loadQr(widget.storeId);
     }

@@ -60,7 +60,14 @@ class Store extends Model
     {
         if (!$this->is_open) return false;
 
-        $todaySchedules = $this->schedules()->where('day', now()->dayOfWeek)->get();
+        $allSchedules = $this->relationLoaded('schedules') ? $this->getRelation('schedules') : null;
+        $hasWeeklySchedule = $allSchedules !== null
+            ? $allSchedules->isNotEmpty()
+            : $this->schedules()->exists();
+
+        $todaySchedules = $allSchedules !== null
+            ? $allSchedules->where('day', now()->dayOfWeek)
+            : $this->schedules()->where('day', now()->dayOfWeek)->get();
         if ($todaySchedules->isNotEmpty()) {
             $now = now()->format('H:i');
             foreach ($todaySchedules as $s) {
@@ -69,12 +76,18 @@ class Store extends Model
             return false;
         }
 
-        if ($this->opening_time && $this->closing_time) {
+        // When weekly schedules are configured, a missing day means closed.
+        // Do not fill it from the general opening/closing hours.
+        if ($hasWeeklySchedule) return false;
+
+        $openingTime = $this->getRawOriginal('opening_time');
+        $closingTime = $this->getRawOriginal('closing_time');
+        if ($openingTime && $closingTime) {
             $now = now()->format('H:i');
-            return $now >= $this->opening_time && $now <= $this->closing_time;
+            return $now >= $openingTime && $now <= $closingTime;
         }
 
-        return true;
+        return (bool) $this->is_open;
     }
 
     public function getOpeningTimeAttribute($value): ?string { return $value ?? '08:00'; }
@@ -188,13 +201,15 @@ class Store extends Model
         return $active?->package?->type;
     }
 
-    public function hasReachedInvoiceLimit(): bool
+    public function getInvoiceLimitStatus(): array
     {
         $activePackage = $this->activePackagesRelation()
             ->with('package')
             ->first();
 
-        if (!$activePackage || !$activePackage->package) return false;
+        if (!$activePackage || !$activePackage->package) {
+            return ['limit' => null, 'used' => 0, 'remaining' => null, 'package' => null];
+        }
 
         $features = (array) ($activePackage->package->features ?? []);
         $limit = null;
@@ -203,7 +218,7 @@ class Store extends Model
             if (isset($fObj->key) && $fObj->key === 'invoices') {
                 $val = strtolower(trim($fObj->value));
                 if ($val === 'ilimitado' || $val === 'unlimited' || $val === 'sí' || $val === 'si') {
-                    return false;
+                    return ['limit' => 999999, 'used' => 0, 'remaining' => null, 'package' => $activePackage->package];
                 }
                 if (is_numeric($val)) {
                     $limit = (int) $val;
@@ -218,42 +233,35 @@ class Store extends Model
             $limit = $limits[$type] ?? null;
         }
 
-        if ($limit === null) return false;
+        if ($limit === null) return ['limit' => null, 'used' => 0, 'remaining' => null, 'package' => $activePackage->package];
 
-        $startDate = $activePackage->starts_at ?: $activePackage->created_at;
+        $startDate = $activePackage->invoice_quota_starts_at;
+        if (!$startDate || $startDate->isFuture()) {
+            $startDate = $activePackage->starts_at ?: $activePackage->created_at;
+        }
         $invoiceCount = \App\Models\SunatInvoice::where('seller_id', $this->seller_id)
             ->where('created_at', '>=', $startDate)
             ->whereIn('tipo_doc', ['01', '03', '07', '08', 'RA'])
             ->count();
 
-        return $invoiceCount >= $limit;
+        return [
+            'limit' => $limit,
+            'used' => $invoiceCount,
+            'remaining' => max(0, $limit - $invoiceCount),
+            'package' => $activePackage->package,
+        ];
+    }
+
+    public function hasReachedInvoiceLimit(): bool
+    {
+        $status = $this->getInvoiceLimitStatus();
+        return $status['limit'] !== null && $status['used'] >= $status['limit'];
     }
 
     public function getInvoiceLimit(): ?int
     {
-        $activePackage = $this->activePackagesRelation()
-            ->with('package')
-            ->first();
-
-        if (!$activePackage || !$activePackage->package) return null;
-
-        $features = (array) ($activePackage->package->features ?? []);
-        foreach ($features as $f) {
-            $fObj = (object) $f;
-            if (isset($fObj->key) && $fObj->key === 'invoices') {
-                $val = strtolower(trim($fObj->value));
-                if ($val === 'ilimitado' || $val === 'unlimited' || $val === 'sí' || $val === 'si') {
-                    return 999999;
-                }
-                if (is_numeric($val)) {
-                    return (int) $val;
-                }
-            }
-        }
-
-        $limits = ['basic' => 50, 'featured' => 100];
-        $type = $activePackage->package->type;
-        return $limits[$type] ?? null;
+        $status = $this->getInvoiceLimitStatus();
+        return $status['limit'];
     }
 
     public function getActivePackagesAttribute(): array

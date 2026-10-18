@@ -127,14 +127,20 @@ class SellerPackageController extends GetxController {
   Future<void> loadMySubscriptions(int storeId) async {
     loadingSubs = true;
     subsLoadFailed = false;
+    // Do not keep an old status if this refresh fails; guards must fail closed.
+    subscriptionsByStore.remove(storeId);
     update();
     try {
       ResponseModel r = await repo.getMySubscriptions(storeId);
       if (r.statusCode == 200) {
         var json = r.responseJson;
-        if (json['status'] == MyStrings.success && json['data'] != null) {
-          subscriptions = (json['data']['subscriptions'] as List)
-              .map((x) => SellerSubscriptionModel.fromJson(x)).toList();
+        final data = json['data'];
+        final rawSubscriptions = data is Map ? data['subscriptions'] : null;
+        if (json['status'] == MyStrings.success && rawSubscriptions is List) {
+          subscriptions = rawSubscriptions
+              .whereType<Map>()
+              .map((x) => SellerSubscriptionModel.fromJson(Map<String, dynamic>.from(x)))
+              .toList();
           subscriptionsByStore[storeId] = subscriptions;
         } else {
           subsLoadFailed = true;
@@ -154,10 +160,12 @@ class SellerPackageController extends GetxController {
       subscriptionsByStore[storeId];
 
   bool hasActiveSubscriptionFor(int storeId) {
-    final subs = subscriptionsByStore[storeId] ?? subscriptions;
+    final subs = subscriptionsByStore[storeId] ?? const <SellerSubscriptionModel>[];
     final now = DateTime.now();
     for (final s in subs) {
       if (s.status != 'active') continue;
+      final starts = s.startsAtDate;
+      if (starts != null && starts.isAfter(now)) continue;
       final exp = s.expiresAtDate;
       if (exp == null || exp.isAfter(now)) return true;
     }
@@ -165,7 +173,7 @@ class SellerPackageController extends GetxController {
   }
 
   SellerSubscriptionModel? expiredSubscriptionFor(int storeId) {
-    final subs = subscriptionsByStore[storeId] ?? subscriptions;
+    final subs = subscriptionsByStore[storeId] ?? const <SellerSubscriptionModel>[];
     final now = DateTime.now();
     SellerSubscriptionModel? latest;
     for (final s in subs) {

@@ -6,6 +6,7 @@ import 'package:lizto_store/data/controller/seller/seller_controller.dart';
 import 'package:lizto_store/presentation/screens/seller/seller_favor_create_screen.dart';
 import 'package:lizto_store/presentation/screens/seller/seller_favor_search_screen.dart';
 import 'package:lizto_store/presentation/screens/seller/seller_favor_tracking_screen.dart';
+import 'package:lizto_store/presentation/screens/seller/subscription_guard.dart';
 
 class SellerFavorsScreen extends StatefulWidget {
   const SellerFavorsScreen({super.key});
@@ -16,6 +17,7 @@ class SellerFavorsScreen extends StatefulWidget {
 
 class _SellerFavorsScreenState extends State<SellerFavorsScreen> {
   bool _loading = true;
+  bool _entryChecked = false;
   List<Map<String, dynamic>> _favors = [];
 
   @override
@@ -25,6 +27,11 @@ class _SellerFavorsScreenState extends State<SellerFavorsScreen> {
   }
 
   Future<void> _load() async {
+    if (!_entryChecked) {
+      final allowed = await SubscriptionGuard.guardModuleEntry(context);
+      if (!allowed || !mounted) return;
+      _entryChecked = true;
+    }
     if (mounted) setState(() => _loading = true);
     final result = await Get.find<SellerController>().getStoreFavors();
     if (!mounted) return;

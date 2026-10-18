@@ -87,10 +87,9 @@ class OrderController extends Controller
 
         event(new DeliveryOrderStatusUpdated($order));
 
-        // Notificar repartidores cuando la tienda CONFIRMA o tiene LISTO el pedido
-        if (in_array($newStatus, ['confirmed', 'ready'])) {
-            broadcast(new \App\Events\NewJobAvailable($order, 'Nuevo pedido para reparto en ' . ($order->store->name ?? 'tienda')))->toOthers();
-            $this->sendFcmToNearbyCouriers($order);
+        // Buscar repartidor solo cuando la tienda termina de preparar el pedido.
+        if ($newStatus === 'ready') {
+            \App\Services\SellerDeliveryOrderDispatchService::start($order);
         }
 
         // Notificar al usuario en cada cambio de estado
@@ -114,12 +113,4 @@ class OrderController extends Controller
         ]);
     }
 
-    private function sendFcmToNearbyCouriers($order)
-    {
-        FcmService::sendToAllCouriers(
-            'Nuevo pedido disponible',
-            'Hay un pedido listo para reparto en ' . ($order->store->name ?? 'tu zona'),
-            ['job_id' => (string) $order->id, 'order_no' => $order->order_no, 'job_type' => 'delivery']
-        );
-    }
 }

@@ -12,6 +12,7 @@ import 'package:liztogo/data/controller/auth/social_auth_controller.dart';
 import 'package:liztogo/data/repo/auth/social_auth_repo.dart';
 import 'package:liztogo/data/model/global/response_model/response_model.dart';
 import 'package:liztogo/data/model/global/user/global_user_model.dart';
+import 'package:liztogo/data/repo/auth/social_auth_repo.dart';
 import 'package:liztogo/presentation/components/buttons/rounded_button.dart';
 import 'package:liztogo/presentation/components/otp_field_widget/otp_field_widget.dart';
 import 'package:liztogo/presentation/components/snack_bar/show_custom_snackbar.dart';

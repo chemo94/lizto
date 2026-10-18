@@ -18,6 +18,7 @@ class SellerNotifyScreen extends StatefulWidget {
 class _SellerNotifyScreenState extends State<SellerNotifyScreen> {
   final _titleCtrl = TextEditingController();
   final _bodyCtrl = TextEditingController();
+  bool _checkingSubscription = true;
 
   @override
   void initState() {
@@ -27,6 +28,14 @@ class _SellerNotifyScreenState extends State<SellerNotifyScreen> {
       Get.put(SellerPackageController(repo: Get.find()));
     }
     Get.find<SellerPackageController>();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final allowed = await SubscriptionGuard.canProceed(
+        context,
+        storeId: widget.storeId,
+        closeModuleOnDenied: true,
+      );
+      if (mounted && allowed) setState(() => _checkingSubscription = false);
+    });
   }
 
   @override
@@ -46,7 +55,9 @@ class _SellerNotifyScreenState extends State<SellerNotifyScreen> {
           title: Text('Notificar Clientes', style: boldLarge.copyWith(color: MyColor.colorWhite)),
           centerTitle: true,
         ),
-        body: ListView(padding: EdgeInsets.all(Dimensions.space16), children: [
+        body: _checkingSubscription
+            ? const Center(child: CircularProgressIndicator(color: MyColor.primaryColor))
+            : ListView(padding: EdgeInsets.all(Dimensions.space16), children: [
           Container(
             padding: EdgeInsets.all(Dimensions.space16),
             decoration: BoxDecoration(color: MyColor.colorWhite, borderRadius: BorderRadius.circular(16)),

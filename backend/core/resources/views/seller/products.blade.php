@@ -21,8 +21,12 @@
 <style>
 .catalog-head{min-height:148px;margin-bottom:16px;padding:24px 26px;border-radius:14px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:20px;background:linear-gradient(90deg,rgba(112,45,10,.92),rgba(161,71,19,.72),rgba(108,48,13,.42)),url('{{ asset('assets/images/banner-cover.png') }}') center/cover no-repeat}.catalog-head .crumb{font-size:9px;color:rgba(255,255,255,.75);margin-bottom:8px}.catalog-head h2{font:800 24px 'Plus Jakarta Sans','Inter',sans-serif;margin:0 0 4px;letter-spacing:-.5px}.catalog-head p{font-size:10px;color:rgba(255,255,255,.78);margin:0}.catalog-head-actions{display:flex;gap:8px;flex-wrap:wrap}.catalog-head-actions .s-btn{height:36px;border-radius:9px;background:rgba(255,255,255,.13);color:#fff;border:1px solid rgba(255,255,255,.28);backdrop-filter:blur(8px)}.catalog-head-actions .primary{background:#fff;color:#a64c15;border-color:#fff}.catalog-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}.catalog-kpi{min-height:82px;background:#fff;border:1px solid var(--s-border);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:var(--s-shadow-sm)}.catalog-kpi i{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;color:#fff;font-size:18px;box-shadow:0 6px 14px rgba(15,23,42,.1)}.catalog-kpi b{display:block;font-size:19px;color:#172033}.catalog-kpi small{display:block;font-size:9px;color:#94a3b8}.catalog-filter-row{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.catalog-pills{display:flex;gap:7px;overflow:auto;padding-bottom:2px}.catalog-pill{height:34px;padding:0 13px;border:1px solid var(--s-border);border-radius:9px;background:#fff;color:#64748b;font-size:10px;font-weight:700;white-space:nowrap;cursor:pointer}.catalog-pill.active{background:#f97316;color:#fff;border-color:#f97316;box-shadow:0 5px 12px rgba(249,115,22,.2)}.catalog-toolbar{display:flex;align-items:center;gap:8px;margin:0}.catalog-search{position:relative}.catalog-search i{position:absolute;left:13px;top:11px;color:#94a3b8}.catalog-search input{width:220px;height:36px;padding:0 12px 0 37px;border:1px solid var(--s-border);border-radius:10px;background:#fff;outline:0;font-size:10px}.catalog-toolbar select{height:36px;border:1px solid var(--s-border);border-radius:10px;padding:0 10px;background:#fff;color:#64748b;font-size:10px}.catalog-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.catalog-product-card{min-width:0;border:1px solid var(--s-border);border-radius:14px;background:#fff;overflow:hidden;box-shadow:0 3px 10px rgba(15,23,42,.045);transition:.2s}.catalog-product-card:hover{border-color:#fed7aa;transform:translateY(-2px);box-shadow:0 9px 20px rgba(15,23,42,.08)}.catalog-product-image{height:154px;position:relative;background:#edf1f5;overflow:hidden}.catalog-product-image img{width:100%;height:100%;object-fit:cover}.catalog-product-image:after{content:'';position:absolute;inset:auto 0 0;height:42%;background:linear-gradient(transparent,rgba(0,0,0,.55))}.catalog-product-price{position:absolute;right:12px;bottom:10px;z-index:2;color:#fff;font-size:15px;font-weight:800}.catalog-product-status{position:absolute;left:10px;top:10px;z-index:2;padding:4px 8px;border-radius:7px;color:#fff;background:#10b981;font-size:8px;font-weight:800}.catalog-product-status.off{background:#ef4444}.catalog-product-body{padding:13px}.catalog-product-name{font-size:12px;font-weight:800;color:#273244;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.catalog-product-desc{height:32px;margin:5px 0 8px;color:#94a3b8;font-size:9px;line-height:1.55;overflow:hidden}.catalog-product-meta{display:flex;justify-content:space-between;align-items:center;gap:8px}.catalog-product-actions{display:flex;align-items:center;gap:3px}.catalog-product-actions form{margin:0}.catalog-product-actions .s-btn{width:27px;height:27px;padding:0;justify-content:center}.catalog-category-tag{padding:3px 7px;border-radius:7px;background:#fff7ed;color:#ea580c;font-size:8px;font-weight:700}@media(max-width:1199px){.catalog-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:900px){.catalog-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.catalog-kpis{grid-template-columns:repeat(2,1fr)}.catalog-filter-row{align-items:stretch;flex-direction:column}.catalog-toolbar,.catalog-search,.catalog-search input{width:100%}}@media(max-width:600px){.catalog-head{align-items:flex-start;flex-direction:column}.catalog-head-actions{width:100%}.catalog-grid{grid-template-columns:1fr}.catalog-kpis{grid-template-columns:1fr}}
 .catalog-pill{display:inline-flex;align-items:center;text-decoration:none}.catalog-pill:hover{color:#ea580c;border-color:#fed7aa}.catalog-pill.active:hover{color:#fff}
+.catalog-view-switch{display:inline-flex;gap:3px;padding:3px;background:#f1f5f9;border:1px solid var(--s-border);border-radius:9px;flex-shrink:0}.catalog-view-switch button{height:29px;padding:0 10px;border:0;border-radius:6px;background:transparent;color:#64748b;font-size:11px;font-weight:700;cursor:pointer}.catalog-view-switch button.active{background:#fff;color:#ea580c;box-shadow:0 1px 4px rgba(15,23,42,.12)}
+.catalog-table-wrap{overflow:auto;background:#fff;border:1px solid var(--s-border);border-radius:12px;box-shadow:var(--s-shadow-sm)}.catalog-table{width:100%;border-collapse:collapse;min-width:760px}.catalog-table th{padding:12px 14px;text-align:left;background:#f8fafc;color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--s-border);white-space:nowrap}.catalog-table td{padding:11px 14px;border-bottom:1px solid #eef2f7;color:#334155;font-size:12px;vertical-align:middle}.catalog-table tbody tr:last-child td{border-bottom:0}.catalog-table tbody tr:hover{background:#fffaf5}.catalog-table .table-product{display:flex;align-items:center;gap:10px;min-width:210px}.catalog-table .table-product img,.catalog-table .table-product .table-placeholder{width:40px;height:40px;border-radius:8px;object-fit:cover;background:#fff7ed;display:grid;place-items:center;color:#f97316;font-size:19px;flex-shrink:0}.catalog-table .table-product strong{display:block;color:#1e293b;font-size:12px}.catalog-table .table-product small{display:block;max-width:280px;margin-top:3px;color:#94a3b8;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.catalog-table .table-actions{display:flex;align-items:center;gap:4px}.catalog-table .table-actions form{margin:0}.catalog-table .table-actions .s-btn{width:29px;height:29px;padding:0;justify-content:center}.catalog-list-empty{padding:24px;text-align:center;color:#94a3b8;font-size:13px}[hidden]{display:none!important}
 @media(max-width:900px){.catalog-toolbar{flex-wrap:wrap}.catalog-search{flex:1 1 220px}.catalog-toolbar select{flex:1 1 140px}}
 @media(max-width:600px){.catalog-toolbar .s-btn{flex:0 0 36px}.catalog-search{flex-basis:100%}}
+.catalog-toolbar select[name="category"]{max-width:240px}
+@media(max-width:600px){.catalog-toolbar select[name="category"]{max-width:none}}
 .s-check-label{display:flex;align-items:center;gap:7px;font-size:11px;color:#334155;cursor:pointer;padding:6px 9px;border-radius:7px;background:#fff;border:1px solid #e2e8f0;transition:.15s;user-select:none}
 .s-check-label:hover{background:#f8fafc;border-color:#cbd5e1}
 .catalog-stock-tag{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:6px;font-size:8px;font-weight:800;line-height:1.4}
@@ -43,8 +47,17 @@
     <div class="catalog-kpi"><i class="las la-layer-group" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)"></i><div><b>{{ $cats->count() }}</b><small>Categorías</small></div></div>
 </div>
 <div class="catalog-filter-row">
-    <div class="catalog-pills"><a href="{{ route('seller.products', array_filter(['search'=>request('search'),'status'=>request('status'),'tax_type'=>request('tax_type')])) }}" class="catalog-pill {{ request('category') ? '' : 'active' }}">Todos ({{ $totalProducts }})</a>@foreach($cats as $cat)<a href="{{ route('seller.products', array_filter(['category'=>$cat->id,'search'=>request('search'),'status'=>request('status'),'tax_type'=>request('tax_type')])) }}" class="catalog-pill {{ (string)request('category') === (string)$cat->id ? 'active' : '' }}">{{ $cat->name }} ({{ $categoryCounts[$cat->id] ?? 0 }})</a>@endforeach</div>
-    <form class="catalog-toolbar" method="GET" action="{{ route('seller.products') }}">@if(request('category'))<input type="hidden" name="category" value="{{ request('category') }}">@endif<label class="catalog-search"><i class="las la-search"></i><input name="search" value="{{ request('search') }}" type="search" placeholder="Buscar productos..."></label><select name="status" aria-label="Filtrar por estado" onchange="this.form.submit()"><option value="">Todos los estados</option><option value="active" @selected(request('status')==='active')>Disponibles</option><option value="inactive" @selected(request('status')==='inactive')>Inactivos</option></select><select name="tax_type" aria-label="Filtrar por IGV" onchange="this.form.submit()"><option value="">Todas las opciones de IGV</option>@foreach($taxTypes as $value => $label)<option value="{{ $value }}" @selected(request('tax_type') === $value)>{{ $label }}</option>@endforeach</select><button class="s-btn s-btn-primary s-btn-sm" type="submit" aria-label="Aplicar filtros"><i class="las la-search"></i></button></form>
+    <form class="catalog-toolbar" method="GET" action="{{ route('seller.products') }}">
+        <select name="category" aria-label="Filtrar por categoría" onchange="this.form.submit()">
+            <option value="">Todas las categorías ({{ $totalProducts }})</option>
+            @foreach($cats as $cat)<option value="{{ $cat->id }}" @selected((string)request('category') === (string)$cat->id)>{{ $cat->name }} ({{ $categoryCounts[$cat->id] ?? 0 }})</option>@endforeach
+        </select>
+        <label class="catalog-search"><i class="las la-search"></i><input name="search" value="{{ request('search') }}" type="search" placeholder="Buscar productos..."></label>
+        <select name="status" aria-label="Filtrar por estado" onchange="this.form.submit()"><option value="">Todos los estados</option><option value="active" @selected(request('status')==='active')>Disponibles</option><option value="inactive" @selected(request('status')==='inactive')>Inactivos</option></select>
+        <select name="tax_type" aria-label="Filtrar por IGV" onchange="this.form.submit()"><option value="">Todas las opciones de IGV</option>@foreach($taxTypes as $value => $label)<option value="{{ $value }}" @selected(request('tax_type') === $value)>{{ $label }}</option>@endforeach</select>
+        <button class="s-btn s-btn-primary s-btn-sm" type="submit" aria-label="Aplicar filtros"><i class="las la-search"></i></button>
+        <div class="catalog-view-switch" role="group" aria-label="Vista de productos"><button type="button" data-catalog-view="list" aria-pressed="true"><i class="las la-list"></i> Lista</button><button type="button" data-catalog-view="grid" aria-pressed="false"><i class="las la-th-large"></i> Grid</button></div>
+    </form>
 </div>
 
 @if($cats->isEmpty())
@@ -56,9 +69,10 @@
 </div>
 @endif
 
-<div class="catalog-grid">
+<div class="catalog-table-wrap" id="catalog-list-view"><table class="catalog-table"><thead><tr><th data-sort="text">Producto <i class="las la-sort"></i></th><th data-sort="text">Categoría <i class="las la-sort"></i></th><th data-sort="number">Precio <i class="las la-sort"></i></th><th>Stock</th><th data-sort="text">Estado <i class="las la-sort"></i></th><th>Acciones</th></tr></thead><tbody id="catalog-table-body"></tbody></table><div class="catalog-list-empty" id="catalog-list-empty" hidden>Sin productos en esta categoría</div></div>
+<div class="catalog-grid" id="catalog-grid-view" hidden>
         @forelse($allProducts as $p)
-        <article class="catalog-product-card" data-category="{{ $p->store_category_id }}" data-status="{{ $p->status ? 'active' : 'inactive' }}" style="{{ $p->status ? '' : 'opacity:.68' }}">
+        <article class="catalog-product-card" data-product-id="{{ $p->id }}" data-category="{{ $p->store_category_id }}" data-status="{{ $p->status ? 'active' : 'inactive' }}" style="{{ $p->status ? '' : 'opacity:.68' }}">
             <div class="catalog-product-image">
                 @if($p->image)
                     <img src="{{ asset('storage/'.$p->image) }}" loading="lazy" alt="{{ $p->name }}">
@@ -117,9 +131,9 @@
         </div>
         @endforelse
 </div>
-@if($allProducts->hasPages())
+<div id="catalog-pagination">@if($allProducts->hasPages())
 <div style="margin-top:18px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><small style="color:#94a3b8">Mostrando {{ $allProducts->firstItem() }}–{{ $allProducts->lastItem() }} de {{ $allProducts->total() }} productos</small><div>{{ $allProducts->links() }}</div></div>
-@endif
+@endif</div>
 </div>
 
 <!-- PRODUCT MODAL -->
@@ -842,6 +856,125 @@ function autoFillSunatCode() {
         sunatField.value = '50190000'; // Lácteos / Alimentos generales default
     }
 }
+
+// Vista de catálogo: lista tipo DataTables por defecto; la cuadrícula queda como alternativa.
+(function initCatalogViews() {
+    var list = document.getElementById('catalog-list-view');
+    var grid = document.getElementById('catalog-grid-view');
+    var tbody = document.getElementById('catalog-table-body');
+    if (!list || !grid || !tbody) return;
+
+    document.querySelectorAll('[data-catalog-view]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            var view = button.getAttribute('data-catalog-view');
+            list.hidden = view !== 'list';
+            grid.hidden = view !== 'grid';
+            document.querySelectorAll('[data-catalog-view]').forEach(function(item) {
+                var active = item === button;
+                item.classList.toggle('active', active);
+                item.setAttribute('aria-pressed', active ? 'true' : 'false');
+            });
+            try { localStorage.setItem('seller-products-view', view); } catch (e) {}
+        });
+    });
+
+    window.renderCatalogTable = function() {
+    tbody.innerHTML = '';
+    var cards = Array.from(grid.querySelectorAll('.catalog-product-card'));
+    cards.forEach(function(card) {
+        var row = document.createElement('tr');
+        var image = card.querySelector('.catalog-product-image img');
+        var productCell = document.createElement('td');
+        var product = document.createElement('div');
+        product.className = 'table-product';
+        if (image) {
+            var thumb = image.cloneNode(); thumb.removeAttribute('loading'); product.appendChild(thumb);
+        } else {
+            var placeholder = document.createElement('span'); placeholder.className = 'table-placeholder';
+            placeholder.innerHTML = '<i class="las la-hamburger"></i>'; product.appendChild(placeholder);
+        }
+        var details = document.createElement('div');
+        var name = document.createElement('strong'); name.textContent = card.querySelector('.catalog-product-name')?.textContent.trim() || '';
+        var desc = document.createElement('small'); desc.textContent = card.querySelector('.catalog-product-desc')?.textContent.trim() || '';
+        details.append(name, desc); product.appendChild(details); productCell.appendChild(product); row.appendChild(productCell);
+
+        var category = document.createElement('td'); category.textContent = card.querySelector('.catalog-category-tag')?.textContent.trim() || 'Sin categoría'; row.appendChild(category);
+        var price = document.createElement('td'); price.textContent = card.querySelector('.catalog-product-price')?.textContent.trim() || '—'; price.style.fontWeight = '700'; row.appendChild(price);
+        var stock = document.createElement('td'); stock.textContent = card.querySelector('.catalog-stock-tag')?.textContent.trim() || '—'; row.appendChild(stock);
+        var status = document.createElement('td');
+        var badge = document.createElement('span'); badge.className = 'catalog-stock-tag ' + (card.dataset.status === 'active' ? 'green' : 'red');
+        badge.textContent = card.dataset.status === 'active' ? 'Disponible' : 'Agotado'; status.appendChild(badge); row.appendChild(status);
+        var actionsCell = document.createElement('td'); var actions = document.createElement('div'); actions.className = 'table-actions';
+        var cardActions = card.querySelector('.catalog-product-actions');
+        if (cardActions) Array.from(cardActions.children).forEach(function(action) { actions.appendChild(action.cloneNode(true)); });
+        actionsCell.appendChild(actions); row.appendChild(actionsCell); tbody.appendChild(row);
+    });
+    document.getElementById('catalog-list-empty').hidden = cards.length > 0;
+    };
+    window.renderCatalogTable();
+
+    document.querySelectorAll('.catalog-table th[data-sort]').forEach(function(header) {
+        header.style.cursor = 'pointer';
+        header.addEventListener('click', function() {
+            var direction = header.dataset.direction === 'asc' ? 'desc' : 'asc';
+            document.querySelectorAll('.catalog-table th[data-sort]').forEach(function(item) { delete item.dataset.direction; });
+            header.dataset.direction = direction;
+            var rows = Array.from(tbody.querySelectorAll('tr'));
+            rows.sort(function(a, b) {
+                var left = a.cells[header.cellIndex].textContent.trim(); var right = b.cells[header.cellIndex].textContent.trim();
+                var result = header.dataset.sort === 'number'
+                    ? (parseFloat(left.replace(/[^0-9,.-]/g, '').replace(',', '.')) || 0) - (parseFloat(right.replace(/[^0-9,.-]/g, '').replace(',', '.')) || 0)
+                    : left.localeCompare(right, 'es', { sensitivity: 'base' });
+                return direction === 'asc' ? result : -result;
+            });
+            rows.forEach(function(row) { tbody.appendChild(row); });
+            header.querySelector('i').className = 'las ' + (direction === 'asc' ? 'la-sort-up' : 'la-sort-down');
+            document.querySelectorAll('.catalog-table th[data-sort] i').forEach(function(icon) {
+                if (icon.parentElement !== header) icon.className = 'las la-sort';
+            });
+        });
+    });
+
+    var initialView = 'list';
+    try { if (localStorage.getItem('seller-products-view') === 'grid') initialView = 'grid'; } catch (e) {}
+    var initialButton = document.querySelector('[data-catalog-view="' + initialView + '"]');
+    if (initialButton) initialButton.click();
+})();
+
+// La paginación trae el HTML actualizado en segundo plano y sustituye solo el listado.
+(function enableAjaxProductPagination() {
+    document.addEventListener('click', function(event) {
+        var link = event.target.closest('#catalog-pagination a');
+        if (!link || link.origin !== window.location.origin) return;
+        event.preventDefault();
+        var pagination = document.getElementById('catalog-pagination');
+        pagination.style.opacity = '.55';
+        pagination.style.pointerEvents = 'none';
+        fetch(link.href, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } })
+            .then(function(response) {
+                if (!response.ok) throw new Error('No se pudo cargar la página de productos.');
+                return response.text();
+            })
+            .then(function(html) {
+                var parsed = new DOMParser().parseFromString(html, 'text/html');
+                var nextGrid = parsed.querySelector('#catalog-grid-view');
+                var nextPagination = parsed.querySelector('#catalog-pagination');
+                if (!nextGrid || !nextPagination) throw new Error('La respuesta de productos no es válida.');
+                document.getElementById('catalog-grid-view').innerHTML = nextGrid.innerHTML;
+                pagination.innerHTML = nextPagination.innerHTML;
+                pagination.style.opacity = '';
+                pagination.style.pointerEvents = '';
+                window.renderCatalogTable();
+                window.history.pushState({}, '', link.href);
+            })
+            .catch(function(error) {
+                pagination.style.opacity = '';
+                pagination.style.pointerEvents = '';
+                window.location.assign(link.href);
+            });
+    });
+    window.addEventListener('popstate', function() { window.location.reload(); });
+})();
 </script>
 @endpush
 @endsection

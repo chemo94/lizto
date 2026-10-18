@@ -4,8 +4,10 @@ class AppService {
   String? code;
   String? image;
   String? imageWithPath;
+  String? vehicleType;
+  String? minVehicleCapacity;
 
-  AppService({this.id, this.name, this.code, this.image, this.imageWithPath});
+  AppService({this.id, this.name, this.code, this.image, this.imageWithPath, this.vehicleType, this.minVehicleCapacity});
 
   factory AppService.fromJson(Map<String, dynamic> json) => AppService(
         id: json["id"].toString(),
@@ -13,6 +15,8 @@ class AppService {
         code: json["code"],
         image: json["image"],
         imageWithPath: json["image_with_path"],
+        vehicleType: json["vehicle_type"]?.toString(),
+        minVehicleCapacity: json["min_vehicle_capacity"]?.toString(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -21,5 +25,7 @@ class AppService {
         "code": code,
         "image": image,
         "image_with_path": imageWithPath,
+        "vehicle_type": vehicleType,
+        "min_vehicle_capacity": minVehicleCapacity,
       };
 }

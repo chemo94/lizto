@@ -48,6 +48,8 @@ class VehicleVerificationController extends GetxController {
   VerifyElement? selectedYear;
   VerifyElement? selectedColor;
   String vehicleNumber = '';
+  String passengerCapacity = '4';
+  final TextEditingController passengerCapacityController = TextEditingController(text: '4');
   List<String> selectedRuleIds = [];
 
   // Files
@@ -212,8 +214,7 @@ class VehicleVerificationController extends GetxController {
     for (var element in formList) {
       final label = (element.label ?? '').toLowerCase();
       final name = (element.name ?? '').toLowerCase();
-      if (label.contains('año') || label.contains('ano') || label.contains('year') ||
-          name.contains('año') || name.contains('ano') || name.contains('year')) {
+      if (label.contains('año') || label.contains('ano') || label.contains('year') || name.contains('año') || name.contains('ano') || name.contains('year')) {
         element.selectedValue = yearName;
         element.textEditingController?.text = yearName;
       }
@@ -227,6 +228,16 @@ class VehicleVerificationController extends GetxController {
 
   void setVehicleNumber(String value) {
     vehicleNumber = value;
+  }
+
+  void setPassengerCapacity(String value) {
+    passengerCapacity = value;
+  }
+
+  @override
+  void onClose() {
+    passengerCapacityController.dispose();
+    super.onClose();
   }
 
   void toggleRule(String ruleId) {
@@ -300,6 +311,7 @@ class VehicleVerificationController extends GetxController {
         yearValue: selectedYear?.name ?? '',
         colorValue: selectedColor?.name ?? '',
         vehicleNumber: vehicleNumber,
+        passengerCapacity: passengerCapacity,
         ruleIds: selectedRuleIds,
         vehicleImageFile: vehicleImageFile,
         vehicleDocumentFile: vehicleDocumentFile,
@@ -347,6 +359,12 @@ class VehicleVerificationController extends GetxController {
     if (vehicleNumber.trim().isEmpty) {
       errorList.add('Vehicle number ${MyStrings.isRequired}');
     }
+    final capacity = int.tryParse(passengerCapacity) ?? 0;
+    if (capacity < 1 || capacity > 12) {
+      errorList.add('La capacidad debe estar entre 1 y 12 pasajeros');
+    } else if (selectedService?.minVehicleCapacity != null && capacity < (int.tryParse(selectedService!.minVehicleCapacity!) ?? 1)) {
+      errorList.add('Este servicio requiere capacidad mínima de ${selectedService!.minVehicleCapacity} pasajeros');
+    }
     if (selectedRuleIds.isEmpty) {
       errorList.add('Rules ${MyStrings.isRequired}');
     }
@@ -358,8 +376,7 @@ class VehicleVerificationController extends GetxController {
     for (var element in formList) {
       final label = (element.label ?? '').toLowerCase();
       final name = (element.name ?? '').toLowerCase();
-      final isYear = label.contains('año') || label.contains('ano') || label.contains('year') ||
-                     name.contains('año') || name.contains('ano') || name.contains('year');
+      final isYear = label.contains('año') || label.contains('ano') || label.contains('year') || name.contains('año') || name.contains('ano') || name.contains('year');
       if (isYear && selectedYear != null) {
         element.selectedValue = selectedYear?.name;
         continue;

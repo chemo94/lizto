@@ -25,7 +25,13 @@ class _SellerCashScreenState extends State<SellerCashScreen> {
       Get.put(SellerPanelController(repo: Get.find()));
     }
     c = Get.find<SellerPanelController>();
-    WidgetsBinding.instance.addPostFrameCallback((_) => c.loadCash());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final allowed = await SubscriptionGuard.guardModuleEntry(
+        context,
+        storeId: _currentStoreId(),
+      );
+      if (allowed && mounted) c.loadCash();
+    });
   }
 
   @override

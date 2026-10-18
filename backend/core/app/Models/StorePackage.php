@@ -11,6 +11,7 @@ class StorePackage extends Model
     protected $casts = [
         'starts_at'   => 'datetime',
         'expires_at'  => 'datetime',
+        'invoice_quota_starts_at' => 'datetime',
         'amount_paid' => 'double',
     ];
 

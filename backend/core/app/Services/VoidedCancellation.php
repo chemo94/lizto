@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\{SunatInvoice, SellerCompany};
+use App\Models\Store;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -36,6 +37,10 @@ class VoidedCancellation
                 return $previous;
             }
             if ($error = $this->eligibilityError($original)) throw new RuntimeException($error);
+            $store = Store::where('seller_id', $original->seller_id)->first();
+            if ($store && $store->hasReachedInvoiceLimit()) {
+                throw new RuntimeException('Se alcanzó el límite de comprobantes electrónicos del plan. Cambia o renueva tu plan en /seller/pricing para continuar.');
+            }
             $company = SellerCompany::whereKey($original->seller_company_id)->where('seller_id', $original->seller_id)->lockForUpdate()->firstOrFail();
             if ($original->pos_order_id && SunatInvoice::where('seller_company_id', $company->id)->where('pos_order_id', $original->pos_order_id)
                 ->whereIn('tipo_doc', ['07', 'RA'])->whereNull('original_invoice_id')->where('cdr_status', '!=', 'rejected')->exists()) {

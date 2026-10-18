@@ -392,6 +392,30 @@ class PanelController extends Controller
             'consumption_description' => 'nullable|string|max:250',
         ]);
 
+        // Reject an over-quota electronic document before marking the order paid.
+        $preflightCompany = $this->activeCompany();
+        $preflightSeriesId = $request->series_id;
+        if (!$preflightSeriesId && $preflightCompany) {
+            $preflightSeriesId = PosInvoiceSeries::where('seller_company_id', $preflightCompany->id)
+                ->whereHas('invoiceType', fn($q) => $q->where('code', 'NV'))->value('id');
+        }
+        if ($preflightSeriesId) {
+            $preflightSeries = PosInvoiceSeries::where('id', $preflightSeriesId)
+                ->where('seller_company_id', $preflightCompany?->id)->with('invoiceType')->first();
+            if (!$preflightSeries || !$preflightCompany) {
+                return apiResponse('invalid_series', 'error', ['La serie de comprobante seleccionada no es válida.']);
+            }
+            $preflightType = $preflightSeries->invoiceType->sunat_code ?? $preflightSeries->invoiceType->code;
+            $store = $this->store();
+            if ($preflightType !== 'NV' && $store && $store->hasReachedInvoiceLimit()) {
+                $usage = $store->getInvoiceLimitStatus();
+                $limit = $usage['limit'] ?? 50;
+                $planName = $usage['package']?->name ?? 'Actual';
+                $message = "Has alcanzado el límite de {$limit} comprobantes electrónicos de tu plan {$planName}. Cambia o renueva tu plan para continuar.";
+                return apiResponse('limit_reached', 'error', [$message], ['upgrade_url' => route('seller.pricing')]);
+            }
+        }
+
         $paymentMethod = $request->payment_method ?? 'cash';
         $paymentDetails = null;
 
@@ -499,9 +523,11 @@ class PanelController extends Controller
 
             $store = $this->store();
             if ($tipoDoc !== 'NV' && $store && $store->hasReachedInvoiceLimit()) {
-                $planName = $store->getPlanType() === 'basic' ? 'Emprendedor' : 'Destacado';
-                $limit = $store->getPlanType() === 'basic' ? 50 : 100;
-                return apiResponse('limit_reached', 'error', ["Has alcanzado el límite de {$limit} comprobantes electrónicos de tu plan {$planName}. Actualiza a un plan superior para facturación ilimitada."]);
+                $usage = $store->getInvoiceLimitStatus();
+                $limit = $usage['limit'] ?? 50;
+                $planName = $usage['package']?->name ?? 'Actual';
+                $message = "Has alcanzado el límite de {$limit} comprobantes electrónicos de tu plan {$planName}. Cambia o renueva tu plan para continuar.";
+                return apiResponse('limit_reached', 'error', [$message], ['upgrade_url' => route('seller.pricing')]);
             }
 
             $correlativo = $series->current_number;
@@ -621,21 +647,23 @@ class PanelController extends Controller
             return apiResponse('no_company', 'error', ['Debes configurar una empresa antes de emitir comprobantes.']);
         }
 
-        $store = $this->store();
-        if ($store && $store->hasReachedInvoiceLimit()) {
-            $planName = $store->getPlanType() === 'basic' ? 'Emprendedor' : 'Destacado';
-            $limit = $store->getPlanType() === 'basic' ? 50 : 100;
-            return apiResponse('limit_reached', 'error', ["Has alcanzado el límite de {$limit} comprobantes electrónicos de tu plan {$planName}. Actualiza a un plan superior para facturación ilimitada."]);
-        }
-
         $series = PosInvoiceSeries::where('id', $request->series_id)
             ->where('seller_company_id', $activeCompany->id)
             ->with('invoiceType')
             ->firstOrFail();
 
+        $tipoDoc = $series->invoiceType->sunat_code ?? $series->invoiceType->code;
+        $store = $this->store();
+        if ($tipoDoc !== 'NV' && $store && $store->hasReachedInvoiceLimit()) {
+            $usage = $store->getInvoiceLimitStatus();
+            $limit = $usage['limit'] ?? 50;
+            $planName = $usage['package']?->name ?? 'Actual';
+            $message = "Has alcanzado el límite de {$limit} comprobantes electrónicos de tu plan {$planName}. Cambia o renueva tu plan para continuar.";
+            return apiResponse('limit_reached', 'error', [$message], ['upgrade_url' => route('seller.pricing')]);
+        }
+
         $correlativo = $series->current_number;
         $series->increment('current_number');
-        $tipoDoc = $series->invoiceType->sunat_code ?? $series->invoiceType->code;
 
         $clientData = [
             'tipo_doc' => $request->tipo_doc ?? ($tipoDoc === '01' ? '6' : '1'),

@@ -23,6 +23,8 @@ class DeliveryOrder extends Model
         'payment_status'      => 'integer',
         'cash_pay_amount'     => 'double',
         'whatsapp_sent_at'    => 'datetime',
+        'dispatch_timeout_at' => 'datetime',
+        'dispatch_attempted_driver_ids' => 'array',
     ];
 
     public function user()

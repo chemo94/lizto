@@ -237,7 +237,17 @@ class RideController extends Controller
     public function list()
     {
         $driver = auth()->user();
-        $query  = Ride::with('user')->where('service_id', @$driver->service_id);
+        $vehicleType = $driver->service?->vehicle_type ?? 'auto';
+        $capacity = (int) ($driver->vehicle?->passenger_capacity ?? 4);
+        $query = Ride::with('user')
+            ->whereHas('service', function ($serviceQuery) use ($vehicleType, $capacity) {
+                $serviceQuery->where('vehicle_type', $vehicleType)
+                    ->where('min_vehicle_capacity', '<=', $capacity);
+            })
+            ->where('number_of_passenger', '<=', $capacity);
+        if (!in_array($driver->service_type, ['ride', 'both'], true)) {
+            $query->whereRaw('1 = 0');
+        }
 
         if (request()->status == 'accept') {
             $query->pending()
@@ -246,9 +256,11 @@ class RideController extends Controller
                 })
                 ->filter(['ride_type']);
         } elseif (request()->status == 'all') {
-            $query->where('driver_id', auth()->id())
-                ->orWhereHas('bids', function ($q) use ($driver) {
-                    $q->where('status', Status::BID_PENDING)->where("driver_id", $driver->id);
+            $query->where(function ($eligibleRideQuery) use ($driver) {
+                $eligibleRideQuery->where('driver_id', $driver->id)
+                    ->orWhereHas('bids', function ($q) use ($driver) {
+                        $q->where('status', Status::BID_PENDING)->where('driver_id', $driver->id);
+                    });
                 })
                 ->filter(['ride_type']);
         } else {

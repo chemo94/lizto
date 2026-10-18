@@ -65,7 +65,12 @@ class HomeController extends GetxController {
 
   void updatePassenger(bool isIncrement) {
     if (isIncrement) {
-      passenger = passenger + 1;
+      final maxPassengers = int.tryParse(selectedService.maxPassengers ?? '') ?? 12;
+      if (passenger < maxPassengers) {
+        passenger++;
+      } else {
+        CustomSnackBar.error(errorList: ['Este servicio admite hasta $maxPassengers pasajeros.']);
+      }
     } else {
       passenger > 1 ? passenger-- : passenger = 1;
     }
@@ -366,6 +371,19 @@ class HomeController extends GetxController {
     update();
   }
 
+  void adjustSelectedServiceOffer(double delta) {
+    if (!selectedService.allowOffer) return;
+    final isMercadoPago = selectedPaymentMethod.name?.toLowerCase() == 'mercadopago' || selectedPaymentMethod.name?.toLowerCase() == 'mercado pago';
+    final multiplier = isMercadoPago ? 1.05 : 1.0;
+    final minimum = StringConverter.formatDouble(selectedService.minAmount?.toString() ?? selectedService.cityMinFare?.toString() ?? '0') * multiplier;
+    final maximum = StringConverter.formatDouble(selectedService.maxAmount?.toString() ?? selectedService.cityMaxFare?.toString() ?? '0') * multiplier;
+    final current = mainAmount > 0 ? mainAmount : _extractServicePrice(selectedService);
+    var next = current + delta;
+    if (minimum > 0) next = next < minimum ? minimum : next;
+    if (maximum > 0) next = next > maximum ? maximum : next;
+    updateMainAmount(double.parse(next.toStringAsFixed(2)));
+  }
+
   AppPaymentMethod selectedPaymentMethod = MyUtils.getDefaultPaymentMethod()[0];
   void selectPaymentMethod(AppPaymentMethod method) {
     printX(method.id);
@@ -392,6 +410,10 @@ class HomeController extends GetxController {
     try {
       if (selectedLocations.length > 1) {
         selectedService = service;
+        final servicePassengerLimit = int.tryParse(service.maxPassengers ?? '') ?? 12;
+        if (passenger > servicePassengerLimit) {
+          passenger = servicePassengerLimit;
+        }
         if (shouldLoadFare) {
           await getRideFare();
         } else {
@@ -460,6 +482,9 @@ class HomeController extends GetxController {
       return false;
     } else if (selectedService.id == "-99") {
       CustomSnackBar.error(errorList: [MyStrings.pleaseSelectAService]);
+      return false;
+    } else if (passenger > (int.tryParse(selectedService.maxPassengers ?? '') ?? 12)) {
+      CustomSnackBar.error(errorList: ['La cantidad de pasajeros supera el máximo de este servicio.']);
       return false;
     }
     return true;

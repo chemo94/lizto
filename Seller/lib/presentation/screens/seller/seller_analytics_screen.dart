@@ -31,7 +31,11 @@ class _SellerAnalyticsScreenState extends State<SellerAnalyticsScreen> {
   }
 
   Future<void> _init() async {
-    final ok = await SubscriptionGuard.canProceed(context, storeId: widget.storeId);
+    final ok = await SubscriptionGuard.canProceed(
+      context,
+      storeId: widget.storeId,
+      closeModuleOnDenied: true,
+    );
     if (ok) {
       _c.loadAnalytics(widget.storeId);
     }

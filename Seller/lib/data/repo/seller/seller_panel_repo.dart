@@ -33,6 +33,7 @@ class SellerPanelRepo {
   // Kitchen
   Future<ResponseModel> kitchen() => _get(UrlContainer.panelKitchen);
   Future<ResponseModel> updateKitchenStatus(int id, Map<String, dynamic> data) => _post(UrlContainer.panelKitchenStatus(id), data);
+  Future<ResponseModel> deleteKitchenItem(int orderId, int itemId) => _post(UrlContainer.panelKitchenItemDelete(orderId, itemId));
 
   // Orders
   Future<ResponseModel> panelOrders({int page = 1}) => _get('${UrlContainer.panelOrders}?page=$page');

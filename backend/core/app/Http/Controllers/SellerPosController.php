@@ -42,6 +42,7 @@ use App\Services\FcmService;
 use App\Services\StockService;
 use App\Services\StoreSubscriptionService;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Hash;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
@@ -62,7 +63,7 @@ class SellerPosController extends Controller
                 return $next($request);
             }
             $sellerId = Session::get('seller_id');
-            if (!$sellerId || !\App\Models\Seller::find($sellerId)) {
+            if (!$sellerId || !\App\Models\Seller::where('status', 1)->find($sellerId)) {
                 Session::forget('seller_id');
                 Session::forget('seller_staff_id');
                 return redirect()->route('seller.login');
@@ -71,7 +72,7 @@ class SellerPosController extends Controller
             // Authorization check for staff members
             $staffId = Session::get('seller_staff_id');
             if ($staffId) {
-                $staff = \App\Models\PosStaff::find($staffId);
+                $staff = \App\Models\PosStaff::where('seller_id', $sellerId)->find($staffId);
                 if (!$staff || $staff->status !== 'active') {
                     Session::forget('seller_staff_id');
                     Session::forget('seller_id');
@@ -83,79 +84,84 @@ class SellerPosController extends Controller
                     Session::put('active_company_id', $staff->seller_company_id);
                 }
 
-                // Protect specific routes based on permissions
                 $routeName = $request->route()->getName();
-                
-                // Route mapping to permission keys
+                // Employees must always be able to end their own session.
+                if ($routeName === 'seller.logout') {
+                    return $next($request);
+                }
+
+                // Staff accounts use an explicit allow-list of route families.
                 $permissionsMap = [
+                    'seller.dashboard' => 'reports',
                     'seller.pos' => 'pos_orders',
-                    'seller.pos.workspace' => 'pos_orders',
-                    'seller.pos.floorplan' => 'pos_orders',
-                    'seller.pos.tables' => 'pos_orders',
-                    'seller.pos.kitchen' => 'kitchen',
-                    'seller.pos.billing' => 'billing',
-                    'seller.cash' => 'billing',
-                    'seller.cash.open' => 'billing',
-                    'seller.cash.close' => 'billing',
-                    'seller.cash.arqueo' => 'billing',
-                    'seller.cash.transaction' => 'billing',
-                    'seller.expenses' => 'billing',
-                    'seller.expenses.store' => 'billing',
-                    'seller.pos.bank_accounts' => 'billing',
+                    'seller.orders' => 'pos_orders',
+                    'seller.customers' => 'pos_orders',
+                    'seller.crm' => 'pos_orders',
+                    'seller.external.order' => 'pos_orders',
+                    'seller.delivery.request' => 'pos_orders',
+                    'seller.delivery.order' => 'pos_orders',
+                    'seller.declarations' => 'accounting',
+                    'seller.companies' => 'settings',
+                    'seller.register.ruc' => 'settings',
+                    'seller.invoice' => 'settings',
+                    'seller.sunat' => 'settings',
+                    'seller.invoicing' => 'settings',
+                    'seller.delivery' => 'settings',
+                    'seller.logo' => 'settings',
+                    'seller.cover.video' => 'settings',
+                    'seller.api' => 'settings',
+                    'seller.qr.save' => 'settings',
+                    'seller.inventory' => 'inventory',
+                    'seller.logistics' => 'inventory',
                     'seller.products' => 'products',
                     'seller.categories' => 'products',
-                    'seller.products.bulk' => 'products',
-                    'seller.products.bulk.store' => 'products',
-                    'seller.products.bulk.template' => 'products',
                     'seller.qrmenu' => 'products',
-                    'seller.customers' => 'pos_orders',
-                    'seller.customers.update' => 'pos_orders',
-                    'seller.orders' => 'pos_orders',
-                    'seller.orders.cancel' => 'pos_orders',
-                    'seller.orders.status' => 'pos_orders',
-                    'seller.external.order' => 'pos_orders',
-                    'seller.inventory.items' => 'inventory',
-                    'seller.logistics.warehouses' => 'inventory',
-                    'seller.logistics.suppliers' => 'inventory',
-                    'seller.logistics.purchase_orders' => 'inventory',
-                    'seller.logistics.receptions' => 'inventory',
-                    'seller.inventory.purchases' => 'inventory',
-                    'seller.inventory.recipes' => 'inventory',
-                    'seller.logistics.transfers' => 'inventory',
-                    'seller.inventory.wastes' => 'inventory',
-                    'seller.inventory.sales' => 'inventory',
-                    'seller.inventory.kardex' => 'inventory',
-                    'seller.logistics.reports' => 'inventory',
-                    'seller.inventory.tax-report' => 'inventory',
-                    'seller.pos.staff' => 'hr',
-                    'seller.pos.hr.attendance' => 'hr',
-                    'seller.pos.hr.payroll' => 'hr',
-                    'seller.pos.staff.reports' => 'reports',
+                    'seller.cash' => 'billing',
+                    'seller.expenses' => 'billing',
+                    'seller.registers' => 'billing',
                     'seller.reports' => 'reports',
-                    'seller.reports.advanced' => 'reports',
-                    'seller.reports.export' => 'reports',
-                    'seller.invoicing' => 'settings',
-                    'seller.sunat.config' => 'settings',
-                    'seller.invoice.series' => 'settings',
-                    'seller.delivery' => 'settings',
-                    'seller.api.settings' => 'settings',
-                    'seller.api.token' => 'settings',
                     'seller.notifications' => 'notifications',
-                    'seller.notifications.send' => 'notifications',
+                    'seller.save-token' => 'notifications',
+                    'seller.pos.kitchen' => 'kitchen',
+                    'seller.pos.billing' => 'billing',
+                    'seller.pos.order.pay' => 'billing',
+                    'seller.pos.order.invoice' => 'settings',
+                    'seller.pos.bank_accounts' => 'billing',
+                    'seller.pos.staff.reports' => 'reports',
+                    'seller.pos.staff' => 'hr',
+                    'seller.pos.hr' => 'hr',
+                    'seller.pos.reservations' => 'pos_orders',
+                    'seller.pos.table' => 'pos_orders',
+                    'seller.pos.tables' => 'pos_orders',
+                    'seller.pos.floorplan' => 'pos_orders',
+                    'seller.pos.areas' => 'pos_orders',
+                    'seller.pos.orders' => 'pos_orders',
+                    'seller.pos.fee' => 'pos_orders',
+                    'seller.pos.workspace' => 'pos_orders',
+                    'seller.pos.order' => 'pos_orders',
                 ];
 
+                // Prefer the most specific route family. In particular, kitchen
+                // and billing routes must not inherit the general POS permission.
+                $matchedPermission = null;
+                $matchedPrefixLength = -1;
                 foreach ($permissionsMap as $routePrefix => $permissionKey) {
-                    if ($routeName === $routePrefix || str_starts_with($routeName, $routePrefix . '.')) {
-                        if (!$staff->hasPermission($permissionKey)) {
-                            if (in_array($permissionKey, ['reports', 'settings']) && $staff->hasPermission('accounting')) {
-                                continue;
-                            }
-                            if ($request->expectsJson()) {
-                                return response()->json(['status' => false, 'result' => 'No tienes permiso para realizar esta acción.'], 403);
-                            }
-                            return redirect()->route('seller.pos')->with('error', 'No tienes permisos para acceder a esta sección.');
-                        }
+                    if (($routeName === $routePrefix || str_starts_with($routeName, $routePrefix . '.'))
+                        && strlen($routePrefix) > $matchedPrefixLength) {
+                        $matchedPermission = $permissionKey;
+                        $matchedPrefixLength = strlen($routePrefix);
                     }
+                }
+
+                if ($matchedPermission === null || !$staff->hasPermission($matchedPermission)) {
+                    if ($matchedPermission && in_array($matchedPermission, ['reports', 'settings'], true)
+                        && $staff->hasPermission('accounting')) {
+                        return $next($request);
+                    }
+                    if ($request->expectsJson()) {
+                        return response()->json(['status' => false, 'result' => 'No tienes permiso para realizar esta acción.'], 403);
+                    }
+                    abort(403, 'No tienes permisos para acceder a esta sección.');
                 }
             }
             return $next($request);
@@ -217,7 +223,7 @@ class SellerPosController extends Controller
 
     private function seller()
     {
-        $seller = Seller::find(Session::get('seller_id'));
+        $seller = Seller::where('status', 1)->find(Session::get('seller_id'));
         if (!$seller) {
             Session::forget('seller_id');
             Session::forget('seller_staff_id');
@@ -306,7 +312,8 @@ class SellerPosController extends Controller
             if (!$seller->status) {
                 return back()->with('error', 'Cuenta suspendida')->withInput();
             }
-            Session::forget('seller_staff_id');
+            $request->session()->regenerate();
+            Session::forget(['seller_staff_id', 'active_company_id']);
             Session::put('seller_id', $seller->id);
             $store = Store::where('seller_id', $seller->id)->first();
             if ($store?->isDeliveryOnlyMode()) {
@@ -321,6 +328,11 @@ class SellerPosController extends Controller
             if ($staff->status !== 'active') {
                 return back()->with('error', 'Cuenta de empleado inactiva.')->withInput();
             }
+            if (!Seller::where('status', 1)->find($staff->seller_id)) {
+                return back()->with('error', 'La cuenta del negocio está suspendida.')->withInput();
+            }
+            $request->session()->regenerate();
+            Session::forget('active_company_id');
             Session::put('seller_id', $staff->seller_id);
             Session::put('seller_staff_id', $staff->id);
             if ($staff->seller_company_id) {
@@ -347,8 +359,8 @@ class SellerPosController extends Controller
 
     public function webLogout()
     {
-        Session::forget('seller_id');
-        Session::forget('seller_staff_id');
+        Session::invalidate();
+        Session::regenerateToken();
         return redirect()->route('seller.login');
     }
 
@@ -870,7 +882,7 @@ class SellerPosController extends Controller
     // ── Billing & Invoicing ──
 
 
-    public function billing()
+    public function billing(Request $request)
     {
         $seller = $this->seller(); $store = $this->store();
         $pageTitle = 'Cobrar y Facturar';
@@ -880,25 +892,57 @@ class SellerPosController extends Controller
             ->with('items', 'table')
             ->latest()->get();
 
-        $paidOrders = PosOrder::where('seller_id', $seller->id)
+        $billingSearch = trim((string) $request->query('billing_search', ''));
+        $billingPerPage = (int) $request->query('billing_per_page', 15);
+        if (!in_array($billingPerPage, [10, 15, 25, 50], true)) {
+            $billingPerPage = 15;
+        }
+
+        $paidOrdersQuery = PosOrder::where('seller_id', $seller->id)
             ->where(function($q) {
                 $q->whereIn('payment_status', ['paid', 'credit'])
                   ->orWhereNotNull('invoice_series');
-            })
-            ->with('items', 'table', 'sunatInvoice')
-            ->latest()->paginate(15);
+            });
+        if ($billingSearch !== '') {
+            $paidOrdersQuery->where(function ($query) use ($billingSearch) {
+                $query->where('order_no', 'like', "%{$billingSearch}%")
+                    ->orWhere('customer_name', 'like', "%{$billingSearch}%")
+                    ->orWhere('invoice_series', 'like', "%{$billingSearch}%")
+                    ->orWhere('invoice_number', 'like', "%{$billingSearch}%");
+            });
+        }
+        $paidOrders = $paidOrdersQuery->with('items', 'table', 'sunatInvoice')
+            ->latest()->paginate($billingPerPage)->withQueryString();
 
         $invoiceTypes = PosInvoiceType::where('seller_id', $seller->id)->with('series')->get();
         $bankAccounts = PosBankAccount::where('seller_id', $seller->id)->active()->get();
 
-        return view('seller.pos.billing', compact('pageTitle', 'seller', 'store', 'pendingOrders', 'paidOrders', 'invoiceTypes', 'bankAccounts'));
+        return view('seller.pos.billing', compact('pageTitle', 'seller', 'store', 'pendingOrders', 'paidOrders', 'invoiceTypes', 'bankAccounts', 'billingSearch', 'billingPerPage'));
     }
 
     public function payOrder(Request $request, $id)
     {
+        $sellerId = (int) Session::get('seller_id');
+        $lock = \Illuminate\Support\Facades\Cache::lock("seller:{$sellerId}:pay-order:{$id}", 300);
+        if (!$lock->get()) {
+            $message = 'Este cobro ya se está procesando. Espera un momento y actualiza la lista.';
+            return ($request->expectsJson() || $request->ajax())
+                ? response()->json(['status' => false, 'message' => $message], 409)
+                : back()->with('error', $message);
+        }
+
+        try {
+            return $this->processPayOrder($request, $id);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    private function processPayOrder(Request $request, $id)
+    {
         $seller = $this->seller();
-        $isCashOpen = PosCashSession::where('seller_id', $seller->id)->open()->exists();
-        if (!$isCashOpen) {
+        $activeCashSession = $this->getActiveCashSession($seller->id);
+        if (!$activeCashSession) {
             $msg = 'Debe abrir una caja antes de procesar el pago de un pedido.';
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json(['status' => false, 'message' => $msg], 422);
@@ -914,6 +958,12 @@ class SellerPosController extends Controller
             }
             return back()->with('error', $msg);
         }
+        if (in_array($order->payment_status, ['paid', 'cancelled', 'credit'], true)) {
+            $message = 'Este pedido ya fue cobrado, está a crédito o fue anulado. Actualiza la lista antes de continuar.';
+            return ($request->expectsJson() || $request->ajax())
+                ? response()->json(['status' => false, 'message' => $message], 409)
+                : back()->with('error', $message);
+        }
 
         $request->validate([
             'series_id'        => 'nullable|integer',
@@ -928,6 +978,64 @@ class SellerPosController extends Controller
             'consumption_description' => 'nullable|string|max:250|required_if:detail_mode,consumption',
             'include_tupper'   => 'nullable|boolean',
         ]);
+
+        // Validate the selected document and plan quota before changing payment,
+        // stock, table or transaction state. A rejected invoice must not leave
+        // an order marked as paid.
+        $activeCompany = null;
+        $series = null;
+        $seriesId = $request->series_id;
+        if (!$seriesId) {
+            $activeCompany = $this->activeCompany();
+            if ($activeCompany) {
+                $seriesId = PosInvoiceSeries::where('seller_company_id', $activeCompany->id)
+                    ->whereHas('invoiceType', fn($q) => $q->where('code', 'NV'))
+                    ->value('id');
+            }
+        }
+        if ($seriesId) {
+            $activeCompany = $activeCompany ?: $this->activeCompany();
+            if (!$activeCompany) {
+                $msg = 'Debes configurar una empresa antes de emitir comprobantes.';
+                return ($request->expectsJson() || $request->ajax())
+                    ? response()->json(['status' => false, 'message' => $msg], 422)
+                    : back()->with('error', $msg);
+            }
+            $series = PosInvoiceSeries::where('id', $seriesId)
+                ->where(fn($q) => $q->where('seller_company_id', $activeCompany->id)->orWhere('seller_id', $seller->id))
+                ->with('invoiceType')->first();
+            if (!$series) {
+                $msg = 'La serie de comprobante seleccionada no es válida.';
+                return ($request->expectsJson() || $request->ajax())
+                    ? response()->json(['status' => false, 'message' => $msg], 422)
+                    : back()->with('error', $msg);
+            }
+            $tipoDoc = $series->invoiceType->sunat_code ?? $series->invoiceType->code;
+            if ($tipoDoc === '01' && !preg_match('/^\d{11}$/', (string) $request->num_doc)) {
+                $msg = 'Para emitir factura, ingresa un RUC válido de 11 dígitos.';
+                return ($request->expectsJson() || $request->ajax())
+                    ? response()->json(['status' => false, 'message' => $msg], 422)
+                    : back()->with('error', $msg)->withInput();
+            }
+            if ($tipoDoc === '03' && $request->filled('num_doc') && $request->input('tipo_doc') === '1'
+                && !preg_match('/^\d{8}$/', (string) $request->num_doc)) {
+                $msg = 'El DNI debe tener 8 dígitos. Puedes dejar el documento vacío para emitir a Cliente Varios.';
+                return ($request->expectsJson() || $request->ajax())
+                    ? response()->json(['status' => false, 'message' => $msg], 422)
+                    : back()->with('error', $msg)->withInput();
+            }
+            $store = $this->store();
+            if ($tipoDoc !== 'NV' && $store && $store->hasReachedInvoiceLimit()) {
+                $usage = $store->getInvoiceLimitStatus();
+                $planName = $usage['package']?->name ?? 'Actual';
+                $limit = $usage['limit'] ?? 50;
+                $msg = "Has alcanzado el límite de {$limit} comprobantes electrónicos de tu plan {$planName}. Cambia o renueva tu plan para continuar.";
+                if ($request->expectsJson() || $request->ajax()) {
+                    return response()->json(['status' => false, 'code' => 'invoice_limit_reached', 'message' => $msg, 'upgrade_url' => route('seller.pricing')], 422);
+                }
+                return back()->with('error', $msg)->with('upgrade_url', route('seller.pricing'));
+            }
+        }
 
         // The fee is validated first and persisted only once the payment is
         // valid, so a rejected payment never leaves an orphaned Tupper line.
@@ -949,11 +1057,18 @@ class SellerPosController extends Controller
         }
 
         $paymentMethod = $request->payment_method ?? 'cash';
+        $allowedPaymentMethods = ['cash', 'card', 'yape', 'plin', 'transfer', 'credit', 'courtesy'];
+        if (!in_array($paymentMethod, $allowedPaymentMethods, true)) {
+            return back()->with('error', 'El método de pago seleccionado no es válido.')->withInput();
+        }
         $paymentDetails = null;
 
         if ($request->has('payments') && is_array($request->payments)) {
             $splits = [];
             foreach ($request->payments as $method => $amount) {
+                if (!in_array((string) $method, $allowedPaymentMethods, true) || !is_numeric($amount) || (float) $amount < 0) {
+                    return back()->with('error', 'Revisa los métodos y montos del pago dividido.')->withInput();
+                }
                 if ($amount > 0) {
                     $splits[$method] = round((float) $amount, 2);
                 }
@@ -1042,7 +1157,7 @@ class SellerPosController extends Controller
 
         // Recreate transaction records for payment splits
         PosTransaction::where('pos_order_id', $order->id)->delete();
-        $cashSession = PosCashSession::where('seller_id', $order->seller_id)->open()->first();
+        $cashSession = $this->getActiveCashSession($order->seller_id);
 
         if ($request->has('payments') && is_array($request->payments)) {
             foreach ($request->payments as $method => $amount) {
@@ -1050,7 +1165,9 @@ class SellerPosController extends Controller
                 if ($amount > 0 && $method !== 'credit') {
                     $bankAccountId = null;
                     if ($method !== 'cash' && $request->has('payment_accounts') && isset($request->payment_accounts[$method])) {
-                        $bankAccountId = (int) $request->payment_accounts[$method];
+                        $account = PosBankAccount::where('seller_id', $seller->id)->active()->find($request->payment_accounts[$method]);
+                        if (!$account) return back()->with('error', 'La cuenta de pago seleccionada no pertenece a este negocio.')->withInput();
+                        $bankAccountId = $account->id;
                     }
 
                     PosTransaction::create([
@@ -1093,57 +1210,8 @@ class SellerPosController extends Controller
 
         $message = 'Pedido #' . $order->order_no . ' cobrado';
 
-        $seriesId = $request->series_id;
-        if (!$seriesId) {
-            $activeCompany = $this->activeCompany();
-            if ($activeCompany) {
-                $nvSeries = PosInvoiceSeries::where('seller_company_id', $activeCompany->id)
-                    ->whereHas('invoiceType', function($q) {
-                        $q->where('code', 'NV');
-                    })->first();
-                if ($nvSeries) {
-                    $seriesId = $nvSeries->id;
-                }
-            }
-        }
-
         if ($seriesId) {
-            $activeCompany = $this->activeCompany();
-            if (!$activeCompany) {
-                $msg = 'Debes configurar una empresa antes de emitir comprobantes.';
-                if ($request->expectsJson() || $request->ajax()) {
-                    return response()->json(['status' => false, 'message' => $msg], 422);
-                }
-                return back()->with('error', $msg);
-            }
-
-            $series = PosInvoiceSeries::where('id', $seriesId)
-                ->where(function($q) use ($activeCompany, $seller) {
-                    $q->where('seller_company_id', $activeCompany->id)
-                      ->orWhere('seller_id', $seller->id);
-                })
-                ->with('invoiceType')
-                ->first();
-
-            if (!$series) {
-                $msg = 'La serie de comprobante seleccionada no es válida.';
-                if ($request->expectsJson() || $request->ajax()) {
-                    return response()->json(['status' => false, 'message' => $msg], 422);
-                }
-                return back()->with('error', $msg);
-            }
-
             $tipoDoc = $series->invoiceType->sunat_code ?? $series->invoiceType->code;
-
-            if ($tipoDoc !== 'NV' && $store && $store->hasReachedInvoiceLimit()) {
-                $planName = $store->activePackagesRelation()->first()?->package?->name ?? 'Actual';
-                $limit = $store->getInvoiceLimit() ?? 50;
-                $msg = "Has alcanzado el límite de {$limit} comprobantes electrónicos de tu plan {$planName}. Actualiza a un plan superior para facturación ilimitada.";
-                if ($request->expectsJson() || $request->ajax()) {
-                    return response()->json(['status' => false, 'message' => $msg], 422);
-                }
-                return back()->with('error', $msg);
-            }
 
             $correlativo = \Illuminate\Support\Facades\DB::transaction(function () use ($series) {
                 $locked = PosInvoiceSeries::where('id', $series->id)->lockForUpdate()->first();
@@ -1170,48 +1238,19 @@ class SellerPosController extends Controller
             $isElectronic = $series->invoiceType->is_electronic ?? false;
             $isNV = ($tipoDoc === 'NV');
 
-            // Calcular los totales de impuestos sumando cada ítem según su régimen tributario (tax_type)
-            $totalGravada   = 0;
-            $totalExonerada = 0;
-            $totalInafecta  = 0;
-            $totalIgv       = 0;
-
+            $taxLines = [];
             if ($detailMode === 'consumption') {
                 $consumptionTaxType = $activeCompany->default_tax_type ?? 'gravado';
                 $orderTotal = (float) $order->total;
-                if ($consumptionTaxType === 'exonerado') {
-                    $totalExonerada = $orderTotal;
-                } elseif ($consumptionTaxType === 'inafecto') {
-                    $totalInafecta = $orderTotal;
-                } else { // gravado
-                    $base = round($orderTotal / 1.18, 2);
-                    $totalGravada = $base;
-                    $totalIgv = round($orderTotal - $base, 2);
-                }
+                $taxLines[] = ['tax_type' => $consumptionTaxType, 'total' => $orderTotal];
             } else {
-                foreach ($order->items as $item) {
-                    $itemTaxType = $item->tax_type ?? ($item->product?->tax_type ?? 'gravado');
-                    $lineTotal   = (float) $item->total_price;
-
-                    if ($itemTaxType === 'exonerado') {
-                        $totalExonerada += $lineTotal;
-                    } elseif ($itemTaxType === 'inafecto') {
-                        $totalInafecta += $lineTotal;
-                    } else { // gravado
-                        $base = round($lineTotal / 1.18, 2);
-                        $totalGravada += $base;
-                        $totalIgv += round($lineTotal - $base, 2);
-                    }
-                }
+                $taxLines = \App\Support\TaxCalculator::orderLines($order, $activeCompany->default_tax_type ?? 'gravado');
             }
-
-            // Para Nota de Venta (NV) u otros documentos locales no electrónicos, todo se emite sin impuestos
-            if ($isNV || !$isElectronic) {
-                $totalGravada   = 0;
-                $totalExonerada = 0;
-                $totalInafecta  = 0;
-                $totalIgv       = 0;
-            }
+            $taxTotals = \App\Support\TaxCalculator::totals($taxLines);
+            $totalGravada = $taxTotals['gravada'];
+            $totalExonerada = $taxTotals['exonerada'];
+            $totalInafecta = $taxTotals['inafecta'];
+            $totalIgv = $taxTotals['igv'];
 
             // Estado SUNAT: NV y no-electrónicos -> "Generado" (azul), electrónicos -> "Pendiente"
             $cdrStatus = ($isNV || !$isElectronic)
@@ -1761,19 +1800,58 @@ class SellerPosController extends Controller
         $orderItems = [];
         $stockErrors = [];
         foreach ($items as $item) {
-            $product = Product::find($item['product_id'] ?? 0);
-            $name = $item['name'] ?? ($product?->name ?? 'Producto');
-            $qty = max(1, (int) ($item['quantity'] ?? $item['qty'] ?? 1));
-            $itemCourtesy = filter_var($item['is_courtesy'] ?? false, FILTER_VALIDATE_BOOLEAN) || $isCourtesy;
-            $price = $itemCourtesy ? 0 : (float) ($item['price'] ?? $product?->finalPrice() ?? 0);
+            $product = Product::whereHas('store', fn($query) => $query->where('seller_id', $seller->id))->active()
+                ->with(['variations', 'addons'])->find($item['product_id'] ?? 0);
+            if (!$product) {
+                $message = 'Uno de los productos ya no está disponible en esta tienda. Actualiza la comanda e inténtalo nuevamente.';
+                return $request->expectsJson()
+                    ? response()->json(['success' => false, 'message' => $message], 422)
+                    : back()->with('error', $message);
+            }
+            $qty = filter_var($item['quantity'] ?? $item['qty'] ?? 1, FILTER_VALIDATE_INT);
+            if ($qty === false || $qty < 1 || $qty > 999) {
+                return response()->json(['success' => false, 'message' => 'La cantidad de un producto no es válida.'], 422);
+            }
+            $name = $product->name;
+            $price = (float) $product->finalPrice();
+            $variationId = isset($item['variation_id']) ? (int) $item['variation_id'] : null;
+            if ($variationId) {
+                $variation = $product->variations->firstWhere('id', $variationId);
+                if (!$variation) return response()->json(['success' => false, 'message' => 'La variación seleccionada ya no está disponible.'], 422);
+                $name .= ' (' . $variation->name . ')';
+                $price = (float) ($variation->price > 0 ? $variation->price : $product->finalPrice());
+            }
+            $addonIds = array_values(array_unique(array_map('intval', (array) ($item['addon_ids'] ?? []))));
+            foreach ($addonIds as $addonId) {
+                $addon = $product->addons->firstWhere('id', $addonId);
+                if (!$addon) return response()->json(['success' => false, 'message' => 'Un adicional seleccionado ya no está disponible.'], 422);
+                $name .= ' +' . $addon->name;
+                $price += (float) $addon->price;
+            }
+
+            // Precio editable: si el carrito envía un precio unitario explícito
+            // (antes de tupper), se respeta el monto editado por el usuario en
+            // lugar del precio calculado por producto/variación/addons.
+            $submittedPrice = isset($item['price']) ? (float) $item['price'] : null;
+            if ($submittedPrice !== null && $submittedPrice >= 0) {
+                // El frontend envía el precio con tupper ya incluido; lo normalizamos
+                // restando el recargo de tupper si aplica, para mantener la convención
+                // de que tupper se suma al final (igual que abajo).
+                if (!empty($item['has_tupper'])) {
+                    $submittedPrice = round($submittedPrice - 1.00, 2);
+                    if ($submittedPrice < 0) $submittedPrice = 0;
+                }
+                $price = $submittedPrice;
+            }
+
+            $itemCourtesy = $isCourtesy;
+            if ($itemCourtesy) $price = 0;
+            if (!empty($item['has_tupper']) && !$itemCourtesy) $price += 1.00;
             $total = $price * $qty;
             $subtotal += $total;
 
             $hasTupper = filter_var($item['has_tupper'] ?? false, FILTER_VALIDATE_BOOLEAN);
-            $productName = $name;
-            if ($hasTupper && strpos($productName, '(Con Tupper)') === false) {
-                $productName .= ' (Con Tupper)';
-            }
+            $productName = $name . ($hasTupper ? ' (Con Tupper)' : '');
 
             $orderItems[] = [
                 'product_id'   => $product?->id,
@@ -1794,11 +1872,14 @@ class SellerPosController extends Controller
                 $product = Product::find($oi['product_id'] ?? 0);
                 if (!$product || !$product->hasStockTracking()) continue;
 
-                $recipe = \App\Models\InvRecipe::where('product_id', $product->id)->active()->with('items.item')->first();
+                $recipe = \App\Models\InvRecipe::where('seller_id', $seller->id)->where('product_id', $product->id)->active()->with('items.item')->first();
                 if ($recipe) {
                     // Producto preparado con receta: se valida el stock de sus ingredientes.
                     foreach ($recipe->items as $ri) {
-                        if (!$ri->item) continue;
+                        if (!$ri->item || (int) $ri->item->seller_id !== $seller->id) {
+                            $stockErrors[] = 'La receta contiene un insumo inválido. Revisa su configuración.';
+                            continue;
+                        }
                         $needed = ($ri->quantity_net / max(0.01, $recipe->portions)) * $oi['quantity'];
                         if ($ri->item->stock < $needed) {
                             $stockErrors[] = "{$ri->item->name} (necesita {$needed}, stock: {$ri->item->stock})";
@@ -1807,10 +1888,13 @@ class SellerPosController extends Controller
                 } elseif ($product->isStockPackaged()) {
                     // Producto empaquetado/devoluble: se valida el stock unitario del item vinculado.
                     // Los 'prepared' sin receta NO se bloquean por stock (se preparan por comanda).
-                    $links = InvProductItem::where('product_id', $product->id)->get();
+                    $links = InvProductItem::where('product_id', $product->id)->with('item')->get();
                     foreach ($links as $link) {
-                        $invItem = InvItem::find($link->item_id);
-                        if (!$invItem) continue;
+                        $invItem = $link->item;
+                        if (!$invItem || (int) $invItem->seller_id !== $seller->id) {
+                            $stockErrors[] = 'El producto tiene un vínculo de inventario inválido. Revisa su configuración.';
+                            continue;
+                        }
                         $needed = $link->quantity * $oi['quantity'];
                         if ($invItem->stock < $needed) {
                             $stockErrors[] = "{$invItem->name} (necesita {$needed}, stock: {$invItem->stock})";
@@ -1830,6 +1914,16 @@ class SellerPosController extends Controller
 
         if ($request->order_id) {
             $order = PosOrder::where('seller_id', $seller->id)->findOrFail($request->order_id);
+            if ($order->payment_status !== 'pending' || in_array($order->status, ['cancelled', 'rejected'], true)) {
+                return response()->json(['success' => false, 'message' => 'La comanda ya no está abierta para recibir cambios.'], 409);
+            }
+
+            if ($request->pos_staff_id && !\App\Models\PosStaff::where('seller_id', $seller->id)->where('status', 'active')->whereKey($request->pos_staff_id)->exists()) {
+                return response()->json(['success' => false, 'message' => 'El personal seleccionado no pertenece a este negocio.'], 422);
+            }
+            if ($request->table_id && !PosTable::where('seller_id', $seller->id)->whereKey($request->table_id)->exists()) {
+                return response()->json(['success' => false, 'message' => 'La mesa seleccionada no pertenece a este negocio.'], 422);
+            }
 
             if ($order->pos_table_id) {
                 PosTable::where('seller_id', $seller->id)->where('id', $order->pos_table_id)->update(['status' => 'occupied']);
@@ -1891,7 +1985,26 @@ class SellerPosController extends Controller
                 ]);
             }
 
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Adición a comanda #' . $order->order_no . ' enviada a cocina',
+                    'order' => [
+                        'id' => $order->id,
+                        'order_no' => $order->order_no,
+                        'total' => (float) $order->total,
+                    ],
+                ]);
+            }
+
             return redirect()->route('seller.pos')->with('success', 'Adición a comanda #' . $order->order_no . ' enviada a cocina');
+        }
+
+        if ($request->pos_staff_id && !\App\Models\PosStaff::where('seller_id', $seller->id)->where('status', 'active')->whereKey($request->pos_staff_id)->exists()) {
+            return response()->json(['success' => false, 'message' => 'El personal seleccionado no pertenece a este negocio.'], 422);
+        }
+        if ($request->table_id && !PosTable::where('seller_id', $seller->id)->whereKey($request->table_id)->exists()) {
+            return response()->json(['success' => false, 'message' => 'La mesa seleccionada no pertenece a este negocio.'], 422);
         }
 
         $deliveryFee = 0;
@@ -2008,73 +2121,115 @@ class SellerPosController extends Controller
 
     // ── Customers ──
 
-    public function customers()
+    public function customers(Request $request)
     {
         $seller = $this->seller();
         $store = $this->store();
         $pageTitle = 'Clientes';
-        $customers = PosOrder::where('seller_id', $seller->id)
-            ->where(function ($query) {
-                $query->whereNotNull('customer_phone')
-                    ->orWhereNotNull('customer_name')
-                    ->orWhereNotNull('customer_doc');
-            })
-            ->selectRaw('customer_name, customer_phone, customer_doc, COUNT(*) as total_orders, SUM(total) as total_spent, MAX(created_at) as last_order')
-            ->groupBy('customer_phone', 'customer_name', 'customer_doc')
-            ->orderByDesc('total_orders')
-            ->get();
+        $perPage = min(100, max(10, (int) $request->input('per_page', 15)));
+        $sellerId = $seller->id;
+        $identitySql = "CASE WHEN NULLIF(TRIM(customer_doc), '') IS NOT NULL THEN CONCAT('doc:', TRIM(customer_doc)) WHEN NULLIF(TRIM(customer_phone), '') IS NOT NULL THEN CONCAT('phone:', TRIM(customer_phone)) ELSE CONCAT('name:', SHA1(LOWER(TRIM(COALESCE(customer_name, ''))))) END";
 
-        $customers->each(function ($customer) {
-            $customer->identity_key = $this->customerIdentityKey(
-                $customer->customer_doc,
-                $customer->customer_phone,
-                $customer->customer_name
-            );
+        $customerRows = PosOrder::where('seller_id', $sellerId)
+            ->where(function ($query) {
+                $query->whereNotNull('customer_phone')->orWhereNotNull('customer_name')->orWhereNotNull('customer_doc');
+            })
+            ->selectRaw("id, total, created_at, customer_name, customer_phone, customer_doc, customer_doc_type, {$identitySql} as identity_key");
+
+        $customerAggregates = \Illuminate\Support\Facades\DB::query()
+            ->fromSub(clone $customerRows, 'customer_rows')
+            ->selectRaw("identity_key, MAX(NULLIF(customer_name, '')) as customer_name, MAX(NULLIF(customer_phone, '')) as customer_phone, MAX(NULLIF(customer_doc, '')) as customer_doc, MAX(customer_doc_type) as customer_doc_type, COUNT(id) as total_orders, SUM(total) as total_spent, MAX(created_at) as last_order")
+            ->groupBy('identity_key');
+
+        $summary = \Illuminate\Support\Facades\DB::query()->fromSub(clone $customerAggregates, 'customer_totals')
+            ->selectRaw("COUNT(*) as total_customers, COALESCE(SUM(total_orders), 0) as total_orders, COALESCE(SUM(total_spent), 0) as total_spent, SUM(CASE WHEN last_order >= ? THEN 1 ELSE 0 END) as active_customers, SUM(CASE WHEN total_orders >= 5 THEN 1 ELSE 0 END) as frequent_customers, SUM(CASE WHEN last_order < ? THEN 1 ELSE 0 END) as churned_customers", [now()->subDays(90), now()->subDays(90)])
+            ->first();
+
+        $customerListQuery = \Illuminate\Support\Facades\DB::query()->fromSub(clone $customerAggregates, 'customer_totals');
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $term = '%' . addcslashes($search, '%_\\') . '%';
+            $customerListQuery->where(function ($query) use ($term) {
+                $query->where('customer_name', 'LIKE', $term)
+                    ->orWhere('customer_doc', 'LIKE', $term)
+                    ->orWhere('customer_phone', 'LIKE', $term);
+            });
+        }
+        $customers = $customerListQuery->orderByDesc('total_orders')->orderBy('customer_name')
+            ->paginate($perPage)->withQueryString();
+
+        $customers->getCollection()->each(function ($customer) {
+            $customer->identity_key = $this->customerIdentityKey($customer->customer_doc, $customer->customer_phone, $customer->customer_name);
             $customer->customer_address = null;
         });
-        $profiles = PosCustomerProfile::where('seller_id', $seller->id)
-            ->whereIn('identity_key', $customers->pluck('identity_key')->filter()->values())
-            ->get()->keyBy('identity_key');
-        $customers->each(function ($customer) use ($profiles) {
+        $profiles = PosCustomerProfile::where('seller_id', $sellerId)
+            ->whereIn('identity_key', $customers->getCollection()->pluck('identity_key')->filter()->values())->get()->keyBy('identity_key');
+        $customers->getCollection()->each(function ($customer) use ($profiles) {
             $profile = $profiles->get($customer->identity_key);
             if (!$profile) return;
             $customer->customer_name = $profile->name ?: $customer->customer_name;
             $customer->customer_phone = $profile->phone ?: $customer->customer_phone;
             $customer->customer_doc = $profile->document_number ?: $customer->customer_doc;
-            $customer->customer_doc_type = $profile->document_type;
+            $customer->customer_doc_type = $profile->document_type ?: $customer->customer_doc_type;
             $customer->customer_address = $profile->address;
         });
 
-        $customerGrowth = collect(range(11, 0))->map(function ($monthsAgo) use ($seller) {
+        $customerGrowth = collect(range(11, 0))->map(function ($monthsAgo) use ($sellerId) {
             $month = now()->subMonths($monthsAgo);
-            $start = $month->copy()->startOfMonth();
-            $end = $month->copy()->endOfMonth();
-            $phonesInMonth = PosOrder::where('seller_id', $seller->id)
-                ->whereNotNull('customer_phone')->whereBetween('created_at', [$start, $end])
-                ->distinct()->pluck('customer_phone');
-            $new = $phonesInMonth->filter(function ($phone) use ($seller, $start) {
-                return !PosOrder::where('seller_id', $seller->id)->where('customer_phone', $phone)
-                    ->where('created_at', '<', $start)->exists();
+            return ['month_key' => $month->format('Y-m'), 'label' => ucfirst($month->locale('es')->translatedFormat('M')), 'new' => 0, 'returning' => 0];
+        });
+        $growthOrders = PosOrder::where('seller_id', $sellerId)->whereNotNull('created_at')
+            ->where(function ($query) {
+                $query->whereNotNull('customer_doc')->orWhereNotNull('customer_phone')->orWhereNotNull('customer_name');
+            })
+            ->where('created_at', '>=', now()->subMonths(11)->startOfMonth())
+            ->selectRaw("{$identitySql} as customer_key, DATE_FORMAT(created_at, '%Y-%m') as month_key")
+            ->groupByRaw("customer_key, DATE_FORMAT(created_at, '%Y-%m')")->get();
+        $firstPurchases = PosOrder::where('seller_id', $sellerId)
+            ->where(function ($query) {
+                $query->whereNotNull('customer_doc')->orWhereNotNull('customer_phone')->orWhereNotNull('customer_name');
+            })
+            ->selectRaw("{$identitySql} as customer_key, MIN(created_at) as first_order")
+            ->groupByRaw('customer_key')->get()->keyBy('customer_key');
+        $growthByMonth = $growthOrders->groupBy('month_key');
+        $customerGrowth = $customerGrowth->map(function ($item) use ($growthByMonth, $firstPurchases) {
+            $keys = $growthByMonth->get($item['month_key'], collect())->pluck('customer_key');
+            $newCount = $keys->filter(function ($key) use ($firstPurchases, $item) {
+                $firstOrder = $firstPurchases->get($key)?->first_order;
+                return $firstOrder && \Carbon\Carbon::parse($firstOrder)->format('Y-m') === $item['month_key'];
             })->count();
-
-            return [
-                'label' => ucfirst($month->locale('es')->translatedFormat('M')),
-                'new' => $new,
-                'returning' => max(0, $phonesInMonth->count() - $new),
-            ];
+            $item['new'] = $newCount;
+            $item['returning'] = max(0, $keys->count() - $newCount);
+            return $item;
         });
 
         $customerStats = [
-            'active' => $customers->filter(fn($customer) => \Carbon\Carbon::parse($customer->last_order)->gte(now()->subDays(90)))->count(),
-            'new_today' => PosOrder::where('seller_id', $seller->id)->whereNotNull('customer_phone')
-                ->whereDate('created_at', today())->distinct('customer_phone')->count('customer_phone'),
-            'vip' => $customers->where('total_orders', '>=', 5)->count(),
-            'churned' => $customers->filter(fn($customer) => \Carbon\Carbon::parse($customer->last_order)->lt(now()->subDays(90)))->count(),
+            'active' => (int) ($summary->active_customers ?? 0),
+            'new_today' => PosOrder::where('seller_id', $sellerId)->whereDate('created_at', today())
+                ->where(function ($query) { $query->whereNotNull('customer_phone')->orWhereNotNull('customer_doc')->orWhereNotNull('customer_name'); })
+                ->selectRaw("{$identitySql} as customer_key")->distinct()->get()->count(),
+            'vip' => (int) ($summary->frequent_customers ?? 0),
+            'churned' => (int) ($summary->churned_customers ?? 0),
         ];
+        $frequentCustomers = $customerStats['vip'];
+        $avgCustomerTicket = ($summary->total_orders ?? 0) > 0 ? $summary->total_spent / $summary->total_orders : 0;
+        $topCustomers = \Illuminate\Support\Facades\DB::query()->fromSub(clone $customerAggregates, 'customer_totals')
+            ->orderByDesc('total_spent')->limit(5)->get();
+        $customerEditData = $customers->getCollection()->map(function ($customer) {
+            return ['key' => $customer->identity_key, 'doc_type' => $customer->customer_doc_type ?: (strlen((string) $customer->customer_doc) === 11 ? '6' : '1'), 'doc' => $customer->customer_doc, 'name' => $customer->customer_name, 'phone' => $customer->customer_phone, 'address' => $customer->customer_address];
+        })->values();
 
-        return view('seller.customers', compact('pageTitle', 'seller', 'store', 'customers', 'customerGrowth', 'customerStats'));
+        if ($request->ajax()) {
+            return response()->json([
+                'rows' => view('seller.partials.customer_history_rows', compact('customers'))->render(),
+                'pagination' => $customers->links()->toHtml(),
+                'total' => $customers->total(),
+                'editData' => $customerEditData,
+            ]);
+        }
+
+        return view('seller.customers', compact('pageTitle', 'seller', 'store', 'customers', 'customerGrowth', 'customerStats', 'frequentCustomers', 'avgCustomerTicket', 'topCustomers', 'customerEditData', 'summary'));
     }
-
     public function customerUpdate(Request $request)
     {
         $data = $request->validate([
@@ -2170,70 +2325,171 @@ class SellerPosController extends Controller
 
     // ── Orders ──
 
-    public function orders()
+    public function orders(Request $request)
     {
         $seller = $this->seller();
         $store = $this->store();
         $storeId = $store?->id;
         $pageTitle = 'Pedidos';
+        $perPage = (int) $request->input('per_page', 20);
+        if (!in_array($perPage, [10, 20, 50], true)) $perPage = 20;
+        $page = max(1, LengthAwarePaginator::resolveCurrentPage());
+        $sortBy = in_array($request->input('sort_by'), ['created_at', 'total', 'order_no'], true) ? $request->input('sort_by') : 'created_at';
+        $sortDir = $request->input('sort_dir') === 'asc' ? 'asc' : 'desc';
+        $statusFilter = $request->string('status_filter')->toString() ?: 'all';
+        $sourceFilter = $request->string('source')->toString() ?: 'all';
+        $typeFilter = $request->string('type')->toString() ?: 'all';
+        $search = trim($request->string('search')->toString());
+        $statusGroups = [
+            'pending' => ['pending', 'confirmed'],
+            'preparing' => ['preparing'],
+            'way' => ['ready', 'on_the_way', 'on_way', 'accepted', 'on_way_to_pickup', 'at_pickup', 'on_way_to_delivery'],
+            'delivered' => ['delivered'],
+            'cancelled' => ['cancelled'],
+        ];
+        $limit = $page * $perPage;
 
-        $posOrders = PosOrder::where('seller_id', $seller->id)->with('items', 'table')->latest()->get()->map(fn($o) => [
+        $applyFilters = function ($query, string $source, ?string $type) use ($statusFilter, $sourceFilter, $typeFilter, $search, $statusGroups) {
+            if ($sourceFilter !== 'all' && $sourceFilter !== $source) return $query->whereRaw('1 = 0');
+            if ($typeFilter !== 'all') {
+                if ($source === 'POS') $query->where('order_type', $typeFilter);
+                elseif ($typeFilter !== $type) return $query->whereRaw('1 = 0');
+            }
+            if (isset($statusGroups[$statusFilter])) $query->whereIn('status', $statusGroups[$statusFilter]);
+            elseif ($statusFilter !== 'all') $query->whereRaw('1 = 0');
+            if ($search !== '') {
+                $query->where(function ($q) use ($search, $source) {
+                    $q->where('order_no', 'like', '%' . $search . '%')
+                        ->orWhere('id', 'like', '%' . $search . '%');
+                    if ($source === 'POS') {
+                        $q->orWhere('customer_name', 'like', '%' . $search . '%');
+                    } elseif ($source === 'App') {
+                        $q->orWhere('contact_name', 'like', '%' . $search . '%')
+                            ->orWhere('contact_phone', 'like', '%' . $search . '%')
+                            ->orWhereHas('user', fn($user) => $user->where('fullname', 'like', '%' . $search . '%'))
+                            ->orWhereHas('driver', fn($driver) => $driver->where('fullname', 'like', '%' . $search . '%'));
+                    } else {
+                        $q->orWhere('recipient_name', 'like', '%' . $search . '%')
+                            ->orWhere('description', 'like', '%' . $search . '%')
+                            ->orWhereHas('courier', fn($courier) => $courier->where('fullname', 'like', '%' . $search . '%'));
+                    }
+                });
+            }
+            return $query;
+        };
+
+        $posBase = PosOrder::where('seller_id', $seller->id);
+        $appBase = DeliveryOrder::where('store_id', $storeId);
+        $favorBase = \App\Models\Favor::query();
+        if ($store && $store->latitude && $store->longitude) {
+            $favorBase->where('pickup_lat', $store->latitude)->where('pickup_lng', $store->longitude);
+        } else {
+            $favorBase->whereRaw('1 = 0');
+        }
+
+        $posQuery = $applyFilters(clone $posBase, 'POS', null);
+        $appQuery = $applyFilters(clone $appBase, 'App', 'delivery');
+        $favorQuery = $applyFilters(clone $favorBase, 'Envío', 'send');
+        $total = (clone $posQuery)->count() + (clone $appQuery)->count() + (clone $favorQuery)->count();
+        $lastPage = max(1, (int) ceil($total / $perPage));
+        if ($page > $lastPage) $page = $lastPage;
+        $limit = $page * $perPage;
+        $offset = ($page - 1) * $perPage;
+
+        // Read only the newest candidates needed for the requested page from each source,
+        // then merge them chronologically so the combined table stays correctly ordered.
+        $posRows = $posQuery->with('items.product', 'table')->orderBy($sortBy, $sortDir)->orderBy('id', $sortDir)->limit($limit)->get();
+        $appRows = $appQuery->with('user', 'items', 'driver')->orderBy($sortBy, $sortDir)->orderBy('id', $sortDir)->limit($limit)->get();
+        $favorRows = $favorQuery->with('courier')->orderBy($sortBy, $sortDir)->orderBy('id', $sortDir)->limit($limit)->get();
+
+        $proofsByTypeAndId = collect();
+        $deliveryIds = $appRows->pluck('id');
+        $favorIds = $favorRows->pluck('id');
+        if ($deliveryIds->isNotEmpty()) {
+            foreach (\App\Models\CourierProof::where('job_type', 'delivery')->whereIn('job_id', $deliveryIds)->get() as $proof) {
+                $proofsByTypeAndId->put('delivery:' . $proof->job_id, $proof);
+            }
+        }
+        if ($favorIds->isNotEmpty()) {
+            foreach (\App\Models\CourierProof::where('job_type', 'favor')->whereIn('job_id', $favorIds)->get() as $proof) {
+                $proofsByTypeAndId->put('favor:' . $proof->job_id, $proof);
+            }
+        }
+
+        $posOrders = $posRows->map(fn($o) => [
             'source' => 'POS', 'id' => $o->id, 'order_no' => $o->order_no, 'customer' => $o->customer_name,
             'type' => $o->order_type, 'table' => $o->table?->name, 'total' => $o->total,
             'status' => $o->status, 'items' => $o->items->count(), 'created_at' => $o->created_at,
             'cancel_reason' => $o->cancel_reason, 'is_pos' => true,
-            'items_list' => $o->items->map(fn($i) => [
-                'name' => $i->product_name ?? ($i->product ? $i->product->name : 'Producto'),
-                'qty' => $i->quantity,
-                'price' => $i->unit_price,
-            ])->toArray(),
+            'items_list' => $o->items->map(fn($i) => ['name' => $i->product_name ?? ($i->product?->name ?? 'Producto'), 'qty' => $i->quantity, 'price' => $i->unit_price])->toArray(),
         ]);
-
-        $delOrders = DeliveryOrder::where('store_id', $storeId)->with('user', 'items', 'driver')->latest()->get()->map(function($o) {
-            $proof = \App\Models\CourierProof::where('job_id', $o->id)->where('job_type', 'delivery')->first();
+        $delOrders = $appRows->map(function ($o) use ($proofsByTypeAndId) {
+            $proof = $proofsByTypeAndId->get('delivery:' . $o->id);
             return [
                 'source' => 'App', 'id' => $o->id, 'order_no' => $o->order_no, 'customer' => $o->user?->fullname,
-                'type' => 'delivery', 'table' => null, 'total' => $o->total,
-                'status' => $o->status, 'items' => $o->items->count(), 'created_at' => $o->created_at,
-                'driver' => $o->driver?->fullname, 'is_pos' => false,
-                'driver_phone' => $o->driver?->mobile,
-                'driver_email' => $o->driver?->email,
-                'delivery_proof' => $proof ? asset($proof->image) : null,
-                'delivery_proof_note' => $proof ? $proof->note : null,
-                'items_list' => $o->items->map(fn($i) => [
-                    'name' => $i->product_name,
-                    'qty' => $i->quantity,
-                    'price' => $i->price,
-                ])->toArray(),
+                'type' => 'delivery', 'table' => null, 'total' => $o->total, 'status' => $o->status,
+                'items' => $o->items->count(), 'created_at' => $o->created_at, 'driver' => $o->driver?->fullname, 'is_pos' => false,
+                'driver_phone' => $o->driver?->mobile, 'driver_email' => $o->driver?->email,
+                'delivery_proof' => $proof ? asset($proof->image) : null, 'delivery_proof_note' => $proof?->note,
+                'items_list' => $o->items->map(function ($i) {
+                    $quantity = max(0, (int) $i->quantity);
+                    $unitPrice = (float) $i->unit_price;
+                    $subtotal = (float) $i->total_price;
+                    if ($unitPrice <= 0 && $subtotal > 0) {
+                        $unitPrice = $subtotal / max(1, $quantity);
+                    }
+                    if ($subtotal <= 0 && $unitPrice > 0) {
+                        $subtotal = $unitPrice * $quantity;
+                    }
+                    return [
+                        'name' => $i->product_name,
+                        'qty' => $quantity,
+                        'price' => $unitPrice,
+                        'subtotal' => $subtotal,
+                    ];
+                })->toArray(),
             ];
         });
+        $favors = $favorRows->map(function ($f) use ($proofsByTypeAndId) {
+            $proof = $proofsByTypeAndId->get('favor:' . $f->id);
+            return [
+                'source' => 'Envío', 'id' => $f->id, 'order_no' => $f->order_no, 'customer' => $f->recipient_name,
+                'type' => 'send', 'table' => null, 'total' => $f->total, 'status' => $f->status,
+                'items' => 1, 'created_at' => $f->created_at, 'driver' => $f->courier?->fullname, 'is_pos' => false, 'is_favor' => true,
+                'driver_phone' => $f->courier?->mobile, 'driver_email' => $f->courier?->email,
+                'delivery_proof' => $proof ? asset($proof->image) : null, 'delivery_proof_note' => $proof?->note,
+                'description' => $f->description, 'pickup_address' => $f->pickup_address, 'delivery_address' => $f->delivery_address,
+            ];
+        });
+        $combinedOrders = $posOrders->concat($delOrders)->concat($favors);
+        $pageItems = $combinedOrders->sort(function ($left, $right) use ($sortBy, $sortDir) {
+            $leftValue = $sortBy === 'created_at' ? ($left[$sortBy]?->getTimestamp() ?? 0) : ($left[$sortBy] ?? '');
+            $rightValue = $sortBy === 'created_at' ? ($right[$sortBy]?->getTimestamp() ?? 0) : ($right[$sortBy] ?? '');
+            $comparison = $sortBy === 'total'
+                ? ((float) $leftValue <=> (float) $rightValue)
+                : (is_numeric($leftValue) && is_numeric($rightValue) ? ((float) $leftValue <=> (float) $rightValue) : strcasecmp((string) $leftValue, (string) $rightValue));
+            if ($comparison === 0) $comparison = ((int) $left['id']) <=> ((int) $right['id']);
+            return $sortDir === 'asc' ? $comparison : -$comparison;
+        })->slice($offset, $perPage)->values();
+        $orders = new LengthAwarePaginator($pageItems, $total, $perPage, $page, [
+            'path' => LengthAwarePaginator::resolveCurrentPath(), 'query' => $request->query(),
+        ]);
 
-        $favors = collect();
-        if ($store && $store->latitude && $store->longitude) {
-            $favors = \App\Models\Favor::where('pickup_lat', $store->latitude)
-                ->where('pickup_lng', $store->longitude)
-                ->with('courier')
-                ->latest()
-                ->get()
-                ->map(function($f) {
-                    $proof = \App\Models\CourierProof::where('job_id', $f->id)->where('job_type', 'favor')->first();
-                    return [
-                        'source' => 'Envío', 'id' => $f->id, 'order_no' => $f->order_no, 'customer' => $f->recipient_name,
-                        'type' => 'send', 'table' => null, 'total' => $f->total,
-                        'status' => $f->status, 'items' => 1, 'created_at' => $f->created_at,
-                        'driver' => $f->courier?->fullname, 'is_pos' => false, 'is_favor' => true,
-                        'driver_phone' => $f->courier?->mobile,
-                        'driver_email' => $f->courier?->email,
-                        'delivery_proof' => $proof ? asset($proof->image) : null,
-                        'delivery_proof_note' => $proof ? $proof->note : null,
-                        'description' => $f->description,
-                        'pickup_address' => $f->pickup_address,
-                        'delivery_address' => $f->delivery_address,
-                    ];
-                });
+        $statusCounts = collect();
+        foreach ([$posBase, $appBase, $favorBase] as $baseQuery) {
+            $sourceCounts = (clone $baseQuery)->selectRaw('status, COUNT(*) as aggregate')->groupBy('status')->pluck('aggregate', 'status');
+            foreach ($sourceCounts as $status => $count) {
+                $statusCounts->put($status, (int) $statusCounts->get($status, 0) + (int) $count);
+            }
         }
-
-        $orders = $posOrders->concat($delOrders)->concat($favors)->sortByDesc('created_at')->values();
+        $orderStats = [
+            'all' => $statusCounts->sum(),
+            'pending' => (int) $statusCounts->only(['pending', 'confirmed'])->sum(),
+            'preparing' => (int) $statusCounts->get('preparing', 0),
+            'way' => (int) $statusCounts->only(['ready', 'on_the_way', 'on_way', 'accepted', 'on_way_to_pickup', 'at_pickup', 'on_way_to_delivery'])->sum(),
+            'delivered' => (int) $statusCounts->get('delivered', 0),
+            'cancelled' => (int) $statusCounts->get('cancelled', 0),
+        ];
 
         $pusherConfig = [
             'key'     => env('PUSHER_APP_KEY', env('REVERB_APP_KEY', '')),
@@ -2243,7 +2499,7 @@ class SellerPosController extends Controller
             'cluster' => env('PUSHER_APP_CLUSTER', ''),
         ];
 
-        return view('seller.orders', compact('pageTitle', 'seller', 'store', 'orders', 'pusherConfig'));
+        return view('seller.orders', compact('pageTitle', 'seller', 'store', 'orders', 'orderStats', 'pusherConfig', 'statusFilter', 'sourceFilter', 'typeFilter', 'search', 'perPage', 'sortBy', 'sortDir'));
     }
 
     public function orderDetail(string $source, int $id)
@@ -2383,13 +2639,8 @@ class SellerPosController extends Controller
 
             event(new DeliveryOrderStatusUpdated($order));
 
-            if (in_array($request->status, ['confirmed', 'ready'])) {
-                broadcast(new NewJobAvailable($order, 'Nuevo pedido para reparto en ' . ($order->store->name ?? 'tienda')))->toOthers();
-                FcmService::sendToAllCouriers(
-                    'Nuevo pedido disponible',
-                    'Hay un pedido listo para reparto en ' . ($order->store->name ?? 'tu zona'),
-                    ['job_id' => (string) $order->id, 'order_no' => $order->order_no, 'job_type' => 'delivery']
-                );
+            if ($request->status === 'ready') {
+                \App\Services\SellerDeliveryOrderDispatchService::start($order);
             }
 
             if ($order->user) {
@@ -2531,6 +2782,78 @@ class SellerPosController extends Controller
         $orders = $posOrders->concat($delOrders)->sortByDesc('raw_date')->values();
 
         return response()->json($orders);
+    }
+
+    public function deleteOrderItem(Request $request, $id, $item)
+    {
+        $seller = $this->seller();
+        $order = PosOrder::where('seller_id', $seller->id)->with('items')->findOrFail($id);
+
+        if (in_array($order->status, ['cancelled', 'rejected'], true)) {
+            return response()->json(['success' => false, 'message' => 'La comanda ya está cerrada.'], 409);
+        }
+
+        $orderItem = $order->items->firstWhere('id', (int) $item);
+        if (!$orderItem) {
+            return response()->json(['success' => false, 'message' => 'El plato no pertenece a esta comanda.'], 404);
+        }
+
+        $removedSubtotal = (float) $orderItem->total_price;
+
+        $result = \Illuminate\Support\Facades\DB::transaction(function () use ($order, $orderItem, $seller, $removedSubtotal) {
+            // 1) Revertir stock del plato eliminado.
+            $this->restoreStockForOrder($seller->id, [$orderItem], $order->id);
+
+            // 2) Revertir caja / transacción si había sesión abierta y el plato no era cortesía (precio > 0).
+            if ($removedSubtotal > 0) {
+                $cashSession = PosCashSession::where('seller_id', $seller->id)->open()->first();
+                if ($cashSession) {
+                    $cashSession->decrement('total_sales', $removedSubtotal);
+                    $transaction = PosTransaction::where('pos_order_id', $order->id)->where('type', 'sale')->first();
+                    if ($transaction) {
+                        $newAmount = max(0, (float) $transaction->amount - $removedSubtotal);
+                        $transaction->update([
+                            'amount' => $newAmount,
+                            'description' => 'Venta #' . $order->order_no . ' - Platos' . ($newAmount > 0 ? '' : ' (sin monto por eliminación de ítems)'),
+                        ]);
+                    }
+                }
+            }
+
+            // 3) Eliminar el ítem.
+            $orderItem->delete();
+
+            // 4) Recalcular totales de la comanda con los ítems restantes.
+            $remainingItems = $order->items()->get();
+            $newSubtotal = $remainingItems->sum('total_price');
+            $order->subtotal = $newSubtotal;
+            $order->total = $newSubtotal - (float) $order->discount + (float) $order->delivery_fee;
+            $order->save();
+
+            return $remainingItems->count();
+        });
+
+        // 5) Si la comanda quedó sin ítems, cerrarla y liberar la mesa.
+        if ($result === 0) {
+            $order->update(['status' => 'cancelled', 'cancelled_at' => now(), 'cancel_reason' => 'Todos los platos fueron eliminados']);
+            if ($order->pos_table_id) {
+                PosTable::where('id', $order->pos_table_id)
+                    ->orWhere('linked_to_table_id', $order->pos_table_id)
+                    ->update(['status' => 'free', 'linked_to_table_id' => null]);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $result === 0 ? 'Último plato eliminado. Comanda cerrada.' : 'Plato eliminado de la comanda.',
+            'order' => [
+                'id' => $order->id,
+                'subtotal' => (float) $order->subtotal,
+                'total' => (float) $order->total,
+                'items_count' => $result,
+                'closed' => $result === 0,
+            ],
+        ]);
     }
 
     public function getActiveTableOrder($tableId)
@@ -3587,6 +3910,12 @@ class SellerPosController extends Controller
         ]);
         $store = $this->store();
         $seller = $this->seller();
+        $request->validate([
+            'discount_price' => 'nullable|numeric|min:0|lt:price',
+            'initial_stock' => 'nullable|numeric|min:0',
+            'cost' => 'nullable|numeric|min:0',
+        ]);
+        abort_unless($store && $store->categories()->whereKey($request->store_category_id)->exists(), 422, 'La categoría no pertenece a esta tienda.');
 
         $data = [
             'store_id' => $store->id, 'store_category_id' => $request->store_category_id,
@@ -3672,6 +4001,15 @@ class SellerPosController extends Controller
         $store = $this->store();
         $seller = $this->seller();
         $product = Product::where('store_id', $store->id)->findOrFail($id);
+        $request->validate([
+            'name' => 'required|string|max:200', 'price' => 'required|numeric|min:0',
+            'discount_price' => 'nullable|numeric|min:0|lt:price',
+            'store_category_id' => 'required|integer',
+            'stock_type' => 'nullable|in:packaged,prepared,none',
+            'tax_type' => 'nullable|in:gravado,exonerado,inafecto',
+            'barcode' => 'nullable|string|max:50', 'sunat_code' => 'nullable|string|max:8',
+        ]);
+        abort_unless($store->categories()->whereKey($request->store_category_id)->exists(), 422, 'La categoría no pertenece a esta tienda.');
         $product->update($request->only(['name', 'price', 'barcode', 'discount_price', 'description', 'store_category_id', 'sort_order', 'stock_type', 'tax_type', 'sunat_code']));
         $product->update(['status' => $request->has('status') ? 1 : 0]);
 
@@ -5008,100 +5346,12 @@ class SellerPosController extends Controller
 
     public function generateInvoice(Request $request, $id)
     {
-        $seller = $this->seller();
-        $store = $this->store();
-        $activeCompany = $this->activeCompany();
-        
-        if (!$activeCompany) {
-            return back()->with('error', 'Debes configurar una empresa antes de facturar.');
+        // Keep the legacy endpoint on the same locked and validated path as
+        // the Cobros screen; invoice generation must never mark an unpaid order paid.
+        if (!$request->filled('customer_name') && $request->filled('nombre')) {
+            $request->merge(['customer_name' => $request->input('nombre')]);
         }
-
-        $request->validate([
-            'series_id' => 'required',
-            'payment_method' => 'nullable|string',
-            'payments' => 'nullable|array',
-        ]);
-
-        $order = PosOrder::where('seller_id', $seller->id)->with('items')->findOrFail($id);
-        $series = PosInvoiceSeries::where('id', $request->series_id)
-            ->where('seller_company_id', $activeCompany->id)
-            ->with('invoiceType')->firstOrFail();
-
-        $tipoDoc = $series->invoiceType->sunat_code ?? $series->invoiceType->code;
-
-        if ($tipoDoc !== 'NV' && $store && $store->hasReachedInvoiceLimit()) {
-            $planName = $store->activePackagesRelation()->first()?->package?->name ?? 'Actual';
-            $limit = $store->getInvoiceLimit() ?? 50;
-            return back()->with('error', "Has alcanzado el límite de {$limit} comprobantes electrónicos de tu plan {$planName}. Actualiza a un plan superior para facturación ilimitada.");
-        }
-
-        $paymentMethod = $request->payment_method ?? 'cash';
-        $paymentDetails = null;
-
-        if ($request->has('payments') && is_array($request->payments)) {
-            $splits = [];
-            foreach ($request->payments as $method => $amount) {
-                if ($amount > 0) {
-                    $splits[$method] = round((float) $amount, 2);
-                }
-            }
-            if (count($splits) > 0) {
-                $splitTotal = round(array_sum($splits), 2);
-                $orderTotal = round((float) $order->total, 2);
-                if (abs($splitTotal - $orderTotal) > 0.01) {
-                    return back()->with('error', 'El monto total ingresado debe coincidir con el total de la cuenta.')->withInput();
-                }
-                $paymentDetails = $splits;
-                if (count($splits) > 1) {
-                    $paymentMethod = 'split';
-                } else {
-                    $paymentMethod = array_key_first($splits);
-                }
-            }
-        }
-
-        try {
-            $sunatService = new \App\Services\SunatService($activeCompany);
-
-            $clientData = [
-                'tipo_doc' => $request->tipo_doc ?? '6',
-                'num_doc'  => $request->num_doc ?? ($order->customer_doc ?? '0'),
-                'nombre'   => $order->customer_name ?? 'CLIENTE VARIOS',
-                'direccion'=> $this->customerAddressByDocument($seller->id, (string) ($request->num_doc ?? $order->customer_doc)),
-            ];
-
-            $sunatInvoice = $sunatService->sendInvoice($order, $series, $clientData);
-
-            if ($sunatInvoice->cdr_status === \App\Models\SunatInvoice::STATUS_ACCEPTED) {
-                $number = str_pad($sunatInvoice->correlativo, 8, '0', STR_PAD_LEFT);
-                $order->update([
-                    'invoice_type_id'   => $series->invoiceType->id,
-                    'invoice_series'    => $sunatInvoice->serie,
-                    'invoice_number'    => $number,
-                    'payment_status'    => 'paid',
-                    'paid_at'           => now(),
-                    'payment_method'    => $paymentMethod,
-                    'payment_details'   => $paymentDetails,
-                ]);
-                return back()->with('success', 'Comprobante ' . $sunatInvoice->serie . '-' . $number . ' emitido y aceptado por SUNAT ✓');
-            } else {
-                return back()->with('error', 'SUNAT rechazó el comprobante: ' . ($sunatInvoice->cdr_response ?? 'Error desconocido'));
-            }
-        } catch (\Exception $e) {
-            // Fallback: emitir sin SUNAT (solo incrementar correlativo)
-            $number = str_pad($series->current_number, 8, '0', STR_PAD_LEFT);
-            $order->update([
-                'invoice_type_id'   => $series->invoiceType->id,
-                'invoice_series'    => $series->series,
-                'invoice_number'    => $number,
-                'payment_status'    => 'paid',
-                'paid_at'           => now(),
-                'payment_method'    => $paymentMethod,
-                'payment_details'   => $paymentDetails,
-            ]);
-            $series->increment('current_number');
-            return back()->with('warning', 'Comprobante ' . $series->series . '-' . $number . ' emitido localmente. SUNAT: ' . $e->getMessage());
-        }
+        return $this->payOrder($request, $id);
     }
 
     public function invoiceSeriesStore(Request $request)
@@ -5687,13 +5937,8 @@ class SellerPosController extends Controller
 
             event(new DeliveryOrderStatusUpdated($order));
 
-            if (in_array($newStatus, ['confirmed', 'ready'])) {
-                broadcast(new NewJobAvailable($order, 'Nuevo pedido para reparto en ' . ($order->store->name ?? 'tienda')))->toOthers();
-                FcmService::sendToAllCouriers(
-                    'Nuevo pedido disponible',
-                    'Hay un pedido listo para reparto en ' . ($order->store->name ?? 'tu zona'),
-                    ['job_id' => (string) $order->id, 'order_no' => $order->order_no, 'job_type' => 'delivery']
-                );
+            if ($newStatus === 'ready') {
+                \App\Services\SellerDeliveryOrderDispatchService::start($order);
             }
 
             if ($order->user) {
@@ -5756,7 +6001,7 @@ class SellerPosController extends Controller
         return view('seller.invoice_detail', compact('pageTitle', 'seller', 'store', 'activeCompany', 'invoice', 'xmlFormatted', 'cdrData', 'sunatResponse', 'errors', 'creditNoteSeries', 'cancellationNotes', 'raEligibilityError'));
     }
 
-    public function invoicePdf($id, $format = 'a4')
+    public function invoicePdf(Request $request, $id, $format = 'a4')
     {
         $seller = $this->seller();
         $invoice = SunatInvoice::where('seller_id', $seller->id)->findOrFail($id);
@@ -5931,7 +6176,9 @@ class SellerPosController extends Controller
         $ruc = $docNumber ?: '00000000000';
         $tipoDoc = $invoice->tipo_doc ?: '03'; // Default to boleta '03'
         $filename = $ruc . '-' . $tipoDoc . '-' . $invoice->serie . '-' . str_pad($invoice->correlativo, 8, '0', STR_PAD_LEFT) . '.pdf';
-        return $pdf->stream($filename);
+        return $request->boolean('download')
+            ? $pdf->download($filename)
+            : $pdf->stream($filename);
     }
 
     public function invoiceCdr($id)
@@ -6037,13 +6284,19 @@ class SellerPosController extends Controller
 
         $store = $this->store();
         if ($store && $store->hasReachedInvoiceLimit()) {
-            $planName = $store->activePackagesRelation()->first()?->package?->name ?? 'Actual';
-            $limit = $store->getInvoiceLimit() ?? 50;
-            return back()->with('error', "Has alcanzado el límite de {$limit} comprobantes electrónicos de tu plan {$planName}. Actualiza a un plan superior para facturación ilimitada.");
+            $usage = $store->getInvoiceLimitStatus();
+            $planName = $usage['package']?->name ?? 'Actual';
+            $limit = $usage['limit'] ?? 50;
+            return back()->with('error', "Has alcanzado el límite de {$limit} comprobantes electrónicos de tu plan {$planName}. Cambia o renueva tu plan para continuar.")->with('upgrade_url', route('seller.pricing'));
         }
 
         $invoice = SunatInvoice::where('seller_id', $seller->id)
-            ->whereIn('cdr_status', [SunatInvoice::STATUS_ACCEPTED, SunatInvoice::STATUS_PENDING])
+            ->where(function ($q) {
+                $q->whereIn('cdr_status', [SunatInvoice::STATUS_ACCEPTED, SunatInvoice::STATUS_PENDING])
+                  ->orWhere(function ($qq) {
+                      $qq->where('tipo_doc', 'NV')->where('cdr_status', SunatInvoice::STATUS_GENERATED);
+                  });
+            })
             ->findOrFail($id);
 
         if ($invoice->tipo_doc === 'NV') {
@@ -7836,6 +8089,8 @@ class SellerPosController extends Controller
                 })->orWhere(function($phoneQuery) {
                     $phoneQuery->whereNotNull('customer_phone')
                         ->where('customer_phone', '!=', '');
+                })->orWhere(function($nameQuery) {
+                    $nameQuery->whereNotNull('customer_name')->where('customer_name', '!=', '');
                 });
             });
 
@@ -7858,7 +8113,7 @@ class SellerPosController extends Controller
             customer_doc_type,
             customer_phone,
             customer_name,
-            COALESCE(NULLIF(customer_doc, ''), NULLIF(customer_phone, '')) as customer_key"
+            COALESCE(NULLIF(customer_doc, ''), NULLIF(customer_phone, ''), CONCAT('name:', SHA1(LOWER(TRIM(COALESCE(customer_name, '')))))) as customer_key"
         );
 
         // We group by the best available customer identifier and calculate stats.
@@ -7889,11 +8144,19 @@ class SellerPosController extends Controller
         $pageTitle = 'Perfil del Cliente';
 
         $customerFilter = function($query) use ($doc) {
+            if (str_starts_with($doc, 'name:')) {
+                $nameHash = substr($doc, 5);
+                $query->where(function ($identity) {
+                    $identity->whereNull('customer_doc')->orWhere('customer_doc', '');
+                })->where(function ($identity) {
+                    $identity->whereNull('customer_phone')->orWhere('customer_phone', '');
+                })->whereRaw('SHA1(LOWER(TRIM(COALESCE(customer_name, ?)))) = ?', ['', $nameHash]);
+                return;
+            }
             $query->where('customer_doc', $doc)
                 ->orWhere(function($q) use ($doc) {
                     $q->where(function($docQuery) {
-                        $docQuery->whereNull('customer_doc')
-                            ->orWhere('customer_doc', '');
+                        $docQuery->whereNull('customer_doc')->orWhere('customer_doc', '');
                     })->where('customer_phone', $doc);
                 });
         };

@@ -505,6 +505,7 @@ Route::namespace('Api\Seller')->prefix('seller')->name('seller.')->group(functio
                 Route::post('areas/{id}/delete', 'areaDelete');
                 Route::get('kitchen', 'kitchen');
                 Route::post('kitchen/{id}/status', 'kitchenStatus');
+                Route::post('kitchen/{id}/item/{item}/delete', 'kitchenDeleteItem');
                 Route::get('orders', 'orders');
                 Route::get('customers', 'customers');
                 Route::get('cash', 'cash');

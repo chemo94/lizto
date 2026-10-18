@@ -364,9 +364,12 @@ class _SellerProductAddEditScreenState extends State<SellerProductAddEditScreen>
   }
 
   void _addVariation() {
-    setState(() {
-      _variations.add({'name': '', 'price': '0'});
-    });
+    if (!mounted) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _variations = [
+          ..._variations,
+          {'name': '', 'price': '0'}
+        ]);
   }
 
   void _removeVariation(int index) {
@@ -376,9 +379,12 @@ class _SellerProductAddEditScreenState extends State<SellerProductAddEditScreen>
   }
 
   void _addAddon() {
-    setState(() {
-      _addons.add({'name': '', 'price': '0'});
-    });
+    if (!mounted) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _addons = [
+          ..._addons,
+          {'name': '', 'price': '0'}
+        ]);
   }
 
   void _removeAddon(int index) {
@@ -390,8 +396,7 @@ class _SellerProductAddEditScreenState extends State<SellerProductAddEditScreen>
   Future<void> _submit(SellerController c) async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCategoryId == null) {
-      Get.snackbar('Error', 'Debe seleccionar una categoría de menú.',
-          backgroundColor: MyColor.redCancelTextColor, colorText: MyColor.colorWhite);
+      Get.snackbar('Error', 'Debe seleccionar una categoría de menú.', backgroundColor: MyColor.redCancelTextColor, colorText: MyColor.colorWhite);
       return;
     }
 
@@ -414,17 +419,21 @@ class _SellerProductAddEditScreenState extends State<SellerProductAddEditScreen>
       data['discount_price'] = double.parse(_discountPriceCtrl.text.trim());
     }
 
-    // Prepare variations
-    for (int i = 0; i < _variations.length; i++) {
-      data['variations[$i][name]'] = _variations[i]['name'];
-      data['variations[$i][price]'] = double.tryParse(_variations[i]['price']?.toString() ?? '0') ?? 0.0;
-    }
-
-    // Prepare addons
-    for (int i = 0; i < _addons.length; i++) {
-      data['addons[$i][name]'] = _addons[i]['name'];
-      data['addons[$i][price]'] = double.tryParse(_addons[i]['price']?.toString() ?? '0') ?? 0.0;
-    }
+    // Send nested arrays so the API receives the same shape as the web form.
+    data['variations'] = _variations
+        .where((entry) => (entry['name']?.toString().trim() ?? '').isNotEmpty)
+        .map((entry) => {
+              'name': entry['name'].toString().trim(),
+              'price': double.tryParse(entry['price']?.toString() ?? '0') ?? 0.0,
+            })
+        .toList();
+    data['addons'] = _addons
+        .where((entry) => (entry['name']?.toString().trim() ?? '').isNotEmpty)
+        .map((entry) => {
+              'name': entry['name'].toString().trim(),
+              'price': double.tryParse(entry['price']?.toString() ?? '0') ?? 0.0,
+            })
+        .toList();
 
     bool success;
     if (widget.product == null) {
@@ -435,11 +444,9 @@ class _SellerProductAddEditScreenState extends State<SellerProductAddEditScreen>
 
     if (success) {
       Get.back();
-      Get.snackbar('Éxito', widget.product == null ? 'Producto creado con éxito' : 'Producto actualizado con éxito',
-          backgroundColor: const Color(0xFF10B981), colorText: MyColor.colorWhite);
+      Get.snackbar('Éxito', widget.product == null ? 'Producto creado con éxito' : 'Producto actualizado con éxito', backgroundColor: const Color(0xFF10B981), colorText: MyColor.colorWhite);
     } else {
-      Get.snackbar('Error', c.errorMessage ?? 'Ocurrió un error al guardar',
-          backgroundColor: MyColor.redCancelTextColor, colorText: MyColor.colorWhite);
+      Get.snackbar('Error', c.errorMessage ?? 'Ocurrió un error al guardar', backgroundColor: MyColor.redCancelTextColor, colorText: MyColor.colorWhite);
     }
   }
 
@@ -499,9 +506,7 @@ class _SellerProductAddEditScreenState extends State<SellerProductAddEditScreen>
                                     width: 2,
                                   ),
                                 ),
-                                child: _isActive
-                                    ? const Icon(Icons.check, size: 16, color: Colors.white)
-                                    : null,
+                                child: _isActive ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
                               ),
                               const SizedBox(width: 12),
                               Text(
@@ -1011,7 +1016,7 @@ class _SellerProductAddEditScreenState extends State<SellerProductAddEditScreen>
                             ],
                           ),
                           OutlinedButton.icon(
-                            onPressed: _addVariation,
+                            onPressed: () => _addVariation(),
                             icon: const Icon(Icons.add, size: 16),
                             label: const Text('Agregar', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                             style: OutlinedButton.styleFrom(
@@ -1039,6 +1044,7 @@ class _SellerProductAddEditScreenState extends State<SellerProductAddEditScreen>
                                   Expanded(
                                     flex: 3,
                                     child: TextFormField(
+                                      key: ValueKey('variation-name-$index'),
                                       initialValue: _variations[index]['name']?.toString(),
                                       decoration: InputDecoration(
                                         labelText: 'Nombre',
@@ -1053,6 +1059,7 @@ class _SellerProductAddEditScreenState extends State<SellerProductAddEditScreen>
                                   Expanded(
                                     flex: 2,
                                     child: TextFormField(
+                                      key: ValueKey('variation-price-$index'),
                                       initialValue: _variations[index]['price']?.toString(),
                                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                       decoration: InputDecoration(
@@ -1084,7 +1091,7 @@ class _SellerProductAddEditScreenState extends State<SellerProductAddEditScreen>
                             style: boldDefault.copyWith(color: const Color(0xFF1E293B), fontSize: 13),
                           ),
                           OutlinedButton.icon(
-                            onPressed: _addAddon,
+                            onPressed: () => _addAddon(),
                             icon: const Icon(Icons.add, size: 16),
                             label: const Text('Agregar', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                             style: OutlinedButton.styleFrom(
@@ -1112,6 +1119,7 @@ class _SellerProductAddEditScreenState extends State<SellerProductAddEditScreen>
                                   Expanded(
                                     flex: 3,
                                     child: TextFormField(
+                                      key: ValueKey('addon-name-$index'),
                                       initialValue: _addons[index]['name']?.toString(),
                                       decoration: InputDecoration(
                                         labelText: 'Nombre',
@@ -1126,6 +1134,7 @@ class _SellerProductAddEditScreenState extends State<SellerProductAddEditScreen>
                                   Expanded(
                                     flex: 2,
                                     child: TextFormField(
+                                      key: ValueKey('addon-price-$index'),
                                       initialValue: _addons[index]['price']?.toString(),
                                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                       decoration: InputDecoration(

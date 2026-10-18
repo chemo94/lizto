@@ -6,6 +6,7 @@ import 'package:lizto_store/core/utils/style.dart';
 import 'package:lizto_store/data/controller/seller/seller_controller.dart';
 import 'package:lizto_store/data/model/delivery/delivery_models.dart';
 import 'package:lizto_store/presentation/screens/seller/seller_order_detail_screen.dart';
+import 'package:lizto_store/presentation/screens/seller/subscription_guard.dart';
 
 class SellerOrdersScreen extends StatefulWidget {
   const SellerOrdersScreen({super.key});
@@ -16,6 +17,7 @@ class SellerOrdersScreen extends StatefulWidget {
 
 class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
   String _statusFilter = '';
+  bool _entryChecked = false;
 
   @override
   void initState() {
@@ -24,6 +26,11 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
   }
 
   Future<void> _load() async {
+    if (!_entryChecked) {
+      final allowed = await SubscriptionGuard.guardModuleEntry(context);
+      if (!allowed || !mounted) return;
+      _entryChecked = true;
+    }
     await Get.find<SellerController>().loadOrders(_statusFilter);
   }
 

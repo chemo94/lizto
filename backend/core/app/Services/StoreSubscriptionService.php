@@ -43,6 +43,9 @@ class StoreSubscriptionService
                     'seller_id' => $store->seller_id,
                     'status' => 'active',
                     'starts_at' => $current->starts_at ?: $now,
+                    // Invoice allowances renew with each paid plan period. If
+                    // renewed early, the new allowance starts after the current term.
+                    'invoice_quota_starts_at' => $baseDate,
                     'expires_at' => $package->duration_days > 0
                         ? $baseDate->addDays($package->duration_days)
                         : null,
@@ -71,6 +74,7 @@ class StoreSubscriptionService
                 'package_id' => $package->id,
                 'status' => 'active',
                 'starts_at' => $now,
+                'invoice_quota_starts_at' => $now,
                 'expires_at' => $package->duration_days > 0
                     ? $now->copy()->addDays($package->duration_days)
                     : null,

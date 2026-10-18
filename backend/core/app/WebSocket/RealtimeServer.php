@@ -331,6 +331,18 @@ class RealtimeServer
         $type = $auth['type'];
         $id   = $auth['id'];
 
+        // user.{id}: canal propio del pasajero/cliente para recibir eventos de negocio
+        // (BID_ACCEPT, NEW_BID, actualizaciones de pantalla, etc.).
+        if (preg_match('/^user\.(\d+)$/', $topic, $m)) {
+            return $type === 'user' && $id === (int) $m[1];
+        }
+
+        // nearby.{serviceType}: cualquier usuario autenticado puede ver en vivo
+        // la posición de taxis/repartidores cercanos antes de pedir.
+        if (preg_match('/^nearby\.([a-z_]+)$/', $topic, $m)) {
+            return $type === 'user';
+        }
+
         // driver.{id}: solo el propio driver o un user autorizado (ride/order activo).
         if (preg_match('/^driver\.(\d+)$/', $topic, $m)) {
             $driverId = (int) $m[1];

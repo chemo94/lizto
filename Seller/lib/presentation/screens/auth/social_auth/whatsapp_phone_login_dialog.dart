@@ -11,6 +11,7 @@ import 'package:lizto_store/data/controller/auth/social_auth_controller.dart';
 import 'package:lizto_store/data/repo/auth/social_auth_repo.dart';
 import 'package:lizto_store/data/model/global/response_model/response_model.dart';
 import 'package:lizto_store/data/model/global/user/global_user_model.dart';
+import 'package:lizto_store/data/repo/auth/social_auth_repo.dart';
 import 'package:lizto_store/presentation/components/buttons/rounded_button.dart';
 import 'package:lizto_store/presentation/components/otp_field_widget/otp_field_widget.dart';
 import 'package:lizto_store/presentation/components/snack_bar/show_custom_snackbar.dart';
@@ -455,8 +456,8 @@ Future<void> showWhatsAppPhoneLoginDialog(
           ),
         ),
       );
-    },
-  ),
-);
-timer?.cancel();
+      },
+    ),
+  );
+  timer?.cancel();
 }

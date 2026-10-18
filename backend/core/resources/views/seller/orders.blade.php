@@ -18,19 +18,11 @@
     #detail-modal .s-modal-box { max-width:800px; }
     .orders-hero{min-height:138px;border-radius:14px;padding:24px;margin-bottom:18px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:20px;position:relative;overflow:hidden;background:linear-gradient(90deg,rgba(24,61,145,.95),rgba(62,62,168,.78),rgba(78,50,155,.58)),url('{{ asset('assets/images/banner-cover.png') }}') center/cover no-repeat}.orders-hero:after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 65% 20%,rgba(255,255,255,.12),transparent 35%);pointer-events:none}.orders-hero>div{position:relative;z-index:1}.orders-hero .crumb{font-size:10px;color:rgba(255,255,255,.72);margin-bottom:9px}.orders-hero h2{font:800 24px 'Plus Jakarta Sans','Inter',sans-serif;letter-spacing:-.6px;margin:0 0 4px}.orders-hero p{font-size:11px;color:rgba(255,255,255,.72);margin:0}.orders-hero-actions{display:flex;gap:8px}.orders-hero-actions a,.orders-hero-actions button{height:35px;border:1px solid rgba(255,255,255,.28);border-radius:9px;padding:0 13px;color:#fff;background:rgba(255,255,255,.12);backdrop-filter:blur(8px);font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:6px;text-decoration:none}.orders-hero-actions .primary{background:#fff;color:#3253a8;border-color:#fff}
     .orders-kpis{display:grid;grid-template-columns:repeat(6,minmax(130px,1fr));gap:12px;margin-bottom:18px}.orders-kpi{background:#fff;border:1px solid var(--s-border);border-radius:14px;min-height:104px;padding:15px;box-shadow:var(--s-shadow-sm)}.orders-kpi-icon{width:37px;height:37px;border-radius:10px;display:grid;place-items:center;color:#fff;font-size:18px;margin-bottom:10px;box-shadow:0 7px 15px rgba(15,23,42,.11)}.orders-kpi b{display:block;font-size:19px;line-height:1;color:#172033;margin-bottom:5px}.orders-kpi small{color:#94a3b8;font-size:9px}.orders-tools{padding:0 20px;border-bottom:1px solid var(--s-border);min-width:0}.orders-tabs{display:flex;gap:4px;max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;overscroll-behavior-x:contain}.orders-tab{flex:0 0 auto;border:0;background:transparent;padding:14px 12px 12px;color:#8b98aa;font-size:10px;font-weight:700;white-space:nowrap;border-bottom:2px solid transparent}.orders-tab.active{color:#f97316;border-bottom-color:#f97316}.orders-tabs::-webkit-scrollbar{height:4px}.orders-tabs::-webkit-scrollbar-thumb{background:var(--s-border);border-radius:4px}.orders-filterbar{padding:14px 20px;display:flex;gap:9px;align-items:center}.orders-search{height:38px;flex:1;min-width:220px;border:1px solid var(--s-border);border-radius:9px;padding:0 12px 0 36px;background:#fff;outline:none;font-size:11px}.orders-search-wrap{position:relative;flex:1}.orders-search-wrap i{position:absolute;left:12px;top:11px;color:#94a3b8}.orders-filterbar select{height:38px;border:1px solid var(--s-border);border-radius:9px;background:#fff;padding:0 10px;color:#64748b;font-size:10px}.s-table tbody tr{transition:background .15s}.s-table tbody tr:hover{background:#fffaf6}.s-table th{font-size:9px!important;text-transform:uppercase;letter-spacing:.35px;color:#9aa6b6!important}.s-table td{padding-top:13px!important;padding-bottom:13px!important}
+    .orders-page-size{display:flex;align-items:center;gap:7px;color:#64748b;font-size:11px;white-space:nowrap}.orders-page-size select{min-width:68px}.s-table thead th[data-order-sort]{cursor:pointer;user-select:none}.s-table thead th[data-order-sort] i{margin-left:4px;color:#f97316;font-size:12px}.s-table thead th[data-order-sort]:hover{color:#334155!important}#orders-table-panel[aria-busy="true"]{transition:opacity .15s}
     @media(max-width:1100px){.orders-kpis{grid-template-columns:repeat(3,1fr)}}@media(max-width:767px){.orders-hero{align-items:flex-start;flex-direction:column;min-height:190px;padding:18px}.orders-kpis{grid-template-columns:repeat(2,1fr)}.orders-tools{padding:0 12px}.orders-tab{padding:14px 14px 12px;font-size:11px}.orders-filterbar{align-items:stretch;flex-direction:column}.orders-search-wrap{width:100%}.orders-filterbar select{width:100%}.orders-hero h2{font-size:21px}}
 </style>
 <div class="s-content">
     @php
-        $orderCollection = collect($orders);
-        $orderStats = [
-            'all' => $orderCollection->count(),
-            'pending' => $orderCollection->whereIn('status', ['pending','confirmed'])->count(),
-            'preparing' => $orderCollection->where('status', 'preparing')->count(),
-            'way' => $orderCollection->whereIn('status', ['ready','on_the_way','on_way','accepted','on_way_to_pickup','at_pickup','on_way_to_delivery'])->count(),
-            'delivered' => $orderCollection->where('status', 'delivered')->count(),
-            'cancelled' => $orderCollection->where('status', 'cancelled')->count(),
-        ];
     @endphp
     <section class="orders-hero">
         <div>
@@ -63,36 +55,37 @@
         </div>
         <div class="orders-tools">
             <div class="orders-tabs">
-                <button class="orders-tab active" data-filter="all">Todos <span class="s-badge s-badge-amber">{{ $orderStats['all'] }}</span></button>
-                <button class="orders-tab" data-filter="pending">Pendientes <span class="s-badge s-badge-amber">{{ $orderStats['pending'] }}</span></button>
-                <button class="orders-tab" data-filter="preparing">Preparando <span class="s-badge s-badge-purple">{{ $orderStats['preparing'] }}</span></button>
-                <button class="orders-tab" data-filter="way">Listos / en camino <span class="s-badge s-badge-blue">{{ $orderStats['way'] }}</span></button>
-                <button class="orders-tab" data-filter="delivered">Entregados <span class="s-badge s-badge-green">{{ $orderStats['delivered'] }}</span></button>
-                <button class="orders-tab" data-filter="cancelled">Cancelados <span class="s-badge s-badge-red">{{ $orderStats['cancelled'] }}</span></button>
+                <button class="orders-tab {{ $statusFilter === 'all' ? 'active' : '' }}" data-filter="all">Todos <span class="s-badge s-badge-amber">{{ $orderStats['all'] }}</span></button>
+                <button class="orders-tab {{ $statusFilter === 'pending' ? 'active' : '' }}" data-filter="pending">Pendientes <span class="s-badge s-badge-amber">{{ $orderStats['pending'] }}</span></button>
+                <button class="orders-tab {{ $statusFilter === 'preparing' ? 'active' : '' }}" data-filter="preparing">Preparando <span class="s-badge s-badge-purple">{{ $orderStats['preparing'] }}</span></button>
+                <button class="orders-tab {{ $statusFilter === 'way' ? 'active' : '' }}" data-filter="way">Listos / en camino <span class="s-badge s-badge-blue">{{ $orderStats['way'] }}</span></button>
+                <button class="orders-tab {{ $statusFilter === 'delivered' ? 'active' : '' }}" data-filter="delivered">Entregados <span class="s-badge s-badge-green">{{ $orderStats['delivered'] }}</span></button>
+                <button class="orders-tab {{ $statusFilter === 'cancelled' ? 'active' : '' }}" data-filter="cancelled">Cancelados <span class="s-badge s-badge-red">{{ $orderStats['cancelled'] }}</span></button>
             </div>
         </div>
         <div class="orders-filterbar">
-            <label class="orders-search-wrap"><i class="las la-search"></i><input class="orders-search" id="ordersSearch" type="search" placeholder="Buscar por pedido, cliente, repartidor..."></label>
-            <select id="ordersSource"><option value="all">Todos los orígenes</option><option value="POS">POS</option><option value="App">App</option><option value="Envío">Envío</option></select>
-            <select id="ordersType"><option value="all">Todos los tipos</option><option value="delivery">Delivery</option><option value="takeaway">Para llevar</option><option value="dine_in">Mesa</option></select>
+            <label class="orders-search-wrap"><i class="las la-search"></i><input class="orders-search" id="ordersSearch" type="search" value="{{ $search }}" placeholder="Buscar por pedido, cliente, repartidor..."></label>
+            <select id="ordersSource"><option value="all">Todos los orígenes</option><option value="POS" @selected($sourceFilter === 'POS')>POS</option><option value="App" @selected($sourceFilter === 'App')>App</option><option value="Envío" @selected($sourceFilter === 'Envío')>Envío</option></select>
+            <select id="ordersType"><option value="all">Todos los tipos</option><option value="delivery" @selected($typeFilter === 'delivery')>Delivery</option><option value="takeaway" @selected($typeFilter === 'takeaway')>Para llevar</option><option value="dine_in" @selected($typeFilter === 'dine_in')>Mesa</option><option value="send" @selected($typeFilter === 'send')>Envío</option></select>
+            <label class="orders-page-size"><span>Mostrar</span><select id="ordersPerPage"><option value="10" @selected($perPage === 10)>10</option><option value="20" @selected($perPage === 20)>20</option><option value="50" @selected($perPage === 50)>50</option></select></label>
         </div>
-        <div style="padding:0 20px 20px;overflow-x:auto">
-        <table class="s-table">
+        <div id="orders-table-panel" style="padding:0 20px 20px;overflow-x:auto">
+        <table class="s-table" id="orders-table">
             <thead>
                 <tr>
-                    <th>#</th>
+                    <th data-order-sort="order_no"># <i class="las {{ $sortBy === 'order_no' ? ($sortDir === 'asc' ? 'la-sort-up' : 'la-sort-down') : 'la-sort' }}"></i></th>
                     <th>Origen</th>
                     <th>Cliente</th>
                     <th>Tipo</th>
                     <th>Items</th>
-                    <th>Total</th>
+                    <th data-order-sort="total">Total <i class="las {{ $sortBy === 'total' ? ($sortDir === 'asc' ? 'la-sort-up' : 'la-sort-down') : 'la-sort' }}"></i></th>
                     <th>Repartidor</th>
                     <th>Estado</th>
-                    <th>Fecha</th>
+                    <th data-order-sort="created_at">Fecha <i class="las {{ $sortBy === 'created_at' ? ($sortDir === 'asc' ? 'la-sort-up' : 'la-sort-down') : 'la-sort' }}"></i></th>
                     <th>Acción</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="orders-table-body">
                 @forelse($orders as $o)
                 <tr class="order-data-row" data-status="{{ $o['status'] }}" data-source="{{ $o['source'] }}" data-type="{{ $o['type'] }}" style="{{ $o['status'] === 'cancelled' ? 'opacity:.45' : '' }}">
                     <td>
@@ -253,6 +246,10 @@
                 @endforelse
             </tbody>
         </table>
+        <div id="orders-pagination" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 2px 0">
+            <small id="orders-page-label" style="color:#94a3b8">{{ $orders->total() ? 'Mostrando ' . $orders->firstItem() . '–' . $orders->lastItem() . ' de ' . $orders->total() . ' pedidos' : 'Sin pedidos para mostrar' }}</small>
+            {{ $orders->links('pagination::bootstrap-5') }}
+        </div>
         </div>
     </div>
 </div>
@@ -457,40 +454,117 @@
 @endif
 <script>
 var currentDetailOrder = null;
-var activeOrderFilter = 'all';
+var activeOrderFilter = @json($statusFilter);
+var activeOrderSort = { by: @json($sortBy), dir: @json($sortDir) };
 
-function orderMatchesGroup(status, group) {
-    if (group === 'all') return true;
-    if (group === 'pending') return ['pending', 'confirmed'].includes(status);
-    if (group === 'way') return ['ready', 'on_the_way', 'on_way', 'accepted', 'on_way_to_pickup', 'at_pickup', 'on_way_to_delivery'].includes(status);
-    return status === group;
-}
+var ordersSearchTimer = null;
+var ordersRequestController = null;
 
-function filterSellerOrders() {
-    var query = (document.getElementById('ordersSearch')?.value || '').trim().toLowerCase();
-    var source = document.getElementById('ordersSource')?.value || 'all';
-    var type = document.getElementById('ordersType')?.value || 'all';
-    document.querySelectorAll('.order-data-row').forEach(function(row) {
-        var matches = orderMatchesGroup(row.dataset.status, activeOrderFilter)
-            && (source === 'all' || row.dataset.source === source)
-            && (type === 'all' || row.dataset.type === type)
-            && (!query || row.textContent.toLowerCase().includes(query));
-        row.style.display = matches ? '' : 'none';
-    });
-}
+function loadOrdersPage(url, updateHistory) {
+    var panel = document.getElementById('orders-table-panel');
+    if (ordersRequestController) ordersRequestController.abort();
+    var requestController = new AbortController();
+    ordersRequestController = requestController;
+    panel.setAttribute('aria-busy', 'true');
+    panel.style.opacity = '.55';
+    panel.style.pointerEvents = 'none';
 
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.orders-tab').forEach(function(tab) {
-        tab.addEventListener('click', function() {
-            document.querySelectorAll('.orders-tab').forEach(function(item) { item.classList.remove('active'); });
-            tab.classList.add('active');
-            activeOrderFilter = tab.dataset.filter || 'all';
-            filterSellerOrders();
+    fetch(url, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' },
+        signal: requestController.signal
+    }).then(function(response) {
+        if (!response.ok) throw new Error('No se pudieron cargar los pedidos.');
+        return response.text();
+    }).then(function(html) {
+        var parsed = new DOMParser().parseFromString(html, 'text/html');
+        var nextBody = parsed.querySelector('#orders-table-body');
+        var nextPagination = parsed.querySelector('#orders-pagination');
+        if (!nextBody || !nextPagination) throw new Error('La respuesta del listado no tiene el formato esperado.');
+
+        document.getElementById('orders-table-body').innerHTML = nextBody.innerHTML;
+        document.getElementById('orders-pagination').innerHTML = nextPagination.innerHTML;
+        var nextLabel = nextPagination.querySelector('#orders-page-label');
+        var currentLabel = document.getElementById('orders-page-label');
+        if (nextLabel && currentLabel) currentLabel.textContent = nextLabel.textContent;
+        var nextHeaders = parsed.querySelectorAll('#orders-table thead [data-order-sort]');
+        nextHeaders.forEach(function(nextHeader) {
+            var currentHeader = document.querySelector('#orders-table thead [data-order-sort="' + nextHeader.dataset.orderSort + '"]');
+            var nextIcon = nextHeader.querySelector('i');
+            var currentIcon = currentHeader?.querySelector('i');
+            if (nextIcon && currentIcon) currentIcon.className = nextIcon.className;
         });
+        if (updateHistory) window.history.pushState({}, '', url);
+    }).catch(function(error) {
+        if (error.name !== 'AbortError') window.alert(error.message || 'Ocurrió un error al cargar los pedidos.');
+    }).finally(function() {
+        if (ordersRequestController !== requestController) return;
+        panel.removeAttribute('aria-busy');
+        panel.style.opacity = '';
+        panel.style.pointerEvents = '';
     });
-    document.getElementById('ordersSearch')?.addEventListener('input', filterSellerOrders);
-    document.getElementById('ordersSource')?.addEventListener('change', filterSellerOrders);
-    document.getElementById('ordersType')?.addEventListener('change', filterSellerOrders);
+}
+
+function updateOrdersFromFilters() {
+    var params = new URLSearchParams(window.location.search);
+    var values = {
+        status_filter: activeOrderFilter,
+        search: document.getElementById('ordersSearch')?.value.trim() || '',
+        source: document.getElementById('ordersSource')?.value || 'all',
+        type: document.getElementById('ordersType')?.value || 'all',
+        per_page: document.getElementById('ordersPerPage')?.value || '20'
+    };
+    Object.keys(values).forEach(function(key) {
+        if (!values[key] || values[key] === 'all') params.delete(key);
+        else params.set(key, values[key]);
+    });
+    params.delete('page');
+    loadOrdersPage('{{ route("seller.orders") }}' + (params.toString() ? '?' + params.toString() : ''), true);
+}
+
+document.addEventListener('click', function(event) {
+    var sortHeader = event.target.closest('#orders-table thead [data-order-sort]');
+    if (sortHeader) {
+        var nextSort = sortHeader.dataset.orderSort;
+        activeOrderSort.dir = activeOrderSort.by === nextSort && activeOrderSort.dir === 'desc' ? 'asc' : 'desc';
+        activeOrderSort.by = nextSort;
+        var params = new URLSearchParams(window.location.search);
+        params.set('sort_by', activeOrderSort.by);
+        params.set('sort_dir', activeOrderSort.dir);
+        params.delete('page');
+        loadOrdersPage('{{ route("seller.orders") }}?' + params.toString(), true);
+        return;
+    }
+    var tab = event.target.closest('.orders-tab');
+    if (tab) {
+        document.querySelectorAll('.orders-tab').forEach(function(item) { item.classList.toggle('active', item === tab); });
+        activeOrderFilter = tab.dataset.filter || 'all';
+        updateOrdersFromFilters();
+        return;
+    }
+    var pageLink = event.target.closest('#orders-pagination a');
+    if (pageLink && pageLink.origin === window.location.origin) {
+        event.preventDefault();
+        loadOrdersPage(pageLink.href, true);
+    }
+});
+
+document.getElementById('ordersSearch')?.addEventListener('input', function() {
+    clearTimeout(ordersSearchTimer);
+    ordersSearchTimer = setTimeout(updateOrdersFromFilters, 300);
+});
+document.getElementById('ordersSource')?.addEventListener('change', updateOrdersFromFilters);
+document.getElementById('ordersType')?.addEventListener('change', updateOrdersFromFilters);
+document.getElementById('ordersPerPage')?.addEventListener('change', updateOrdersFromFilters);
+window.addEventListener('popstate', function() {
+    var params = new URLSearchParams(window.location.search);
+    activeOrderFilter = params.get('status_filter') || 'all';
+    document.querySelectorAll('.orders-tab').forEach(function(tab) { tab.classList.toggle('active', tab.dataset.filter === activeOrderFilter); });
+    document.getElementById('ordersSearch').value = params.get('search') || '';
+    document.getElementById('ordersSource').value = params.get('source') || 'all';
+    document.getElementById('ordersType').value = params.get('type') || 'all';
+    document.getElementById('ordersPerPage').value = params.get('per_page') || '20';
+    activeOrderSort = { by: params.get('sort_by') || 'created_at', dir: params.get('sort_dir') || 'desc' };
+    loadOrdersPage(window.location.href, false);
 });
 var orderMap = null;
 var orderCourierMarker = null;
@@ -811,13 +885,21 @@ function viewDetails(btn) {
         if (order.items_list && order.items_list.length) {
             order.items_list.forEach(function(item) {
                 var row = document.createElement('tr');
-                var priceVal = parseFloat(item.price) || 0;
-                var qtyVal = parseInt(item.qty) || 0;
-                var subtotalVal = qtyVal * priceVal;
-                row.innerHTML = '<td>' + item.name + '</td>' +
-                                '<td style="text-align:center">' + qtyVal + '</td>' +
-                                '<td style="text-align:right">S/ ' + priceVal.toFixed(2) + '</td>' +
-                                '<td style="text-align:right">S/ ' + subtotalVal.toFixed(2) + '</td>';
+                var priceVal = Number(item.price ?? item.unit_price) || 0;
+                var qtyVal = Number.parseInt(item.qty ?? item.quantity, 10) || 0;
+                var subtotalVal = Number(item.subtotal ?? item.total_price);
+                if (!Number.isFinite(subtotalVal)) subtotalVal = qtyVal * priceVal;
+                [
+                    { text: item.name || 'Producto', align: 'left' },
+                    { text: String(qtyVal), align: 'center' },
+                    { text: 'S/ ' + priceVal.toFixed(2), align: 'right' },
+                    { text: 'S/ ' + subtotalVal.toFixed(2), align: 'right' }
+                ].forEach(function(cellData) {
+                    var cell = document.createElement('td');
+                    cell.textContent = cellData.text;
+                    cell.style.textAlign = cellData.align;
+                    row.appendChild(cell);
+                });
                 itemsTbody.appendChild(row);
             });
         } else {

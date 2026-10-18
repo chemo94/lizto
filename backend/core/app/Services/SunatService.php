@@ -209,6 +209,10 @@ class SunatService
         
         if (!$isElectronic || $this->getTipoDoc($series) === 'NV') {
             // Nota de Venta / Comprobante Interno: emitir localmente sin enviar a SUNAT
+            $localTaxLines = $detailMode === 'consumption'
+                ? [['tax_type' => $this->companyModel?->default_tax_type ?: 'gravado', 'total' => (float) $order->total]]
+                : \App\Support\TaxCalculator::orderLines($order, $this->companyModel?->default_tax_type ?: 'gravado');
+            $localTaxTotals = \App\Support\TaxCalculator::totals($localTaxLines);
             $data = [
                 'seller_id'       => $this->seller->id,
                 'seller_company_id'=> $this->companyModel?->id,
@@ -222,10 +226,10 @@ class SunatService
                 'cliente_direccion'=> $clientData['direccion'] ?? $clientData['address'] ?? null,
                 'detail_mode'     => $detailMode,
                 'consumption_description' => $detailMode === 'consumption' ? $consumptionDescription : null,
-                'total_gravada'   => round($order->total / 1.18, 2),
-                'total_exonerada' => 0,
-                'total_inafecta'  => 0,
-                'total_igv'       => round($order->total - ($order->total / 1.18), 2),
+                'total_gravada'   => $localTaxTotals['gravada'],
+                'total_exonerada' => $localTaxTotals['exonerada'],
+                'total_inafecta'  => $localTaxTotals['inafecta'],
+                'total_igv'       => $localTaxTotals['igv'],
                 'total'           => $order->total,
                 'hash'            => null,
                 'cdr_status'      => SunatInvoice::STATUS_ACCEPTED,
@@ -310,64 +314,51 @@ class SunatService
         // SUNAT needs one line for each tax treatment. In consumption mode we
         // consolidate all products under a single line using the tax regime
         // configured in /seller/invoicing (default_tax_type), IGV by default.
-        $sourceItems = $order->items;
+        $sourceItems = \App\Support\TaxCalculator::orderLines($order, $this->companyModel?->default_tax_type ?: 'gravado');
         if ($detailMode === 'consumption') {
             $consumptionTaxType = $this->companyModel?->default_tax_type ?: 'gravado';
             $orderTotal = (float) ($order->total > 0 ? $order->total : $order->items->sum('total_price'));
-            $sourceItems = collect([
-                (object) [
-                    'product' => null,
-                    'tax_type' => $consumptionTaxType,
-                    'unit_price' => $orderTotal,
-                    'quantity' => 1,
-                    'product_name' => $consumptionDescription,
-                ],
-            ]);
+            $sourceItems = [[
+                'item' => null, 'tax_type' => $consumptionTaxType,
+                'unit_price' => $orderTotal, 'total' => $orderTotal,
+                'quantity' => 1, 'name' => $consumptionDescription,
+            ]];
         }
 
         foreach ($sourceItems as $item) {
-            $product = $item->product;
-            $taxType = $item->tax_type ?? ($product ? $product->tax_type : 'gravado');
-            
-            $unitPrice = (float) $item->unit_price;
-            $quantity = (float) $item->quantity;
+            $sourceItem = $item['item'] ?? null;
+            $taxType = $item['tax_type'];
+            $unitPrice = (float) $item['unit_price'];
+            $quantity = (float) $item['quantity'];
+            $lineTotal = (float) $item['total'];
+            $tax = \App\Support\TaxCalculator::line($lineTotal, $taxType);
             
             if ($taxType === 'exonerado') {
                 $hasExonerado = true;
-                $lineTotal = round($unitPrice * $quantity, 2);
-                $mtoValorVenta = $lineTotal;
+                $mtoValorVenta = $tax['base'];
                 $mtoBaseIgv = $mtoValorVenta;
                 $porcentajeIgv = 0;
                 $igv = 0;
-                $mtoValorUnitario = round($unitPrice, 6);
+                $mtoValorUnitario = round($mtoValorVenta / max(1, $quantity), 6);
                 $mtoPrecioUnitario = round($unitPrice, 6);
                 
                 $totalExonerada += $mtoValorVenta;
             } elseif ($taxType === 'inafecto') {
-                $lineTotal = round($unitPrice * $quantity, 2);
-                $mtoValorVenta = $lineTotal;
+                $mtoValorVenta = $tax['base'];
                 $mtoBaseIgv = $mtoValorVenta;
                 $porcentajeIgv = 0;
                 $igv = 0;
-                $mtoValorUnitario = round($unitPrice, 6);
+                $mtoValorUnitario = round($mtoValorVenta / max(1, $quantity), 6);
                 $mtoPrecioUnitario = round($unitPrice, 6);
                 
                 $totalInafecta += $mtoValorVenta;
             } else { // gravado
-                $lineTotal = round($unitPrice * $quantity, 2);
-                $mtoValorVenta = round($lineTotal / 1.18, 2);
+                $mtoValorVenta = $tax['base'];
                 $mtoBaseIgv = $mtoValorVenta;
                 $porcentajeIgv = 18;
-                $igv = round($mtoValorVenta * 0.18, 2);
+                $igv = $tax['igv'];
                 
-                // Adjust for rounding discrepancies
-                $lineSum = round($mtoValorVenta + $igv, 2);
-                if ($lineSum !== $lineTotal) {
-                    $diff = round($lineTotal - $lineSum, 2);
-                    $igv = round($igv + $diff, 2);
-                }
-                
-                $mtoValorUnitario = round($mtoValorVenta / $quantity, 6);
+                $mtoValorUnitario = round($mtoValorVenta / max(1, $quantity), 6);
                 $mtoPrecioUnitario = round($unitPrice, 6);
                 
                 $totalGravada += $mtoValorVenta;
@@ -377,9 +368,9 @@ class SunatService
             $totalValorVenta += $mtoValorVenta;
 
             $items[] = (new \Greenter\Model\Sale\SaleDetail())
-                ->setUnidad($detailMode === 'consumption' ? 'NIU' : $this->resolveUnitCode($item))
+                ->setUnidad($detailMode === 'consumption' || !$sourceItem ? 'NIU' : $this->resolveUnitCode($sourceItem))
                 ->setCantidad($quantity)
-                ->setDescripcion(substr($item->product_name, 0, 250))
+                ->setDescripcion(substr((string) $item['name'], 0, 250))
                 ->setMtoValorUnitario($mtoValorUnitario)
                 ->setMtoValorVenta($mtoValorVenta)
                 ->setMtoBaseIgv($mtoBaseIgv)
@@ -388,7 +379,7 @@ class SunatService
                 ->setTotalImpuestos($igv)
                 ->setTipAfeIgv($taxType === 'exonerado' ? '20' : ($taxType === 'inafecto' ? '30' : '10'))
                 ->setMtoPrecioUnitario($mtoPrecioUnitario)
-                ->setCodProdSunat($detailMode === 'consumption' ? null : $this->resolveSunatProductCode($item));
+                ->setCodProdSunat($detailMode === 'consumption' || !$sourceItem ? null : $this->resolveSunatProductCode($sourceItem));
         }
 
         if ($totalGravada > 0) {
@@ -413,10 +404,6 @@ class SunatService
         $legends = [];
         $legends[] = (new Legend())->setCode('1000')->setValue(($order->total < 700 ? 'SON ' : '') . $this->numeroALetras($order->total) . ' SOLES');
         
-        if ($hasExonerado) {
-            $legends[] = (new Legend())->setCode('2001')->setValue('BIENES TRANSFERIDOS EN LA AMAZONIA REGION SELVA PARA SER CONSUMIDOS EN LA MISMA');
-            $legends[] = (new Legend())->setCode('2002')->setValue('SERVICIOS PRESTADOS EN LA AMAZONIA REGION SELVA PARA SER CONSUMIDOS EN LA MISMA');
-        }
         $invoice->setLegends($legends);
 
         $result = $this->see->send($invoice);
@@ -560,7 +547,7 @@ class SunatService
 
         foreach ($order->items as $item) {
             $product = $item->product;
-            $taxType = $product ? $product->tax_type : 'gravado';
+            $taxType = $item->tax_type ?? ($product ? $product->tax_type : 'gravado');
             
             $unitPrice = (float) $item->unit_price;
             $quantity = (float) $item->quantity;
@@ -568,7 +555,8 @@ class SunatService
             if ($taxType === 'exonerado') {
                 $hasExonerado = true;
                 $lineTotal = round($unitPrice * $quantity, 2);
-                $mtoValorVenta = $lineTotal;
+                $tax = \App\Support\TaxCalculator::line($lineTotal, $taxType);
+                $mtoValorVenta = $tax['base'];
                 $mtoBaseIgv = $mtoValorVenta;
                 $porcentajeIgv = 0;
                 $igv = 0;
@@ -578,7 +566,8 @@ class SunatService
                 $totalExonerada += $mtoValorVenta;
             } elseif ($taxType === 'inafecto') {
                 $lineTotal = round($unitPrice * $quantity, 2);
-                $mtoValorVenta = $lineTotal;
+                $tax = \App\Support\TaxCalculator::line($lineTotal, $taxType);
+                $mtoValorVenta = $tax['base'];
                 $mtoBaseIgv = $mtoValorVenta;
                 $porcentajeIgv = 0;
                 $igv = 0;
@@ -588,10 +577,11 @@ class SunatService
                 $totalInafecta += $mtoValorVenta;
             } else { // gravado
                 $lineTotal = round($unitPrice * $quantity, 2);
-                $mtoValorVenta = round($lineTotal / 1.18, 2);
+                $tax = \App\Support\TaxCalculator::line($lineTotal, $taxType);
+                $mtoValorVenta = $tax['base'];
                 $mtoBaseIgv = $mtoValorVenta;
                 $porcentajeIgv = 18;
-                $igv = round($mtoValorVenta * 0.18, 2);
+                $igv = $tax['igv'];
                 
                 // Adjust for rounding discrepancies
                 $lineSum = round($mtoValorVenta + $igv, 2);
@@ -657,10 +647,6 @@ class SunatService
 
         $legends = [];
         $legends[] = (new Legend())->setCode('1000')->setValue(($order->total < 700 ? 'SON ' : '') . $this->numeroALetras($order->total) . ' SOLES');
-        if ($hasExonerado) {
-            $legends[] = (new Legend())->setCode('2001')->setValue('BIENES TRANSFERIDOS EN LA AMAZONIA REGION SELVA PARA SER CONSUMIDOS EN LA MISMA');
-            $legends[] = (new Legend())->setCode('2002')->setValue('SERVICIOS PRESTADOS EN LA AMAZONIA REGION SELVA PARA SER CONSUMIDOS EN LA MISMA');
-        }
         $note->setLegends($legends);
 
         $result = $this->see->send($note);

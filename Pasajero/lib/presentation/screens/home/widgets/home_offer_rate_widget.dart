@@ -155,16 +155,21 @@ class _HomeOfferRateWidgetState extends State<HomeOfferRateWidget> {
                       double max = StringConverter.formatDouble(
                         controller.selectedService.maxAmount ?? '0.0',
                       );
+                      final isMercadoPago = controller.selectedPaymentMethod.name?.toLowerCase() == 'mercadopago' || controller.selectedPaymentMethod.name?.toLowerCase() == 'mercado pago';
+                      if (isMercadoPago) {
+                        min = double.parse((min * 1.05).toStringAsFixed(2));
+                        max = double.parse((max * 1.05).toStringAsFixed(2));
+                      }
                       printD(min);
                       printD(max);
 
-                      if (enterValue < max + 1 && enterValue >= min) {
+                      if (enterValue <= max && enterValue >= min) {
                         controller.updateMainAmount(enterValue);
                         Get.back();
                       } else {
                         CustomSnackBar.error(
                           errorList: [
-                            '${MyStrings.pleaseEnterMinimum.tr} ${controller.defaultCurrencySymbol}${StringConverter.formatNumber(controller.selectedService.minAmount ?? '0')} to ${controller.defaultCurrencySymbol}${StringConverter.formatNumber(controller.selectedService.maxAmount ?? '')}',
+                            '${MyStrings.pleaseEnterMinimum.tr} ${controller.defaultCurrencySymbol}${min.toStringAsFixed(2)} to ${controller.defaultCurrencySymbol}${max.toStringAsFixed(2)}',
                           ],
                         );
                       }

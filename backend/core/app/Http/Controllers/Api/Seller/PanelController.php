@@ -217,6 +217,71 @@ class PanelController extends Controller
         return apiResponse('status_updated', 'success', ['Estado actualizado'], ['order' => $order->fresh('items')]);
     }
 
+    public function kitchenDeleteItem($id, $itemId)
+    {
+        $seller = $this->seller();
+        $order = PosOrder::where('seller_id', $seller->id)->with('items')->findOrFail($id);
+
+        if (!in_array($order->status, ['confirmed', 'preparing'], true)) {
+            return response()->json(['status' => 'error', 'message' => 'No se puede quitar platos de una comanda lista o cerrada.'], 409);
+        }
+
+        $orderItem = $order->items->firstWhere('id', (int) $itemId);
+        if (!$orderItem) {
+            return response()->json(['status' => 'error', 'message' => 'El plato no pertenece a esta comanda.'], 404);
+        }
+        if (($orderItem->status ?? 'pending') === 'done') {
+            return response()->json(['status' => 'error', 'message' => 'El plato ya fue marcado como preparado y no se puede quitar.'], 409);
+        }
+
+        $removedSubtotal = (float) $orderItem->total_price;
+        $remainingCount = DB::transaction(function () use ($order, $orderItem, $seller, $removedSubtotal) {
+            (new \App\Services\StockService($seller->id))->restoreForOrder([$orderItem], $order->id);
+
+            if ($removedSubtotal > 0) {
+                $cashSession = PosCashSession::where('seller_id', $seller->id)->open()->first();
+                if ($cashSession) {
+                    $cashSession->decrement('total_sales', $removedSubtotal);
+                    $transaction = PosTransaction::where('pos_order_id', $order->id)->where('type', 'sale')->first();
+                    if ($transaction) {
+                        $newAmount = max(0, (float) $transaction->amount - $removedSubtotal);
+                        $transaction->update([
+                            'amount' => $newAmount,
+                            'description' => 'Venta #' . $order->order_no . ' - Platos' . ($newAmount > 0 ? '' : ' (sin monto por eliminación de ítems)'),
+                        ]);
+                    }
+                }
+            }
+
+            $orderItem->delete();
+            $remainingItems = $order->items()->get();
+            $newSubtotal = $remainingItems->sum('total_price');
+            $order->subtotal = $newSubtotal;
+            $order->total = $newSubtotal - (float) $order->discount + (float) $order->delivery_fee;
+            $order->save();
+            return $remainingItems->count();
+        });
+
+        if ($remainingCount === 0) {
+            $order->update(['status' => 'cancelled', 'cancelled_at' => now(), 'cancel_reason' => 'Todos los platos fueron eliminados']);
+            if ($order->pos_table_id) {
+                PosTable::where('id', $order->pos_table_id)
+                    ->orWhere('linked_to_table_id', $order->pos_table_id)
+                    ->update(['status' => 'free', 'linked_to_table_id' => null]);
+            }
+        }
+
+        return apiResponse('kitchen_item_deleted', 'success', [$remainingCount === 0 ? 'Último plato eliminado. Comanda cerrada.' : 'Plato eliminado de la comanda.'], [
+            'order' => [
+                'id' => $order->id,
+                'subtotal' => (float) $order->subtotal,
+                'total' => (float) $order->total,
+                'items_count' => $remainingCount,
+                'closed' => $remainingCount === 0,
+            ],
+        ]);
+    }
+
     // ── Orders History ──
     public function orders(Request $request)
     {
@@ -395,6 +460,30 @@ class PanelController extends Controller
             'consumption_description' => 'nullable|string|max:250',
         ]);
 
+        // Reject an over-quota electronic document before marking the order paid.
+        $preflightCompany = $this->activeCompany();
+        $preflightSeriesId = $request->series_id;
+        if (!$preflightSeriesId && $preflightCompany) {
+            $preflightSeriesId = PosInvoiceSeries::where('seller_company_id', $preflightCompany->id)
+                ->whereHas('invoiceType', fn($q) => $q->where('code', 'NV'))->value('id');
+        }
+        if ($preflightSeriesId) {
+            $preflightSeries = PosInvoiceSeries::where('id', $preflightSeriesId)
+                ->where('seller_company_id', $preflightCompany?->id)->with('invoiceType')->first();
+            if (!$preflightSeries || !$preflightCompany) {
+                return apiResponse('invalid_series', 'error', ['La serie de comprobante seleccionada no es válida.']);
+            }
+            $preflightType = $preflightSeries->invoiceType->sunat_code ?? $preflightSeries->invoiceType->code;
+            $store = $this->store();
+            if ($preflightType !== 'NV' && $store && $store->hasReachedInvoiceLimit()) {
+                $usage = $store->getInvoiceLimitStatus();
+                $limit = $usage['limit'] ?? 50;
+                $planName = $usage['package']?->name ?? 'Actual';
+                $message = "Has alcanzado el límite de {$limit} comprobantes electrónicos de tu plan {$planName}. Cambia o renueva tu plan para continuar.";
+                return apiResponse('limit_reached', 'error', [$message], ['upgrade_url' => route('seller.pricing')]);
+            }
+        }
+
         $paymentMethod = $request->payment_method ?? 'cash';
         $paymentDetails = null;
 
@@ -502,9 +591,11 @@ class PanelController extends Controller
 
             $store = $this->store();
             if ($tipoDoc !== 'NV' && $store && $store->hasReachedInvoiceLimit()) {
-                $planName = $store->getPlanType() === 'basic' ? 'Emprendedor' : 'Destacado';
-                $limit = $store->getPlanType() === 'basic' ? 50 : 100;
-                return apiResponse('limit_reached', 'error', ["Has alcanzado el límite de {$limit} comprobantes electrónicos de tu plan {$planName}. Actualiza a un plan superior para facturación ilimitada."]);
+                $usage = $store->getInvoiceLimitStatus();
+                $limit = $usage['limit'] ?? 50;
+                $planName = $usage['package']?->name ?? 'Actual';
+                $message = "Has alcanzado el límite de {$limit} comprobantes electrónicos de tu plan {$planName}. Cambia o renueva tu plan para continuar.";
+                return apiResponse('limit_reached', 'error', [$message], ['upgrade_url' => route('seller.pricing')]);
             }
 
             $correlativo = $series->current_number;
@@ -518,47 +609,14 @@ class PanelController extends Controller
                 'direccion'=> $customerAddress ?: $this->customerAddress((string) ($request->num_doc ?? $order->customer_doc)),
             ];
 
-            $consumptionTaxType = $detailMode === 'consumption'
-                ? ($activeCompany->default_tax_type ?? 'gravado')
-                : null;
-            if ($consumptionTaxType === 'gravado') {
-                $totalGravada = round($order->total / 1.18, 2);
-                $totalExonerada = 0;
-                $totalInafecta = 0;
-                $totalIgv = round($order->total - $totalGravada, 2);
-            } elseif ($consumptionTaxType === 'exonerado') {
-                $totalGravada = 0;
-                $totalExonerada = round($order->total, 2);
-                $totalInafecta = 0;
-                $totalIgv = 0;
-            } elseif ($consumptionTaxType === 'inafecto') {
-                $totalGravada = 0;
-                $totalExonerada = 0;
-                $totalInafecta = round($order->total, 2);
-                $totalIgv = 0;
-            } else {
-                $totalGravada = 0;
-                $totalExonerada = 0;
-                $totalInafecta = 0;
-                $totalIgv = 0;
-                foreach ($order->items as $item) {
-                    $taxType = $item->tax_type ?? ($item->product?->tax_type ?? 'gravado');
-                    $lineTotal = (float) $item->total_price;
-                    if ($taxType === 'exonerado') {
-                        $totalExonerada += $lineTotal;
-                    } elseif ($taxType === 'inafecto') {
-                        $totalInafecta += $lineTotal;
-                    } else {
-                        $base = round($lineTotal / 1.18, 2);
-                        $totalGravada += $base;
-                        $totalIgv += round($lineTotal - $base, 2);
-                    }
-                }
-                $totalGravada = round($totalGravada, 2);
-                $totalExonerada = round($totalExonerada, 2);
-                $totalInafecta = round($totalInafecta, 2);
-                $totalIgv = round($totalIgv, 2);
-            }
+            $taxLines = $detailMode === 'consumption'
+                ? [['tax_type' => $activeCompany->default_tax_type ?? 'gravado', 'total' => (float) $order->total]]
+                : \App\Support\TaxCalculator::orderLines($order, $activeCompany->default_tax_type ?? 'gravado');
+            $taxTotals = \App\Support\TaxCalculator::totals($taxLines);
+            $totalGravada = $taxTotals['gravada'];
+            $totalExonerada = $taxTotals['exonerada'];
+            $totalInafecta = $taxTotals['inafecta'];
+            $totalIgv = $taxTotals['igv'];
 
             \App\Models\SunatInvoice::create([
                 'seller_id'        => $this->seller()->id,
@@ -624,21 +682,23 @@ class PanelController extends Controller
             return apiResponse('no_company', 'error', ['Debes configurar una empresa antes de emitir comprobantes.']);
         }
 
-        $store = $this->store();
-        if ($store && $store->hasReachedInvoiceLimit()) {
-            $planName = $store->getPlanType() === 'basic' ? 'Emprendedor' : 'Destacado';
-            $limit = $store->getPlanType() === 'basic' ? 50 : 100;
-            return apiResponse('limit_reached', 'error', ["Has alcanzado el límite de {$limit} comprobantes electrónicos de tu plan {$planName}. Actualiza a un plan superior para facturación ilimitada."]);
-        }
-
         $series = PosInvoiceSeries::where('id', $request->series_id)
             ->where('seller_company_id', $activeCompany->id)
             ->with('invoiceType')
             ->firstOrFail();
 
+        $tipoDoc = $series->invoiceType->sunat_code ?? $series->invoiceType->code;
+        $store = $this->store();
+        if ($tipoDoc !== 'NV' && $store && $store->hasReachedInvoiceLimit()) {
+            $usage = $store->getInvoiceLimitStatus();
+            $limit = $usage['limit'] ?? 50;
+            $planName = $usage['package']?->name ?? 'Actual';
+            $message = "Has alcanzado el límite de {$limit} comprobantes electrónicos de tu plan {$planName}. Cambia o renueva tu plan para continuar.";
+            return apiResponse('limit_reached', 'error', [$message], ['upgrade_url' => route('seller.pricing')]);
+        }
+
         $correlativo = $series->current_number;
         $series->increment('current_number');
-        $tipoDoc = $series->invoiceType->sunat_code ?? $series->invoiceType->code;
 
         $clientData = [
             'tipo_doc' => $request->tipo_doc ?? ($tipoDoc === '01' ? '6' : '1'),
@@ -664,47 +724,14 @@ class PanelController extends Controller
             ? ($request->input('consumption_description') ?: 'Consumo')
             : null;
 
-        $consumptionTaxType = $detailMode === 'consumption'
-            ? ($activeCompany->default_tax_type ?? 'gravado')
-            : null;
-        if ($consumptionTaxType === 'gravado') {
-            $totalGravada = round($order->total / 1.18, 2);
-            $totalExonerada = 0;
-            $totalInafecta = 0;
-            $totalIgv = round($order->total - $totalGravada, 2);
-        } elseif ($consumptionTaxType === 'exonerado') {
-            $totalGravada = 0;
-            $totalExonerada = round($order->total, 2);
-            $totalInafecta = 0;
-            $totalIgv = 0;
-        } elseif ($consumptionTaxType === 'inafecto') {
-            $totalGravada = 0;
-            $totalExonerada = 0;
-            $totalInafecta = round($order->total, 2);
-            $totalIgv = 0;
-        } else {
-            $totalGravada = 0;
-            $totalExonerada = 0;
-            $totalInafecta = 0;
-            $totalIgv = 0;
-            foreach ($order->items as $item) {
-                $taxType = $item->tax_type ?? ($item->product?->tax_type ?? 'gravado');
-                $lineTotal = (float) $item->total_price;
-                if ($taxType === 'exonerado') {
-                    $totalExonerada += $lineTotal;
-                } elseif ($taxType === 'inafecto') {
-                    $totalInafecta += $lineTotal;
-                } else {
-                    $base = round($lineTotal / 1.18, 2);
-                    $totalGravada += $base;
-                    $totalIgv += round($lineTotal - $base, 2);
-                }
-            }
-            $totalGravada = round($totalGravada, 2);
-            $totalExonerada = round($totalExonerada, 2);
-            $totalInafecta = round($totalInafecta, 2);
-            $totalIgv = round($totalIgv, 2);
-        }
+        $taxLines = $detailMode === 'consumption'
+            ? [['tax_type' => $activeCompany->default_tax_type ?? 'gravado', 'total' => (float) $order->total]]
+            : \App\Support\TaxCalculator::orderLines($order, $activeCompany->default_tax_type ?? 'gravado');
+        $taxTotals = \App\Support\TaxCalculator::totals($taxLines);
+        $totalGravada = $taxTotals['gravada'];
+        $totalExonerada = $taxTotals['exonerada'];
+        $totalInafecta = $taxTotals['inafecta'];
+        $totalIgv = $taxTotals['igv'];
 
         \App\Models\SunatInvoice::create([
             'seller_id'        => $seller->id,

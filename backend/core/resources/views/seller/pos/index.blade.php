@@ -189,10 +189,10 @@
             <!-- GRILLA ÚNICA DE PRODUCTOS; LAS CATEGORÍAS SE FILTRAN ARRIBA -->
             <div id="products-by-category" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:16px">
                 @foreach($products as $p)
-                <div class="pos-prod" data-category="{{ $p->store_category_id }}" onclick="addItem({{ $p->id }})">
-                    <div class="pos-prod-img">
+                <div class="pos-prod" data-category="{{ $p->store_category_id }}" style="--product-hue: {{ ($p->id * 47) % 360 }}" role="button" tabindex="0" aria-label="Agregar {{ $p->name }} al pedido" onclick="addItem({{ $p->id }})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();addItem({{ $p->id }});}">
+                    <div class="pos-prod-img{{ $p->image ? '' : ' has-placeholder' }}">
                         @if($p->image)
-                        <img src="{{ asset('storage/'.$p->image) }}" alt="{{ $p->name }}" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\'las la-utensils\'></i>'">
+                        <img src="{{ asset('storage/'.$p->image) }}" alt="{{ $p->name }}" onerror="this.style.display='none'; this.parentElement.classList.add('has-placeholder'); this.parentElement.innerHTML='<i class=\'las la-utensils\'></i>'">
                         @else
                         <i class="las la-utensils"></i>
                         @endif
@@ -203,6 +203,11 @@
                     </div>
                 </div>
                 @endforeach
+            </div>
+            <div id="pos-empty-results" role="status" style="display:none;margin-top:12px;padding:34px 20px;text-align:center;background:#f8fafc;border:1px dashed var(--s-border);border-radius:14px;color:var(--s-text-3);">
+                <i class="las la-search" style="display:block;font-size:30px;margin-bottom:8px;color:#94a3b8;"></i>
+                <strong style="display:block;color:var(--s-text-2);font-size:14px;margin-bottom:4px;">No encontramos productos</strong>
+                <span style="font-size:12px;">Prueba otro nombre, código de barras o categoría.</span>
             </div>
             <div id="pos-product-pagination" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;padding-top:14px;border-top:1px solid var(--s-border);flex-wrap:wrap">
                 <small id="pos-page-summary" style="color:var(--s-text-3);font-size:10px;font-weight:600"></small>
@@ -836,6 +841,9 @@
     border-bottom: 1.5px solid var(--s-border);
     transition: background 0.2s;
 }
+.pos-prod-img.has-placeholder {
+    background: linear-gradient(145deg, hsl(var(--product-hue, 210) 78% 96%), hsl(var(--product-hue, 210) 72% 88%));
+}
 .pos-prod-img img {
     width: 100%; 
     height: 100%; 
@@ -843,7 +851,7 @@
 }
 .pos-prod-img i {
     font-size: 32px; 
-    color: var(--s-text-3);
+    color: hsl(var(--product-hue, 210) 58% 42%);
 }
 .pos-prod-info {
     padding: 12px 14px;
@@ -996,20 +1004,28 @@
     .pos-right-sticky {
         position: fixed;
         top: 0;
-        right: -420px;
-        width: 390px;
-        max-width: 100%;
+        right: 0;
+        width: min(390px, 100vw);
+        max-width: 100vw;
         height: 100vh;
+        height: 100dvh;
+        box-sizing: border-box;
         z-index: 99999;
         background: var(--s-surface);
         box-shadow: -4px 0 24px rgba(0,0,0,0.15);
-        transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transform: translateX(100%);
+        visibility: hidden;
+        pointer-events: none;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s linear 0.3s;
         padding: 20px 24px;
         overflow-y: auto;
         display: flex;
     }
     .pos-right-sticky.open {
-        right: 0;
+        transform: translateX(0);
+        visibility: visible;
+        pointer-events: auto;
+        transition-delay: 0s;
     }
     #comanda-backdrop {
         display: none;
@@ -1023,8 +1039,20 @@
     #comanda-backdrop.open {
         display: block;
     }
+    body.comanda-drawer-open {
+        overflow: hidden;
+    }
     #floating-cart-btn {
         display: flex !important;
+        position: fixed !important;
+        left: max(16px, env(safe-area-inset-left)) !important;
+        right: auto !important;
+        bottom: max(12px, env(safe-area-inset-bottom)) !important;
+        z-index: 2147483647 !important;
+        max-width: calc(100vw - 32px);
+    }
+    body.comanda-drawer-open #floating-cart-btn {
+        display: none !important;
     }
     .comanda-close-btn {
         display: inline-flex !important;
@@ -1125,6 +1153,9 @@
     color: #fff !important;
     font-weight: 700;
 }
+.pos-prod:focus-visible{outline:3px solid #86efac;outline-offset:2px;box-shadow:0 0 0 5px rgba(34,197,94,.14)}
+#product-search:focus{border-color:#22c55e!important;box-shadow:0 0 0 4px rgba(34,197,94,.12);outline:0}
+#pos-page-buttons .s-btn:disabled{opacity:.45;cursor:not-allowed}
 </style>
 
 @if(gs('google_maps_api'))
@@ -1207,7 +1238,8 @@ function selectTable(id){
     document.querySelectorAll('.pos-table-btn').forEach(function(e){ e.classList.remove('active'); });
     var el = id ? document.getElementById('table-' + id) : document.getElementById('table-direct');
     if(el) el.classList.add('active');
-    document.getElementById('table-label').textContent = id ? '— ' + (el.querySelector('span')?.textContent || 'Mesa ' + id) : '';
+    var tableLabel = document.getElementById('table-label');
+    if (tableLabel) tableLabel.textContent = id ? '— ' + (el?.querySelector('span')?.textContent || 'Mesa ' + id) : '';
 
     var actionsContainer = document.getElementById('table-actions-container');
     if (actionsContainer) {
@@ -1290,7 +1322,9 @@ function addOrIncrementCartItem(item) {
             (cart[i].notes || '') === (item.notes || '') && 
             cart[i].is_takeaway === item.is_takeaway &&
             (cart[i].is_courtesy || false) === (item.is_courtesy || false) &&
-            (cart[i].has_tupper || false) === (item.has_tupper || false)) {
+            (cart[i].has_tupper || false) === (item.has_tupper || false) &&
+            (cart[i].variation_id || null) === (item.variation_id || null) &&
+            JSON.stringify(cart[i].addon_ids || []) === JSON.stringify(item.addon_ids || [])) {
             existingIndex = i;
             break;
         }
@@ -1316,6 +1350,40 @@ function addItem(pid){
 function removeItem(i){
     cart.splice(i, 1);
     renderItems();
+}
+
+function deleteComandaItem(itemId){
+    if(!activeOrderId){ return; }
+    if(!confirm('¿Eliminar este plato de la comanda? Se revertirá su stock y monto.')){ return; }
+    fetch('{{ route("seller.pos.order.item.delete", ["id" => "__ORDER__", "item" => "__ITEM__"]) }}'.replace('__ORDER__', activeOrderId).replace('__ITEM__', itemId), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        }
+    })
+    .then(function(r){ return r.json().then(function(d){ return { ok: r.ok, data: d }; }); })
+    .then(function(res){
+        if(res.ok && res.data.success){
+            showToast(res.data.message || 'Plato eliminado', 'success');
+            // Refrescar la comanda activa de la mesa actual.
+            var t = selTable;
+            if(res.data.order && res.data.order.closed){
+                activeOrderId = null;
+                activeOrderItems = [];
+                renderItems();
+                if(t){ selectTable(t); }
+            } else {
+                if(t){ selectTable(t); }
+            }
+        } else {
+            showToast(res.data.message || 'Error al eliminar el plato', 'error');
+        }
+    })
+    .catch(function(e){
+        showToast('Error de red: ' + e.message, 'error');
+    });
 }
 
 function updateQty(i, delta){
@@ -1381,6 +1449,7 @@ function renderItems(){
                     '<div style="display:flex; align-items:center; gap:8px;">' +
                         '<span style="font-size:9px; font-weight:800; padding:1px 4px; border-radius:4px;" class="s-badge ' + statusClass + '">' + (statusLabels[it.status] || it.status) + '</span>' +
                         '<span style="font-weight:700;">S/ ' + (it.price * it.qty).toFixed(2) + '</span>' +
+                        '<button type="button" onclick="deleteComandaItem(' + it.id + ')" title="Eliminar plato" style="width:26px;height:26px;background:#fef2f2;border:1px solid #fecaca;border-radius:7px;color:var(--s-danger);padding:0;font-size:13px;cursor:pointer;line-height:1;touch-action:manipulation;">✕</button>' +
                     '</div>' +
                 '</div>' +
                 noteHtml +
@@ -1483,9 +1552,20 @@ function openModal(p){
     var vl = document.getElementById('pm-var-list'), vc = document.getElementById('pm-var-section');
     if(p.variations.length){
         vc.style.display = 'block';
+        var baseOption = document.createElement('label');
+        baseOption.className = 'p-var selected';
+        baseOption.innerHTML = '<span>Sin variación</span><span style="color:var(--s-accent-dark);font-weight:750;margin-left:auto">S/ ' + p.price.toFixed(2) + '</span>';
+        baseOption.addEventListener('click', function(e){
+            e.preventDefault();
+            vl.querySelectorAll('.p-var').forEach(function(x){ x.classList.remove('selected'); });
+            baseOption.classList.add('selected');
+            window._pmVar = null;
+            pmUpd();
+        });
+        vl.appendChild(baseOption);
         p.variations.forEach(function(v, idx){
             var lbl = document.createElement('label');
-            lbl.className = 'p-var' + (idx === 0 ? ' selected' : '');
+            lbl.className = 'p-var';
             var priceText = 'S/ ' + v.price.toFixed(2);
             var diff = v.price - p.price;
             if (Math.abs(diff) > 0.001) {
@@ -1496,13 +1576,10 @@ function openModal(p){
                 e.preventDefault();
                 vl.querySelectorAll('.p-var').forEach(function(x){ x.classList.remove('selected'); });
                 lbl.classList.add('selected');
-                window._pmVar = {name: v.name, price: v.price};
+                window._pmVar = {id: v.id, name: v.name, price: v.price};
                 pmUpd();
             });
             vl.appendChild(lbl);
-            if (idx === 0) {
-                window._pmVar = {name: v.name, price: v.price};
-            }
         });
         pmUpd();
     }else{
@@ -1520,9 +1597,9 @@ function openModal(p){
                 e.preventDefault();
                 lbl.classList.toggle('selected');
                 if(lbl.classList.contains('selected')){
-                    window._pmAddons.push({name: a.name, price: a.price});
+                    window._pmAddons.push({id: a.id, name: a.name, price: a.price});
                 }else{
-                    window._pmAddons = window._pmAddons.filter(function(x){ return x.name !== a.name; });
+        window._pmAddons = window._pmAddons.filter(function(x){ return x.id !== a.id; });
                 }
                 pmUpd();
             });
@@ -1546,10 +1623,6 @@ function pmUpd(){
 
 function pmConfirm(){
     var p = window._pm, n = p.name;
-    if(p.variations.length && !window._pmVar){
-        alert('Por favor selecciona una variación');
-        return;
-    }
     var t = (window._pmVar && window._pmVar.price > 0) ? window._pmVar.price : p.price;
     if(window._pmVar){
         n += ' (' + window._pmVar.name + ')';
@@ -1571,6 +1644,8 @@ function pmConfirm(){
         product_id: p.id,
         name: n,
         price: finalPrice,
+        variation_id: window._pmVar ? window._pmVar.id : null,
+        addon_ids: window._pmAddons.map(function(addon){ return addon.id; }),
         qty: 1,
         notes: noteVal,
         is_takeaway: (orderType === 'takeaway'),
@@ -1594,6 +1669,29 @@ var POS_PRODUCTS_PER_PAGE = 28;
 var posProductPage = 1;
 var posActiveCategory = 'all';
 var posProductQuery = '';
+var POS_PRODUCT_INDEX = null;
+
+function normalizePosSearch(value) {
+    return String(value || '').toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
+
+function getPosProductIndex() {
+    if (POS_PRODUCT_INDEX) return POS_PRODUCT_INDEX;
+    POS_PRODUCT_INDEX = Array.from(document.querySelectorAll('.pos-prod')).map(function(element) {
+        var id = (element.getAttribute('onclick') || '').match(/\d+/)?.[0] || '';
+        var product = ALL_PRODUCTS[id] || {};
+        var name = element.querySelector('b')?.textContent || product.name || '';
+        var price = element.querySelector('.pos-prod-info span')?.textContent || product.price || '';
+        var categoryName = document.getElementById('cat-tab-' + (element.dataset.category || ''))?.textContent || '';
+        return {
+            element: element,
+            category: element.dataset.category || '',
+            searchable: normalizePosSearch([name, price, product.barcode, categoryName].join(' ')),
+            barcode: normalizePosSearch(product.barcode || '')
+        };
+    });
+    return POS_PRODUCT_INDEX;
+}
 
 function switchCategory(catId){
     var searchInput = document.getElementById('product-search');
@@ -1613,7 +1711,7 @@ function switchCategory(catId){
 }
 
 function filterProducts(query){
-    query = query.toLowerCase().trim();
+    query = normalizePosSearch(query);
     posProductQuery = query;
     posProductPage = 1;
     var clearBtn = document.getElementById('clear-search');
@@ -1631,17 +1729,12 @@ function filterProducts(query){
 }
 
 function getFilteredPosProducts(){
-    return Array.from(document.querySelectorAll('.pos-prod')).filter(function(prod) {
-        var categoryId = prod.dataset.category || '';
-        var name = (prod.querySelector('b')?.textContent || '').toLowerCase();
-        var price = (prod.querySelector('.pos-prod-info span')?.textContent || '').toLowerCase();
-        var pid = prod.getAttribute('onclick')?.match(/\d+/)?.[0] || '';
-        var p = ALL_PRODUCTS[pid];
-        var barcode = p ? (p.barcode || '').toLowerCase() : '';
-        var matchesQuery = !posProductQuery || name.includes(posProductQuery) || price.includes(posProductQuery) || barcode.includes(posProductQuery);
-        var matchesCategory = posActiveCategory === 'all' || categoryId === posActiveCategory;
+    var terms = normalizePosSearch(posProductQuery).split(/\s+/).filter(Boolean);
+    return getPosProductIndex().filter(function(product) {
+        var matchesQuery = terms.every(function(term) { return product.searchable.includes(term); });
+        var matchesCategory = posActiveCategory === 'all' || product.category === posActiveCategory;
         return matchesQuery && matchesCategory;
-    });
+    }).map(function(product) { return product.element; });
 }
 
 function renderPosProductPage(){
@@ -1655,6 +1748,8 @@ function renderPosProductPage(){
     });
     var summary = document.getElementById('pos-page-summary');
     if (summary) summary.textContent = matches.length ? 'Mostrando ' + (start + 1) + '–' + Math.min(start + POS_PRODUCTS_PER_PAGE, matches.length) + ' de ' + matches.length + ' productos' : 'No se encontraron productos';
+    var emptyState = document.getElementById('pos-empty-results');
+    if (emptyState) emptyState.style.display = matches.length ? 'none' : 'block';
     var buttons = document.getElementById('pos-page-buttons');
     if (!buttons) return;
     buttons.innerHTML = '';
@@ -1712,6 +1807,8 @@ function submitOrder(){
         }
         return {
             product_id: it.product_id,
+            variation_id: it.variation_id || null,
+            addon_ids: it.addon_ids || [],
             name: finalName,
             price: finalUnitPrice,
             qty: it.qty,
@@ -1752,9 +1849,19 @@ function submitOrder(){
         if (res.ok && res.data.success) {
             cart = [];
             renderItems();
-            if (activeOrderId) { activeOrderId = null; }
             showToast(res.data.message || 'Pedido enviado', 'success');
-            setTimeout(function() { location.reload(); }, 800);
+            var completedTableId = selTable;
+            if (completedTableId) {
+                var completedTable = document.getElementById('table-' + completedTableId);
+                if (completedTable) {
+                    completedTable.classList.remove('free');
+                    completedTable.classList.add('busy');
+                    var status = completedTable.querySelector('small');
+                    if (status) status.textContent = 'Ocupada';
+                }
+            }
+            // Volver a consultar la comanda de la mesa por AJAX para sincronizar su estado sin recargar el POS.
+            selectTable(completedTableId || null);
         } else {
             showToast(res.data.message || 'Error al crear pedido', 'error');
         }
@@ -1768,12 +1875,17 @@ function submitOrder(){
 }
 
 function showToast(msg, type) {
-    var toast = document.createElement('div');
-    toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:99999;padding:14px 24px;border-radius:12px;font-size:14px;font-weight:600;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.2);animation:fadeIn .3s;max-width:400px;';
-    toast.style.background = type === 'success' ? '#16a34a' : '#ef4444';
-    toast.textContent = msg;
-    document.body.appendChild(toast);
-    setTimeout(function() { toast.remove(); }, 4000);
+    if (!window.Swal) { window.alert(msg); return; }
+    window.Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: type === 'success' ? 'success' : 'error',
+        title: msg,
+        showConfirmButton: false,
+        timer: 3200,
+        timerProgressBar: true,
+        customClass: { popup: 'lizto-swal-popup', title: 'lizto-swal-title' }
+    });
 }
 
 function searchSunat(){
@@ -2215,11 +2327,45 @@ function submitUngroupAll() {
         f.submit();
     }
 }
+function mountComandaDrawerControls() {
+    var drawer = document.querySelector('.pos-right-sticky');
+    var backdrop = document.getElementById('comanda-backdrop');
+    var button = document.getElementById('floating-cart-btn');
+    var content = document.querySelector('.s-content');
+    var layout = document.querySelector('.pos-layout-grid');
+    if (!document.body || !drawer || !backdrop || !button || !content || !layout) return;
+
+    var isMobile = window.matchMedia('(max-width: 991px)').matches;
+    if (!isMobile) {
+        if (drawer.parentElement !== layout) layout.appendChild(drawer);
+        if (backdrop.parentElement !== content) content.insertBefore(backdrop, layout);
+        if (button.parentElement !== content) content.insertBefore(button, layout);
+        drawer.classList.remove('open');
+        backdrop.classList.remove('open');
+        document.body.classList.remove('comanda-drawer-open');
+        return;
+    }
+
+    // Keep fixed controls outside .s-content so its responsive clipping and
+    // page-entry animation cannot hide them on narrow screens.
+    if (drawer.parentElement !== document.body) document.body.appendChild(drawer);
+    if (backdrop.parentElement !== document.body) document.body.appendChild(backdrop);
+    if (button.parentElement !== document.body) document.body.appendChild(button);
+}
+
+mountComandaDrawerControls();
+window.addEventListener('resize', mountComandaDrawerControls);
+
 function toggleComandaDrawer() {
     var drawer = document.querySelector('.pos-right-sticky');
     var backdrop = document.getElementById('comanda-backdrop');
-    if (drawer) drawer.classList.toggle('open');
-    if (backdrop) backdrop.classList.toggle('open');
+    if (!drawer || !backdrop) return;
+
+    mountComandaDrawerControls();
+
+    var isOpen = drawer.classList.toggle('open');
+    backdrop.classList.toggle('open', isOpen);
+    document.body.classList.toggle('comanda-drawer-open', isOpen);
 }
 
 // ── Charge modal: doc search on input ──

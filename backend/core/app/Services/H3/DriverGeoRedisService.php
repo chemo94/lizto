@@ -198,7 +198,7 @@ class DriverGeoRedisService
         float $lat,
         float $lng,
         float $radiusKm = 3.0,
-        ?int $serviceId = null,
+        int|array|null $serviceId = null,
         string|array|null $serviceType = null,
         int $limit = 20,
         bool $fallbackToDb = true
@@ -246,8 +246,11 @@ class DriverGeoRedisService
                         }
 
                         // Filter service_id
-                        if ($serviceId !== null && (int) ($pos['service_id'] ?? 0) !== (int) $serviceId) {
-                            continue;
+                        if ($serviceId !== null) {
+                            $positionServiceId = (int) ($pos['service_id'] ?? 0);
+                            if (is_array($serviceId) ? !in_array($positionServiceId, array_map('intval', $serviceId), true) : $positionServiceId !== (int) $serviceId) {
+                                continue;
+                            }
                         }
 
                         // Filter service_type
@@ -338,7 +341,7 @@ class DriverGeoRedisService
         float $lat,
         float $lng,
         float $radiusKm,
-        ?int $serviceId = null,
+        int|array|null $serviceId = null,
         string|array|null $serviceType = null,
         int $limit = 20
     ): Collection {
@@ -357,7 +360,7 @@ class DriverGeoRedisService
             ->whereBetween('current_lot', [$minLng, $maxLng]);
 
         if ($serviceId !== null) {
-            $query->where('service_id', $serviceId);
+            is_array($serviceId) ? $query->whereIn('service_id', $serviceId) : $query->where('service_id', $serviceId);
         }
 
         if ($serviceType !== null) {

@@ -26,8 +26,8 @@ class StockService
     private function resolveWarehouse(): ?int
     {
         $store = Store::where('seller_id', $this->sellerId)->first();
-        if ($store && $store->warehouse_id) {
-            return $store->warehouse_id;
+        if ($store && $store->warehouse_id && InvWarehouse::where('seller_id', $this->sellerId)->whereKey($store->warehouse_id)->exists()) {
+            return (int) $store->warehouse_id;
         }
         return InvWarehouse::where('seller_id', $this->sellerId)->where('is_default', true)->value('id')
             ?? InvWarehouse::where('seller_id', $this->sellerId)->value('id');
@@ -38,14 +38,14 @@ class StockService
         $consumed = [];
 
         foreach ($orderItems as $orderItem) {
-            $product = Product::find($orderItem->product_id);
+            $product = Product::whereHas('store', fn($q) => $q->where('seller_id', $this->sellerId))->find($orderItem->product_id);
             if (!$product || !$product->hasStockTracking()) continue;
 
-            $recipe = InvRecipe::where('product_id', $product->id)->active()->with('items.item')->first();
+            $recipe = InvRecipe::where('seller_id', $this->sellerId)->where('product_id', $product->id)->active()->with('items.item')->first();
             if ($recipe) {
                 foreach ($recipe->items as $recipeItem) {
                     $invItem = $recipeItem->item;
-                    if (!$invItem) continue;
+                    if (!$invItem || (int) $invItem->seller_id !== $this->sellerId) continue;
 
                     $portions = max(0.01, floatval($recipe->portions));
                     $qtyUsed = ($recipeItem->quantity_net / $portions) * $orderItem->quantity;
@@ -56,10 +56,10 @@ class StockService
                     $consumed[] = "{$invItem->name}: -{$qtyUsed}";
                 }
             } else {
-                $links = InvProductItem::where('product_id', $product->id)->get();
+                $links = InvProductItem::where('product_id', $product->id)->with('item')->get();
                 foreach ($links as $link) {
-                    $invItem = InvItem::find($link->item_id);
-                    if (!$invItem) continue;
+                    $invItem = $link->item;
+                    if (!$invItem || (int) $invItem->seller_id !== $this->sellerId) continue;
 
                     $qtyUsed = $link->quantity * $orderItem->quantity;
 
@@ -80,18 +80,18 @@ class StockService
         $skipped = [];
 
         foreach ($orderItems as $orderItem) {
-            $product = Product::find($orderItem->product_id);
+            $product = Product::whereHas('store', fn($q) => $q->where('seller_id', $this->sellerId))->find($orderItem->product_id);
             if (!$product || !$product->hasStockTracking()) continue;
             if ($product->isStockPrepared()) {
                 $skipped[] = $product->name;
                 continue;
             }
 
-            $recipe = InvRecipe::where('product_id', $product->id)->active()->with('items.item')->first();
+            $recipe = InvRecipe::where('seller_id', $this->sellerId)->where('product_id', $product->id)->active()->with('items.item')->first();
             if ($recipe) {
                 foreach ($recipe->items as $recipeItem) {
                     $invItem = $recipeItem->item;
-                    if (!$invItem) continue;
+                    if (!$invItem || (int) $invItem->seller_id !== $this->sellerId) continue;
 
                     $portions = max(0.01, floatval($recipe->portions));
                     $qtyUsed = ($recipeItem->quantity_net / $portions) * $orderItem->quantity;
@@ -102,10 +102,10 @@ class StockService
                     $restored[] = "{$invItem->name}: +{$qtyUsed}";
                 }
             } else {
-                $links = InvProductItem::where('product_id', $product->id)->get();
+                $links = InvProductItem::where('product_id', $product->id)->with('item')->get();
                 foreach ($links as $link) {
-                    $invItem = InvItem::find($link->item_id);
-                    if (!$invItem) continue;
+                    $invItem = $link->item;
+                    if (!$invItem || (int) $invItem->seller_id !== $this->sellerId) continue;
 
                     $qtyUsed = $link->quantity * $orderItem->quantity;
 
@@ -181,23 +181,23 @@ class StockService
         $errors = [];
 
         foreach ($orderItems as $oi) {
-            $product = Product::find($oi['product_id'] ?? 0);
+            $product = Product::whereHas('store', fn($q) => $q->where('seller_id', $this->sellerId))->find($oi['product_id'] ?? 0);
             if (!$product || !$product->hasStockTracking()) continue;
 
-            $recipe = InvRecipe::where('product_id', $product->id)->active()->with('items.item')->first();
+            $recipe = InvRecipe::where('seller_id', $this->sellerId)->where('product_id', $product->id)->active()->with('items.item')->first();
             if ($recipe) {
                 foreach ($recipe->items as $ri) {
-                    if (!$ri->item) continue;
+                    if (!$ri->item || (int) $ri->item->seller_id !== $this->sellerId) continue;
                     $needed = ($ri->quantity_net / max(0.01, $recipe->portions)) * $oi['quantity'];
                     if ($ri->item->stock < $needed) {
                         $errors[] = "{$ri->item->name} (necesita {$needed}, stock: {$ri->item->stock})";
                     }
                 }
             } else {
-                $links = InvProductItem::where('product_id', $product->id)->get();
+                $links = InvProductItem::where('product_id', $product->id)->with('item')->get();
                 foreach ($links as $link) {
-                    $invItem = InvItem::find($link->item_id);
-                    if (!$invItem) continue;
+                    $invItem = $link->item;
+                    if (!$invItem || (int) $invItem->seller_id !== $this->sellerId) continue;
                     $needed = $link->quantity * $oi['quantity'];
                     if ($invItem->stock < $needed) {
                         $errors[] = "{$invItem->name} (necesita {$needed}, stock: {$invItem->stock})";

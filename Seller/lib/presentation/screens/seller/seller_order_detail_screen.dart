@@ -6,6 +6,7 @@ import 'package:lizto_store/core/utils/style.dart';
 import 'package:lizto_store/data/controller/seller/seller_controller.dart';
 import 'package:lizto_store/data/model/delivery/delivery_models.dart';
 import 'package:lizto_store/presentation/components/image/my_network_image_widget.dart';
+import 'package:lizto_store/presentation/screens/seller/subscription_guard.dart';
 
 class SellerOrderDetailScreen extends StatefulWidget {
   final int orderId;
@@ -22,6 +23,9 @@ class _SellerOrderDetailScreenState extends State<SellerOrderDetailScreen> {
   void initState() {
     super.initState();
     _c = Get.find<SellerController>();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (mounted) await SubscriptionGuard.guardModuleEntry(context);
+    });
   }
 
   DeliveryOrderModel? get _order => _c.orders.where((o) => o.id == widget.orderId).firstOrNull;

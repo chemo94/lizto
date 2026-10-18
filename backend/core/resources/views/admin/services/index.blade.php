@@ -9,6 +9,7 @@
                             <x-admin.ui.table.header>
                                 <tr>
                                     <th>@lang('Service')</th>
+                                    <th>Tipo / capacidad / Flex</th>
                                     <th>@lang('City Fare')</th>
                                     <th>@lang('Intercity Fare')</th>
                                     <th>@lang('Commission')</th>
@@ -28,6 +29,11 @@
                                                     {{ __($service->name) }}
                                                 </span>
                                             </div>
+                                        </td>
+                                        <td>
+                                            {{ $service->vehicle_type === 'moto' ? 'Moto' : 'Auto' }} /
+                                            {{ $service->min_vehicle_capacity }}+ plazas, hasta {{ $service->max_passengers }} pasajeros /
+                                            {{ $service->allow_offer ? 'Flex' : 'Tarifa fija' }}
                                         </td>
                                         <td>
                                             <div>
@@ -124,6 +130,29 @@
                 <div class="form-group">
                     <label>@lang('Subtitle')</label>
                     <input class="form-control" name="subtitle" type="text" required value="{{ old('subtitle') }}">
+                </div>
+                <div class="row">
+                    <div class="col-md-4 form-group">
+                        <label>Tipo de vehículo</label>
+                        <select class="form-control" name="vehicle_type" required>
+                            <option value="auto">Auto</option>
+                            <option value="moto">Moto</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Capacidad mínima del vehículo</label>
+                        <input class="form-control" name="min_vehicle_capacity" type="number" min="1" max="12" required value="1">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Máximo de pasajeros</label>
+                        <input class="form-control" name="max_passengers" type="number" min="1" max="12" required value="12">
+                    </div>
+                    <div class="col-md-4 form-group d-flex align-items-end">
+                        <label class="d-flex align-items-center gap-2">
+                            <input type="checkbox" name="allow_offer" value="1" checked>
+                            Permitir oferta de precio (Flex)
+                        </label>
+                    </div>
                 </div>
                 <div class="row mb-3">
                     <div class="py-2">
@@ -295,6 +324,10 @@
                 const action = "{{ route('admin.service.update', ':id') }}";
                 $("input[name='name']").val(data.name);
                 $("input[name='subtitle']").val(data.subtitle);
+                $("select[name='vehicle_type']").val(data.vehicle_type || 'auto');
+                $("input[name='min_vehicle_capacity']").val(data.min_vehicle_capacity || 1);
+                $("input[name='max_passengers']").val(data.max_passengers || 12);
+                $("input[name='allow_offer']").prop('checked', Boolean(Number(data.allow_offer)));
                 $("input[name='city_min_fare']").val(getAmount(data.city_min_fare));
                 $("input[name='city_min_trip_fare']").val(getAmount(data.city_min_trip_fare));
                 $("input[name='city_max_fare']").val(getAmount(data.city_max_fare));
@@ -321,6 +354,10 @@
                 const action = "{{ route('admin.service.store') }}";
                 $modal.find(".modal-title").text("@lang('Add Service')");
                 $modal.find('form').trigger('reset');
+                $("select[name='vehicle_type']").val('auto');
+                $("input[name='min_vehicle_capacity']").val(1);
+                $("input[name='max_passengers']").val(12);
+                $("input[name='allow_offer']").prop('checked', true);
                 $modal.find('form').attr('action', action);
                 $modal.find(".image-upload img").attr('src', "{{ asset('assets/images/drag-and-drop.png') }}");
                 $modal.find(".image-upload [type=file]").attr('required', true);

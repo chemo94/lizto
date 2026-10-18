@@ -21,6 +21,7 @@ import 'package:lizto_store/presentation/screens/seller/seller_subscriptions_scr
 import 'package:lizto_store/presentation/screens/seller/seller_analytics_screen.dart';
 import 'package:lizto_store/presentation/screens/seller/seller_notify_screen.dart';
 import 'package:lizto_store/presentation/screens/seller/seller_qr_screen.dart';
+import 'package:lizto_store/presentation/screens/seller/subscription_guard.dart';
 import 'package:lizto_store/presentation/screens/seller/seller_tables_screen.dart';
 import 'package:lizto_store/presentation/screens/seller/mozo_tables_screen.dart';
 import 'package:lizto_store/presentation/screens/seller/seller_kitchen_screen.dart';
@@ -143,7 +144,7 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> with Widg
                     icon: const Icon(Icons.notifications_outlined, color: MyColor.colorWhite),
                     onPressed: () {
                       _notif.markAllRead();
-                      Get.to(() => const SellerOrdersScreen());
+                      _runGuarded(context, c, () => Get.to(() => const SellerOrdersScreen()));
                     },
                   ),
                   if (_notif.unreadCount > 0)
@@ -181,7 +182,7 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> with Widg
                 _buildHeader(c),
                 if (!c.isStaff) _buildSubscriptionAlert(),
                 if (!c.isStaff) _buildMetricCards(c),
-                _buildQuickActions(c),
+                _buildQuickActions(context, c),
                 if (!c.isStaff) _buildRecentOrders(c),
                 if (!c.isStaff) _buildStoresSection(c),
                 SizedBox(height: Dimensions.space32),
@@ -408,7 +409,26 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> with Widg
     );
   }
 
-  Widget _buildQuickActions(SellerController c) {
+  int _primaryStoreId(SellerController c) {
+    if (c.stores.isEmpty) return 0;
+    final raw = c.stores.first['id'];
+    return raw is int ? raw : int.tryParse(raw?.toString() ?? '') ?? 0;
+  }
+
+  Future<void> _runGuarded(
+    BuildContext context,
+    SellerController c,
+    VoidCallback onAllowed, {
+    int? storeId,
+  }) async {
+    final allowed = await SubscriptionGuard.canProceed(
+      context,
+      storeId: storeId ?? _primaryStoreId(c),
+    );
+    if (allowed && context.mounted) onAllowed();
+  }
+
+  Widget _buildQuickActions(BuildContext context, SellerController c) {
     final allActions = [
       {
         'icon': Icons.receipt_long_rounded,
@@ -597,6 +617,14 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> with Widg
       },
     ];
 
+    // Every operational shortcut checks the current store's plan at entry.
+    // Package/subscription management remains available so an expired plan can
+    // be renewed, while operational modules show the renewal dialog first.
+    for (final action in allActions) {
+      final onTap = action['onTap'] as VoidCallback;
+      action['onTap'] = () => _runGuarded(context, c, onTap);
+    }
+
     final filteredActions = allActions.where((action) {
       if (!c.isStaff) return true;
       final perms = action['permissions'] as List<String>;
@@ -663,7 +691,7 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> with Widg
                 child: Text('Pedidos recientes', style: boldLarge.copyWith(fontSize: Dimensions.fontLarge)),
               ),
               TextButton(
-                onPressed: () => Get.to(() => const SellerOrdersScreen()),
+                onPressed: () => _runGuarded(context, c, () => Get.to(() => const SellerOrdersScreen())),
                 child: Text('Ver todos', style: regularDefault.copyWith(color: MyColor.primaryColor)),
               ),
             ],
@@ -693,15 +721,15 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> with Widg
               ),
             )
           else
-            ...recent.map((order) => _buildOrderCard(c, order)),
+            ...recent.map((order) => _buildOrderCard(context, c, order)),
         ],
       ),
     );
   }
 
-  Widget _buildOrderCard(SellerController c, DeliveryOrderModel order) {
+  Widget _buildOrderCard(BuildContext context, SellerController c, DeliveryOrderModel order) {
     return GestureDetector(
-      onTap: () => Get.to(() => SellerOrderDetailScreen(orderId: order.id ?? 0)),
+      onTap: () => _runGuarded(context, c, () => Get.to(() => SellerOrderDetailScreen(orderId: order.id ?? 0))),
       child: Container(
         margin: EdgeInsets.only(bottom: Dimensions.space10),
         padding: EdgeInsets.all(Dimensions.space14),
@@ -992,8 +1020,10 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> with Widg
                     title: 'Productos',
                     subtitle: 'Ver, agregar y editar productos',
                     onTap: () {
-                      Navigator.pop(ctx);
-                      Get.to(() => _SellerProductsScreen(storeId: storeId));
+                      _runGuarded(context, c, () {
+                        Navigator.pop(ctx);
+                        Get.to(() => _SellerProductsScreen(storeId: storeId));
+                      }, storeId: storeId);
                     },
                   ),
                   const SizedBox(height: 10),
@@ -1003,8 +1033,10 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> with Widg
                     title: 'Categorías del menú',
                     subtitle: 'Organiza tus productos en secciones',
                     onTap: () {
-                      Navigator.pop(ctx);
-                      Get.to(() => SellerMenuCategoriesScreen(storeId: storeId, storeName: storeName));
+                      _runGuarded(context, c, () {
+                        Navigator.pop(ctx);
+                        Get.to(() => SellerMenuCategoriesScreen(storeId: storeId, storeName: storeName));
+                      }, storeId: storeId);
                     },
                   ),
                   const SizedBox(height: 10),

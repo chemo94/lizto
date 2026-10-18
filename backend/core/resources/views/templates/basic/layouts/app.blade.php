@@ -9,6 +9,8 @@
     @include('partials.seo')
 
     <link href="{{ asset('assets/global/css/bootstrap.min.css') }}" rel="stylesheet">
+    <link href="{{ asset('assets/global/css/sweetalert2.min.css') }}" rel="stylesheet">
+    <link href="{{ asset('assets/global/css/lizto-swal.css') }}" rel="stylesheet">
     <link href="{{ asset('assets/global/css/all.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('assets/global/css/line-awesome.min.css') }}">
     <link rel="stylesheet" href="{{ asset($activeTemplateTrue . 'css/animate.css') }}">
@@ -37,6 +39,8 @@
 
     <script src="{{ asset('assets/global/js/jquery-3.7.1.min.js') }}"></script>
     <script src="{{ asset('assets/global/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ asset('assets/global/js/sweetalert2.all.min.js') }}"></script>
+    <script src="{{ asset('assets/global/js/swal-compat.js') }}"></script>
 
     <script src="{{ asset($activeTemplateTrue . 'js/viewport.jquery.js') }}"></script>
     <script src="{{ asset($activeTemplateTrue . 'js/wow.min.js') }}"></script>

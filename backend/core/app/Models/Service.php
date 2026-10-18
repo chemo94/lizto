@@ -24,5 +24,8 @@ class Service extends Model
         'intercity_rate_per_km'     => 'double',
         'intercity_min_trip_fare'   => 'double',
         'status'                    => 'integer',
+        'allow_offer'               => 'boolean',
+        'min_vehicle_capacity'      => 'integer',
+        'max_passengers'            => 'integer',
     ];
 }

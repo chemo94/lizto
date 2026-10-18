@@ -25,7 +25,6 @@ class NewDeliveryOrderPlaced implements ShouldBroadcast
     {
         $channels = [
             new Channel('private-admin-notifications'),
-            new Channel('private-nearby-couriers'),
         ];
 
         // Also notify the store/seller

@@ -88,7 +88,7 @@
                             <tr>
                                 <th>Insumo</th>
                                 <th style="width: 80px; text-align: center;">Cant.</th>
-                                <th style="width: 100px; text-align: right;">Costo U.</th>
+                                <th style="width: 100px; text-align: right;">Costo U. (sin IGV)</th>
                                 <th style="width: 100px; text-align: right;">Total</th>
                                 <th style="width: 40px;"></th>
                             </tr>
@@ -100,7 +100,7 @@
                 </div>
 
                 <div style="background: var(--s-bg-light); border-radius: 8px; padding: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-weight: 600; color: var(--s-text-secondary); font-size: 13px;">Monto Total Estimado:</span>
+                    <span style="font-weight: 600; color: var(--s-text-secondary); font-size: 13px;">Total estimado según el tipo de IGV del insumo:</span>
                     <span id="purchase-total" style="font-weight: 800; color: var(--s-primary); font-size: 18px;">S/ 0.00</span>
                 </div>
 
@@ -173,7 +173,7 @@
 
 @push('script')
 <script>
-var itemsSource = @json($items->map(fn($i) => ['id'=>$i->id,'name'=>$i->name]));
+var itemsSource = @json($items->map(fn($i) => ['id'=>$i->id,'name'=>$i->name,'tax_type'=>$i->tax_type]));
 
 function addPurchaseRow() {
     var tbody = document.getElementById('purchase-items');
@@ -275,7 +275,9 @@ function updatePurchaseTotal() {
         if (sel && qtyInput && costInput) {
             var qty = parseFloat(qtyInput.value) || 0;
             var cost = parseFloat(costInput.value) || 0;
-            var rowTotal = qty * cost;
+        var selectedItem = itemsSource.find(function(item){ return String(item.id) === String(sel && sel.value); });
+        var rowSubtotal = Math.round(qty * cost * 100) / 100;
+        var rowTotal = rowSubtotal + ((selectedItem && selectedItem.tax_type === 'gravado') ? Math.round(rowSubtotal * 0.18 * 100) / 100 : 0);
             
             if (tdTotal) {
                 tdTotal.textContent = 'S/ ' + rowTotal.toFixed(2);
@@ -292,7 +294,7 @@ function updatePurchaseTotal() {
         }
     });
     
-    document.getElementById('purchase-total').textContent = 'S/ ' + total.toFixed(2);
+    document.getElementById('purchase-total').textContent = 'S/ ' + total.toFixed(2) + ' (incluye IGV gravado)';
     document.getElementById('purchase-items-json').value = JSON.stringify(rows);
 }
 

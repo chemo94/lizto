@@ -301,6 +301,13 @@
                             </div>
                             <div class="col-sm-6">
                                 <div class="form-group">
+                                    <label>Capacidad máxima de pasajeros</label>
+                                    <input class="form-control" type="number" name="passenger_capacity" min="1" max="12"
+                                        value="{{ $driver->vehicle->passenger_capacity ?? 4 }}">
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="form-group">
                                     <label>@lang('Address')</label>
                                     <input class="form-control" type="text" name="address"
                                         value="{{ @$driver->address }}">

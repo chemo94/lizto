@@ -8,6 +8,7 @@ import 'package:lizto_store/data/controller/seller/seller_panel_controller.dart'
 import 'package:lizto_store/data/model/seller/panel_models.dart';
 import 'package:lizto_store/data/repo/seller/seller_panel_repo.dart';
 import 'package:lizto_store/data/controller/seller/seller_controller.dart';
+import 'package:lizto_store/presentation/screens/seller/subscription_guard.dart';
 
 class SellerKitchenScreen extends StatefulWidget {
   const SellerKitchenScreen({super.key});
@@ -30,11 +31,15 @@ class _SellerKitchenScreenState extends State<SellerKitchenScreen> {
       Get.put(SellerPanelController(repo: Get.find()));
     }
     c = Get.find<SellerPanelController>();
-    WidgetsBinding.instance.addPostFrameCallback((_) => c.loadKitchen());
-
-    // Silent background refresh every 8 s — NO loading indicator, NO widget rebuild freeze.
-    _timer = Timer.periodic(const Duration(seconds: 8), (_) {
-      if (mounted) c.loadKitchenSilent();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final allowed = await SubscriptionGuard.guardModuleEntry(context);
+      if (!allowed || !mounted) return;
+      await c.loadKitchen();
+      if (!mounted) return;
+      // Poll only after subscription access has been confirmed.
+      _timer = Timer.periodic(const Duration(seconds: 8), (_) {
+        if (mounted) c.loadKitchenSilent();
+      });
     });
   }
 
@@ -120,8 +125,7 @@ class _SellerKitchenScreenState extends State<SellerKitchenScreen> {
             child: Text(_statusLabel(o.status), style: boldSmall.copyWith(color: _statusColor(o.status))),
           ),
         ]),
-        if (o.table != null)
-          Text(o.table!, style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor)),
+        if (o.table != null) Text(o.table!, style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor)),
         if (o.kitchenNotes != null) ...[
           const SizedBox(height: 4),
           Text('⚠ ${o.kitchenNotes}', style: regularSmall.copyWith(color: MyColor.redCancelTextColor)),
@@ -133,7 +137,8 @@ class _SellerKitchenScreenState extends State<SellerKitchenScreen> {
           Text('Total: S/ ${o.total?.toStringAsFixed(2) ?? "0"}', style: boldDefault.copyWith(color: MyColor.primaryColor)),
           if (isBusy)
             const SizedBox(
-              width: 28, height: 28,
+              width: 28,
+              height: 28,
               child: CircularProgressIndicator(strokeWidth: 2, color: MyColor.primaryColor),
             )
           else
@@ -164,6 +169,7 @@ class _SellerKitchenScreenState extends State<SellerKitchenScreen> {
 
   Widget _buildItemRow(KitchenItemModel item, KitchenOrderModel o) {
     final done = item.status == 'done';
+    final canRemove = !done && (o.status == 'confirmed' || o.status == 'preparing');
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: InkWell(
@@ -191,9 +197,43 @@ class _SellerKitchenScreenState extends State<SellerKitchenScreen> {
                 ),
               ),
             ),
+            if (canRemove)
+              IconButton(
+                tooltip: 'Quitar de la comanda',
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.delete_outline_rounded, color: MyColor.redCancelTextColor, size: 20),
+                onPressed: () => _confirmRemoveItem(o, item),
+              ),
           ]),
         ),
       ),
+    );
+  }
+
+  Future<void> _confirmRemoveItem(KitchenOrderModel order, KitchenItemModel item) async {
+    if (order.id == null || item.id == null || item.status == 'done') return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Quitar plato'),
+        content: Text('¿Quitar ${item.name ?? 'este producto'} de la comanda? Se actualizarán el stock y el total.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text('Quitar', style: TextStyle(color: MyColor.redCancelTextColor))),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _busyOrders.add(order.id!));
+    final ok = await c.deleteKitchenItem(order.id!, item.id!);
+    if (!mounted) return;
+    setState(() => _busyOrders.remove(order.id));
+    Get.snackbar(
+      ok ? 'Plato eliminado' : 'No se pudo eliminar',
+      ok ? 'El plato se quitó de la comanda.' : 'Solo se pueden quitar platos que aún no se hayan preparado.',
+      backgroundColor: ok ? const Color(0xFF10B981) : MyColor.redCancelTextColor,
+      colorText: Colors.white,
+      snackPosition: SnackPosition.BOTTOM,
     );
   }
 
@@ -222,19 +262,27 @@ class _SellerKitchenScreenState extends State<SellerKitchenScreen> {
 
   Color _statusColor(String? s) {
     switch (s) {
-      case 'confirmed': return const Color(0xFFF59E0B);
-      case 'preparing': return MyColor.primaryColor;
-      case 'ready': return const Color(0xFF10B981);
-      default: return MyColor.bodyMutedTextColor;
+      case 'confirmed':
+        return const Color(0xFFF59E0B);
+      case 'preparing':
+        return MyColor.primaryColor;
+      case 'ready':
+        return const Color(0xFF10B981);
+      default:
+        return MyColor.bodyMutedTextColor;
     }
   }
 
   String _statusLabel(String? s) {
     switch (s) {
-      case 'confirmed': return 'Pendiente';
-      case 'preparing': return 'Preparando';
-      case 'ready': return 'Listo';
-      default: return s ?? '';
+      case 'confirmed':
+        return 'Pendiente';
+      case 'preparing':
+        return 'Preparando';
+      case 'ready':
+        return 'Listo';
+      default:
+        return s ?? '';
     }
   }
 

@@ -43,7 +43,20 @@ class InventoryController extends Controller
     public function __construct()
     {
         $this->middleware(function ($request, $next) {
-            if (!Session::has('seller_id')) return redirect()->route('seller.login');
+            $seller = \App\Models\Seller::where('status', 1)->find(Session::get('seller_id'));
+            if (!$seller) {
+                Session::forget(['seller_id', 'seller_staff_id']);
+                return redirect()->route('seller.login');
+            }
+            $staffId = Session::get('seller_staff_id');
+            if ($staffId) {
+                $staff = \App\Models\PosStaff::where('seller_id', $seller->id)->where('status', 'active')->find($staffId);
+                if (!$staff || (!$staff->isAdmin() && !$staff->hasPermission('inventory'))) {
+                    return $request->expectsJson()
+                        ? response()->json(['message' => 'No tienes permiso para gestionar inventario.'], 403)
+                        : redirect()->route('seller.pos')->with('error', 'No tienes permiso para gestionar inventario.');
+                }
+            }
             return $next($request);
         });
     }
@@ -113,6 +126,8 @@ class InventoryController extends Controller
             'unit'          => 'required|string|max:20',
             'tax_type'      => 'required|in:gravado,exonerado,inafecto',
             'initial_stock' => 'nullable|numeric|min:0',
+            'cost'          => 'nullable|numeric|min:0',
+            'min_stock'     => 'nullable|numeric|min:0',
         ]);
 
         $initialStock = floatval($request->initial_stock ?? 0);
@@ -159,6 +174,12 @@ class InventoryController extends Controller
 
     public function itemUpdate(Request $request, $id)
     {
+        $request->validate([
+            'name' => 'required|string|max:120', 'unit' => 'required|string|max:20',
+            'min_stock' => 'nullable|numeric|min:0', 'cost' => 'nullable|numeric|min:0',
+            'sale_price' => 'nullable|numeric|min:0', 'item_type' => 'nullable|in:insumo,producto',
+            'tax_type' => 'required|in:gravado,exonerado,inafecto',
+        ]);
         InvItem::where('seller_id', $this->seller()->id)->findOrFail($id)
             ->update($request->only([
                 'name', 'category', 'unit', 'min_stock', 'cost', 'sale_price',
@@ -235,9 +256,16 @@ class InventoryController extends Controller
         $seller = $this->seller();
         $request->validate([
             'document_date' => 'required|date',
-            'supplier_id'   => 'required|exists:inv_suppliers,id',
+            'supplier_id'   => 'required|integer',
             'items'         => 'required|json',
+            'document_type' => 'nullable|in:01,03',
+            'payment_method' => 'nullable|in:cash,card,yape,plin,transfer,credit',
+            'document_series' => 'nullable|string|max:20',
+            'document_number' => 'nullable|string|max:40',
+            'notes' => 'nullable|string|max:1000',
         ]);
+
+        $supplier = InvSupplier::where('seller_id', $seller->id)->findOrFail($request->supplier_id);
 
         $purchaseItems = json_decode($request->items, true);
         if (!is_array($purchaseItems) || count($purchaseItems) === 0) {
@@ -245,10 +273,23 @@ class InventoryController extends Controller
         }
 
         $subtotal = 0;
+        $igv = 0;
+        $validatedItems = [];
         foreach ($purchaseItems as $pi) {
-            $subtotal += ($pi['quantity'] ?? 0) * ($pi['unit_cost'] ?? 0);
+            $item = InvItem::where('seller_id', $seller->id)->findOrFail($pi['item_id'] ?? 0);
+            $qty = (float) ($pi['quantity'] ?? 0);
+            $cost = (float) ($pi['unit_cost'] ?? 0);
+            if (!is_finite($qty) || $qty <= 0 || $qty > 1000000 || !is_finite($cost) || $cost < 0) {
+                return back()->with('error', 'Revisa las cantidades y costos de la compra.')->withInput();
+            }
+            $lineSubtotal = round($qty * $cost, 2);
+            $lineIgv = $item->tax_type === 'gravado' ? round($lineSubtotal * 0.18, 2) : 0;
+            $subtotal += $lineSubtotal;
+            $igv += $lineIgv;
+            $validatedItems[] = ['item' => $item, 'quantity' => $qty, 'unit_cost' => $cost, 'subtotal' => $lineSubtotal, 'igv' => $lineIgv];
         }
-        $igv   = round($subtotal * 0.18, 2);
+        $subtotal = round($subtotal, 2);
+        $igv = round($igv, 2);
         $total = round($subtotal + $igv, 2);
 
         $cashSession = PosCashSession::where('seller_id', $seller->id)->open()->first();
@@ -257,13 +298,14 @@ class InventoryController extends Controller
         }
 
         $warehouseId = $request->warehouse_id
-            ?? (\App\Models\InvWarehouse::where('seller_id', $seller->id)->where('is_default', true)->value('id')
+            ? \App\Models\InvWarehouse::where('seller_id', $seller->id)->findOrFail($request->warehouse_id)->id
+            : (\App\Models\InvWarehouse::where('seller_id', $seller->id)->where('is_default', true)->value('id')
             ?? \App\Models\InvWarehouse::where('seller_id', $seller->id)->value('id'));
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($seller, $request, $purchaseItems, $subtotal, $igv, $total, $cashSession, $warehouseId) {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($seller, $request, $validatedItems, $supplier, $subtotal, $igv, $total, $cashSession, $warehouseId) {
             $purchase = InvPurchase::create([
                 'seller_id'       => $seller->id,
-                'supplier_id'     => $request->supplier_id,
+                'supplier_id'     => $supplier->id,
                 'cash_session_id' => $cashSession->id,
                 'warehouse_id'    => $warehouseId,
                 'document_type'   => $request->document_type ?? '01',
@@ -277,19 +319,18 @@ class InventoryController extends Controller
                 'notes'           => $request->notes,
             ]);
 
-            foreach ($purchaseItems as $pi) {
-                $item = InvItem::where('seller_id', $seller->id)->find($pi['item_id'] ?? 0);
-                if (!$item) continue;
-
-                $qty  = floatval($pi['quantity'] ?? 0);
-                $cost = floatval($pi['unit_cost'] ?? 0);
+            foreach ($validatedItems as $line) {
+                $item = InvItem::where('seller_id', $seller->id)->lockForUpdate()->findOrFail($line['item']->id);
+                $qty = $line['quantity'];
+                $cost = $line['unit_cost'];
 
                 InvPurchaseItem::create([
                     'purchase_id' => $purchase->id,
                     'item_id'     => $item->id,
                     'quantity'    => $qty,
                     'unit_cost'   => $cost,
-                    'total'       => $qty * $cost,
+                    'tax_type'    => $item->tax_type,
+                    'total'       => $line['subtotal'] + $line['igv'],
                 ]);
 
                 $oldStock = $item->stock;
@@ -350,6 +391,10 @@ class InventoryController extends Controller
 
     public function stockAdjust(Request $request)
     {
+        $request->validate([
+            'item_id' => 'required|integer', 'quantity' => 'required|numeric|gt:0',
+            'type' => 'required|in:entrada,salida', 'description' => 'nullable|string|max:255',
+        ]);
         $seller   = $this->seller();
         $item     = InvItem::where('seller_id', $seller->id)->findOrFail($request->item_id);
         $qty      = floatval($request->quantity ?? 0);
@@ -432,11 +477,20 @@ class InventoryController extends Controller
         if (empty($ingredients)) {
             return back()->with('error', 'Agrega al menos un ingrediente a la receta');
         }
+        if ($request->filled('product_id') && !Product::whereHas('store', fn($q) => $q->where('seller_id', $seller->id))->whereKey($request->product_id)->exists()) {
+            return back()->with('error', 'El producto seleccionado no pertenece a este negocio.');
+        }
+        foreach ($ingredients as $ingredient) {
+            $itemId = $ingredient['item_id'] ?? 0;
+            $qty = (float) ($ingredient['quantity_gross'] ?? 0);
+            $waste = (float) ($ingredient['waste_pct'] ?? 0);
+            if (!InvItem::where('seller_id', $seller->id)->whereKey($itemId)->exists() || !is_finite($qty) || $qty <= 0 || !is_finite($waste) || $waste < 0 || $waste > 100) {
+                return back()->with('error', 'Revisa los insumos y mermas de la receta.');
+            }
+        }
 
         DB::transaction(function () use ($request, $seller, $ingredients) {
-            $recipe = InvRecipe::updateOrCreate(
-                ['id' => $request->recipe_id ?? 0],
-                [
+            $recipeData = [
                     'seller_id'     => $seller->id,
                     'product_id'    => $request->product_id ?: null,
                     'name'          => $request->name,
@@ -444,8 +498,13 @@ class InventoryController extends Controller
                     'portions'      => $request->portions,
                     'unit_produced' => $request->unit_produced ?? 'porcion',
                     'notes'         => $request->notes,
-                ]
-            );
+                ];
+            if ($request->filled('recipe_id')) {
+                $recipe = InvRecipe::where('seller_id', $seller->id)->findOrFail($request->recipe_id);
+                $recipe->update($recipeData);
+            } else {
+                $recipe = InvRecipe::create($recipeData);
+            }
 
             // Reemplazar ingredientes
             $recipe->items()->delete();
@@ -454,8 +513,6 @@ class InventoryController extends Controller
                 $qtyGross     = floatval($ing['quantity_gross'] ?? 0);
                 $wastePct     = floatval($ing['waste_pct'] ?? 0);
                 $qtyNet       = round($qtyGross * (1 - $wastePct / 100), 8);
-
-                if (!$itemId || $qtyGross <= 0) continue;
 
                 InvRecipeItem::create([
                     'recipe_id'      => $recipe->id,
@@ -698,7 +755,14 @@ class InventoryController extends Controller
         $request->validate([
             'document_date' => 'required|date',
             'items'         => 'required|json',
+            'supplier_id'   => 'nullable|integer',
+            'document_type' => 'nullable|in:00,01,03,07',
+            'payment_method' => 'nullable|in:cash,card,yape,plin,transfer,credit',
+            'notes' => 'nullable|string|max:1000',
         ]);
+        if ($request->filled('supplier_id')) {
+            InvSupplier::where('seller_id', $seller->id)->findOrFail($request->supplier_id);
+        }
 
         $saleItems = json_decode($request->items, true);
         if (empty($saleItems)) {
@@ -710,14 +774,24 @@ class InventoryController extends Controller
         $subtotalInafecto  = 0;
         $igvTotal          = 0;
 
-        // Validate stock before doing anything
+        $validatedItems = [];
+        // Validate the complete document and reject foreign or malformed lines.
         foreach ($saleItems as $si) {
-            $item = InvItem::where('seller_id', $seller->id)->find($si['item_id'] ?? 0);
-            if (!$item) continue;
+            $item = InvItem::where('seller_id', $seller->id)->findOrFail($si['item_id'] ?? 0);
             $qty = floatval($si['quantity'] ?? 0);
+            $price = array_key_exists('unit_price', $si) ? (float) $si['unit_price'] : (float) $item->sale_price;
+            if (!is_finite($qty) || $qty <= 0 || $qty > 1000000 || !is_finite($price) || $price < 0) {
+                return back()->with('error', 'Revisa las cantidades y precios de la venta.');
+            }
             if ($item->stock < $qty) {
                 return back()->with('error', "Stock insuficiente de '{$item->name}' (disponible: {$item->stock} {$item->unit})");
             }
+            $validatedItems[] = ['item_id' => $item->id, 'quantity' => $qty, 'unit_price' => $price];
+        }
+        foreach (collect($validatedItems)->groupBy('item_id') as $itemId => $lines) {
+            $item = InvItem::where('seller_id', $seller->id)->findOrFail($itemId);
+            $needed = $lines->sum('quantity');
+            if ($item->stock < $needed) return back()->with('error', "Stock insuficiente de '{$item->name}' (disponible: {$item->stock} {$item->unit})");
         }
 
         $cashSession = PosCashSession::where('seller_id', $seller->id)->open()->first();
@@ -725,19 +799,24 @@ class InventoryController extends Controller
             return back()->with('error', 'Debe abrir una caja antes de registrar una venta de insumos.');
         }
 
-        DB::transaction(function () use ($seller, $request, $saleItems, $cashSession,
+        try { DB::transaction(function () use ($seller, $request, $validatedItems, $cashSession,
             &$subtotalGravado, &$subtotalExonerado, &$subtotalInafecto, &$igvTotal)
         {
+            foreach (collect($validatedItems)->groupBy('item_id') as $itemId => $lines) {
+                $lockedItem = InvItem::where('seller_id', $seller->id)->lockForUpdate()->findOrFail($itemId);
+                if ($lockedItem->stock < $lines->sum('quantity')) {
+                    throw new \RuntimeException('El stock cambió mientras se registraba la venta.');
+                }
+            }
             // Compute totals
-            foreach ($saleItems as $si) {
-                $item     = InvItem::where('seller_id', $seller->id)->find($si['item_id'] ?? 0);
-                if (!$item) continue;
-                $qty      = floatval($si['quantity'] ?? 0);
-                $price    = floatval($si['unit_price'] ?? $item->sale_price);
-                $taxType  = $si['tax_type'] ?? $item->tax_type;
-                $subtotal = round($qty * $price / (($taxType === 'gravado') ? 1.18 : 1), 4);
-                $igv      = $taxType === 'gravado' ? round($subtotal * 0.18, 4) : 0;
-                $total    = $subtotal + $igv;
+            foreach ($validatedItems as $si) {
+                $item = InvItem::where('seller_id', $seller->id)->lockForUpdate()->findOrFail($si['item_id']);
+                $qty = $si['quantity'];
+                $price = $si['unit_price'];
+                $taxType = in_array($item->tax_type, \App\Support\TaxCalculator::TYPES, true) ? $item->tax_type : 'gravado';
+                $parts = \App\Support\TaxCalculator::line($qty * $price, $taxType);
+                $subtotal = $parts['base'];
+                $igv = $parts['igv'];
 
                 match($taxType) {
                     'exonerado' => $subtotalExonerado += $subtotal,
@@ -764,14 +843,14 @@ class InventoryController extends Controller
                 'notes'               => $request->notes,
             ]);
 
-            foreach ($saleItems as $si) {
-                $item    = InvItem::where('seller_id', $seller->id)->find($si['item_id'] ?? 0);
-                if (!$item) continue;
-                $qty     = floatval($si['quantity'] ?? 0);
-                $price   = floatval($si['unit_price'] ?? $item->sale_price);
-                $taxType = $si['tax_type'] ?? $item->tax_type;
-                $sub     = round($qty * $price / (($taxType === 'gravado') ? 1.18 : 1), 4);
-                $igv     = $taxType === 'gravado' ? round($sub * 0.18, 4) : 0;
+            foreach ($validatedItems as $si) {
+                $item = InvItem::where('seller_id', $seller->id)->lockForUpdate()->findOrFail($si['item_id']);
+                $qty = $si['quantity'];
+                $price = $si['unit_price'];
+                $taxType = in_array($item->tax_type, \App\Support\TaxCalculator::TYPES, true) ? $item->tax_type : 'gravado';
+                $parts = \App\Support\TaxCalculator::line($qty * $price, $taxType);
+                $sub = $parts['base'];
+                $igv = $parts['igv'];
 
                 InvSaleItem::create([
                     'sale_id'    => $sale->id,
@@ -781,7 +860,7 @@ class InventoryController extends Controller
                     'tax_type'   => $taxType,
                     'subtotal'   => $sub,
                     'igv'        => $igv,
-                    'total'      => $sub + $igv,
+                    'total'      => $parts['total'],
                 ]);
 
                 $newStock = max(0, $item->stock - $qty);
@@ -804,7 +883,10 @@ class InventoryController extends Controller
             if ($cashSession) {
                 $cashSession->increment('total_income', $sale->total);
             }
-        });
+        }); } catch (\Throwable $e) {
+            report($e);
+            return back()->with('error', 'No se pudo registrar la venta. Verifica el stock disponible e inténtalo nuevamente.');
+        }
 
         return back()->with('success', 'Venta registrada. Stock actualizado.');
     }

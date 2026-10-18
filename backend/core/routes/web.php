@@ -133,7 +133,7 @@ Route::get('/delivery/store-fee-estimate', 'storeFeeEstimate')->name('store.fee.
     Route::get('/seller/login', [\App\Http\Controllers\SellerPosController::class, 'showLogin'])->name('seller.login');
     Route::post('/seller/login', [\App\Http\Controllers\SellerPosController::class, 'webLogin'])->name('seller.web.login');
     Route::post('/seller/register', [\App\Http\Controllers\SellerPosController::class, 'register'])->name('seller.register');
-    Route::get('/seller/logout', [\App\Http\Controllers\SellerPosController::class, 'webLogout'])->name('seller.logout');
+    Route::post('/seller/logout', [\App\Http\Controllers\SellerPosController::class, 'webLogout'])->name('seller.logout');
     Route::get('/seller/token-login', [\App\Http\Controllers\SellerPosController::class, 'tokenLogin'])->name('seller.token.login');
     Route::prefix('seller')->name('seller.')->middleware([\App\Http\Middleware\CheckSubscription::class])->group(function () {
         Route::get('/pos', [\App\Http\Controllers\SellerPosController::class, 'pos'])->name('pos');
@@ -328,6 +328,7 @@ Route::get('/delivery/store-fee-estimate', 'storeFeeEstimate')->name('store.fee.
             Route::get('/logistics/reports', [\App\Http\Controllers\LogisticsController::class, 'reports'])->name('logistics.reports');
         });
         Route::get('/pos/billing', [\App\Http\Controllers\SellerPosController::class, 'billing'])->name('pos.billing');
+        Route::post('/pos/order/{id}/item/{item}/delete', [\App\Http\Controllers\SellerPosController::class, 'deleteOrderItem'])->name('pos.order.item.delete');
         Route::post('/pos/order/{id}/pay', [\App\Http\Controllers\SellerPosController::class, 'payOrder'])->name('pos.order.pay');
         Route::post('/pos/order/{id}/invoice', [\App\Http\Controllers\SellerPosController::class, 'generateInvoice'])->name('pos.order.invoice');
         Route::get('/pos/order/{id}/ticket', [\App\Http\Controllers\SellerPosController::class, 'preCheckTicket'])->name('pos.order.ticket');

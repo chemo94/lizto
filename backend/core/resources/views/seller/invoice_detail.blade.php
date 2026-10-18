@@ -11,16 +11,40 @@
 @endsection
 
 @section('seller-content')
-<div class="s-content" style="max-width: 1100px; margin:0 auto; padding:20px;">
+<style>
+.invoice-detail-page{width:100%;max-width:none;margin:0;padding:clamp(16px,2vw,32px)}
+.invoice-detail-hero{background:linear-gradient(115deg,#14532d,#15803d 58%,#34a36b);border-radius:18px;padding:clamp(22px,3vw,38px);color:#fff;margin-bottom:22px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;box-shadow:0 14px 34px rgba(21,128,61,.18)}
+.invoice-detail-hero h2{margin:7px 0 0;font-size:clamp(24px,3vw,34px);font-weight:850;letter-spacing:-.6px;line-height:1.15}
+.invoice-detail-hero .invoice-kind{font-size:11px;text-transform:uppercase;letter-spacing:1.4px;opacity:.82;font-weight:800}
+.invoice-detail-hero .invoice-number{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.78em;opacity:.9}
+.invoice-detail-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(360px,.85fr);gap:20px;align-items:stretch}
+.invoice-detail-card{border:1px solid var(--s-border);border-radius:16px;padding:clamp(18px,2vw,26px);box-shadow:0 5px 18px rgba(15,23,42,.045);min-width:0}
+.invoice-detail-card>h3{font-size:16px!important;margin-bottom:18px!important}
+.invoice-data-grid{grid-template-columns:minmax(130px,.38fr) minmax(0,1fr)!important;gap:13px 22px!important;font-size:13px!important}
+.invoice-data-grid>div{min-width:0;overflow-wrap:anywhere}
+.invoice-actions-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px!important}
+.invoice-actions-grid>.s-btn,.invoice-actions-grid>form{min-width:0;height:100%}
+.invoice-actions-grid>.s-btn{min-height:76px;align-items:center!important;padding:14px!important;background:#fff;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}
+.invoice-actions-grid>.s-btn:hover{transform:translateY(-2px);border-color:#86c99e!important;box-shadow:0 8px 20px rgba(15,23,42,.07)}
+.invoice-actions-grid>form .s-btn{height:100%;min-height:76px;align-items:center!important;padding:14px!important}
+.invoice-related{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px;margin:18px 0}
+.invoice-related-item{display:flex;align-items:center;gap:10px;padding:15px 17px;border:1px solid var(--s-border);border-radius:12px;background:#fff;color:var(--s-text-primary);font-size:13px;font-weight:700;text-decoration:none;box-shadow:0 4px 14px rgba(15,23,42,.035)}
+.invoice-related-item:hover{border-color:#86c99e;color:var(--s-primary)}
+.invoice-detail-page>.s-card{border-radius:16px!important;padding:clamp(18px,2vw,26px)!important;box-shadow:0 5px 18px rgba(15,23,42,.045)}
+.invoice-detail-page pre{white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:900px){.invoice-detail-grid{grid-template-columns:1fr}.invoice-actions-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.invoice-detail-page{padding:12px}.invoice-detail-hero{border-radius:14px;padding:20px}.invoice-detail-hero .s-badge{font-size:12px!important}.invoice-actions-grid{grid-template-columns:1fr}.invoice-data-grid{grid-template-columns:1fr!important;gap:5px!important}.invoice-data-grid>div:nth-child(even){margin-bottom:10px}.invoice-related{grid-template-columns:1fr}}
+</style>
+<div class="s-content invoice-detail-page">
 
     <!-- HEADER -->
-    <div style="background:linear-gradient(135deg, var(--s-primary) 0%, #1e8a3f 100%); border-radius:16px; padding:24px 32px; color:#fff; margin-bottom:24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+    <div class="invoice-detail-hero">
         <div>
-            <span style="font-size:11px; text-transform:uppercase; letter-spacing:1.5px; opacity:0.85; font-weight:800;">
+            <span class="invoice-kind">
                 {{ $invoice->tipo_doc === '01' ? 'Factura Electrónica' : ($invoice->tipo_doc === '03' ? 'Boleta Electrónica' : ($invoice->tipo_doc === '07' ? 'Nota de Crédito' : ($invoice->tipo_doc === 'NV' ? 'Nota de Venta' : ($invoice->tipo_doc === 'RA' ? 'Comunicación de baja' : 'Nota de Débito')))) }}
             </span>
-            <h2 style="margin:6px 0; font-size:28px; font-weight:900; letter-spacing:-0.5px;">
-                {{ $invoice->serie }}-{{ str_pad($invoice->correlativo, 8, '0', STR_PAD_LEFT) }}
+            <h2>
+                <span class="invoice-number">{{ $invoice->serie }}-{{ str_pad($invoice->correlativo, 8, '0', STR_PAD_LEFT) }}</span>
             </h2>
         </div>
         <span class="s-badge" style="background:{{ $invoice->statusColor() }}; color:#fff; font-size:14px; padding:6px 16px; font-weight:800; border-radius:8px;">
@@ -28,14 +52,14 @@
         </span>
     </div>
 
-    <div class="s-grid-2" style="gap:24px; align-items:start;">
+    <div class="invoice-detail-grid">
         <!-- INFO CARD -->
-        <div class="s-card" style="border:1px solid var(--s-border);">
+        <div class="s-card invoice-detail-card">
             <h3 style="margin-bottom:20px; font-weight:800; font-size:16px; display:flex; align-items:center; gap:8px;">
                 <i class="las la-info-circle" style="color:var(--s-primary); font-size:20px;"></i> Datos del Comprobante
             </h3>
 
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px 24px; font-size:13px;">
+            <div class="invoice-data-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px 24px; font-size:13px;">
                 <div style="color:var(--s-text-3); font-weight:600;">Cliente</div>
                 <div style="font-weight:700; color:var(--s-text);">{{ $invoice->cliente_nombre }}</div>
 
@@ -75,21 +99,29 @@
         </div>
 
         <!-- ACTIONS CARD -->
-        <div class="s-card" style="border:1px solid var(--s-border);">
+        <div class="s-card invoice-detail-card">
             <h3 style="margin-bottom:20px; font-weight:800; font-size:16px; display:flex; align-items:center; gap:8px;">
                 <i class="las la-download" style="color:var(--s-primary); font-size:20px;"></i> Descargas y Acciones
             </h3>
 
-            <div style="display:flex; flex-direction:column; gap:12px;">
+            <div class="invoice-actions-grid" style="display:flex; flex-direction:column; gap:12px;">
                 @if($invoice->tipo_doc !== 'RA')
                 <a href="{{ route('seller.invoice.pdf', [$invoice->id, 'a4']) }}" class="s-btn s-btn-outline" style="justify-content:flex-start; gap:10px; border-radius:10px; padding:12px 16px;">
                     <i class="las la-file-pdf" style="color:#dc2626; font-size:20px;"></i>
                     <div style="text-align:left;"><b style="font-size:14px;">Previsualizar PDF A4</b><br><small style="color:var(--s-text-3); font-size:11px;">Vista previa e impresión formato carta</small></div>
                 </a>
+                <a href="{{ route('seller.invoice.pdf', [$invoice->id, 'a4']) }}?download=1" class="s-btn s-btn-outline" style="justify-content:flex-start; gap:10px; border-radius:10px; padding:12px 16px;">
+                    <i class="las la-download" style="color:#dc2626; font-size:20px;"></i>
+                    <div style="text-align:left;"><b style="font-size:14px;">Descargar PDF A4</b><br><small style="color:var(--s-text-3); font-size:11px;">Descarga directa del comprobante en A4</small></div>
+                </a>
 
                 <a href="{{ route('seller.invoice.pdf', [$invoice->id, 'a5']) }}" class="s-btn s-btn-outline" style="justify-content:flex-start; gap:10px; border-radius:10px; padding:12px 16px;">
                     <i class="las la-file-pdf" style="color:#f59e0b; font-size:20px;"></i>
                     <div style="text-align:left;"><b style="font-size:14px;">Previsualizar PDF A5</b><br><small style="color:var(--s-text-3); font-size:11px;">Vista previa e impresión media carta</small></div>
+                </a>
+                <a href="{{ route('seller.invoice.pdf', [$invoice->id, 'a5']) }}?download=1" class="s-btn s-btn-outline" style="justify-content:flex-start; gap:10px; border-radius:10px; padding:12px 16px;">
+                    <i class="las la-download" style="color:#f59e0b; font-size:20px;"></i>
+                    <div style="text-align:left;"><b style="font-size:14px;">Descargar PDF A5</b><br><small style="color:var(--s-text-3); font-size:11px;">Descarga directa del comprobante en A5</small></div>
                 </a>
 
                 <a href="{{ route('seller.invoice.pdf', [$invoice->id, 'ticket']) }}" class="s-btn s-btn-outline" style="justify-content:flex-start; gap:10px; border-radius:10px; padding:12px 16px;">
@@ -108,10 +140,10 @@
                     <div style="text-align:left;"><b style="font-size:14px;">Descargar CDR</b><br><small style="color:var(--s-text-3); font-size:11px;">Constancia de Recepción SUNAT</small></div>
                 </a>
 
-                @if(!$invoice->original_invoice_id && ($invoice->cdr_status === 'accepted' || ($invoice->tipo_doc === 'NV' && $invoice->cdr_status === 'pending')))
+                @if(!$invoice->original_invoice_id && (($invoice->tipo_doc === 'NV' && in_array($invoice->cdr_status, ['generated', 'pending'])) || (in_array($invoice->tipo_doc, ['01','03','07','08','RA']) && $invoice->cdr_status === 'accepted')))
                 <button onclick="toggleModal('modal-void')" class="s-btn" style="justify-content:flex-start; gap:10px; border-radius:10px; padding:12px 16px; background:var(--s-danger-bg); color:var(--s-danger-text); border:1px solid rgba(220,38,38,0.2);">
                     <i class="las la-ban" style="color:var(--s-danger); font-size:20px;"></i>
-                    <div style="text-align:left;"><b style="font-size:14px;">{{ in_array($invoice->tipo_doc, ['01','03']) ? 'Emitir nota de crédito' : 'Anular Comprobante' }}</b><br><small style="color:var(--s-danger-text); font-size:11px;">{{ in_array($invoice->tipo_doc ?? '', ['07', '08']) ? 'Envía Comunicación de Baja (RA)' : 'Emite Nota de Crédito por anulación' }}</small></div>
+                    <div style="text-align:left;"><b style="font-size:14px;">{{ in_array($invoice->tipo_doc, ['01','03']) ? 'Emitir nota de crédito' : ($invoice->tipo_doc === 'NV' ? 'Anular Nota de Venta' : 'Anular Comprobante') }}</b><br><small style="color:var(--s-danger-text); font-size:11px;">{{ $invoice->tipo_doc === 'NV' ? 'Revierte caja y devuelve stock al inventario' : (in_array($invoice->tipo_doc ?? '', ['07', '08']) ? 'Envía Comunicación de Baja (RA)' : 'Emite Nota de Crédito por anulación') }}</small></div>
                 </button>
                 @endif
 
@@ -135,11 +167,15 @@
         </div>
     </div>
 
-    @foreach($cancellationNotes as $note)
-    <p><a href="{{ route('seller.invoice.detail', $note->id) }}">{{ $note->tipo_doc === 'RA' ? 'Comunicación de baja' : 'Nota de crédito' }} {{ $note->serie }}-{{ $note->correlativo }} — {{ $note->statusLabel() }}</a></p>
-    @endforeach
-    @if($invoice->original_invoice_id)
-    <p><a href="{{ route('seller.invoice.detail', $invoice->original_invoice_id) }}">Ver comprobante original afectado</a></p>
+    @if($cancellationNotes->isNotEmpty() || $invoice->original_invoice_id)
+    <div class="invoice-related">
+        @foreach($cancellationNotes as $note)
+        <a class="invoice-related-item" href="{{ route('seller.invoice.detail', $note->id) }}"><i class="las la-file-invoice" style="font-size:20px;color:var(--s-primary)"></i><span>{{ $note->tipo_doc === 'RA' ? 'Comunicación de baja' : 'Nota de crédito' }} {{ $note->serie }}-{{ $note->correlativo }}<small style="display:block;color:var(--s-text-3);font-size:11px;margin-top:3px">{{ $note->statusLabel() }}</small></span><i class="las la-arrow-right" style="margin-left:auto;color:#94a3b8"></i></a>
+        @endforeach
+        @if($invoice->original_invoice_id)
+        <a class="invoice-related-item" href="{{ route('seller.invoice.detail', $invoice->original_invoice_id) }}"><i class="las la-reply" style="font-size:20px;color:var(--s-info)"></i><span>Ver comprobante original afectado<small style="display:block;color:var(--s-text-3);font-size:11px;margin-top:3px">Consultar documento relacionado</small></span><i class="las la-arrow-right" style="margin-left:auto;color:#94a3b8"></i></a>
+        @endif
+    </div>
     @endif
     @include('seller.partials.credit_note_result')
     <!-- XML PREVIEW -->
@@ -281,15 +317,22 @@
 </div>
 
 <!-- MODAL ANULAR -->
-@php $isVoidedDoc = in_array($invoice->tipo_doc ?? '', ['07', '08']); @endphp
+@php
+    $isVoidedDoc = in_array($invoice->tipo_doc ?? '', ['07', '08']);
+    $isNotaVenta = ($invoice->tipo_doc ?? '') === 'NV';
+@endphp
 <div id="modal-void" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,25,35,0.6); align-items:center; justify-content:center; z-index:9999; backdrop-filter:blur(4px);">
     <div class="s-card" style="width:100%; max-width:760px; max-height:90vh; overflow:auto; padding:24px; border-radius:16px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 style="margin:0; font-weight:900; font-size:18px; color:var(--s-text);"><i class="las la-ban" style="color:var(--s-danger);"></i> {{ in_array($invoice->tipo_doc,['01','03']) ? 'Emitir nota de crédito' : 'Anular Comprobante' }}</h3>
+            <h3 style="margin:0; font-weight:900; font-size:18px; color:var(--s-text);"><i class="las la-ban" style="color:var(--s-danger);"></i> {{ in_array($invoice->tipo_doc,['01','03']) ? 'Emitir nota de crédito' : ($invoice->tipo_doc === 'NV' ? 'Anular Nota de Venta' : 'Anular Comprobante') }}</h3>
             <button class="s-btn s-btn-ghost" onclick="toggleModal('modal-void')" style="font-size:20px; color:var(--s-text-3);">✕</button>
         </div>
 
-        @if($isVoidedDoc)
+        @if($isNotaVenta)
+            <div style="background:var(--s-warning-bg); color:var(--s-warning-text); padding:12px; border-radius:10px; margin-bottom:16px; font-size:12px; font-weight:700;">
+                <i class="las la-exclamation-triangle"></i> Se anulará esta Nota de Venta, se revertirá el efectivo en caja y se devolverá el stock al inventario. Esta acción es irreversible.
+            </div>
+        @elseif($isVoidedDoc)
             <div style="background:var(--s-warning-bg); color:var(--s-warning-text); padding:12px; border-radius:10px; margin-bottom:16px; font-size:12px; font-weight:700;">
                 <i class="las la-exclamation-triangle"></i> Se enviará una Comunicación de Baja Electrónica (RA) por anulación. Esta acción es irreversible.
             </div>
@@ -333,7 +376,7 @@
             <div style="display:flex; gap:10px; justify-content:flex-end;">
                 <button type="button" class="s-btn s-btn-ghost" onclick="toggleModal('modal-void')">Cancelar</button>
                 <button type="submit" class="s-btn s-btn-danger" style="gap:6px;">
-                    <i class="las la-ban"></i> {{ $isVoidedDoc ? 'Enviar Comunicación de Baja' : 'Emitir nota de crédito' }}
+                    <i class="las la-ban"></i> {{ $isNotaVenta ? 'Anular Nota de Venta' : ($isVoidedDoc ? 'Enviar Comunicación de Baja' : 'Emitir nota de crédito') }}
                 </button>
             </div>
         </form>

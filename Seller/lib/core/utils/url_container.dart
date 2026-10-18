@@ -124,6 +124,7 @@ class UrlContainer {
   static String panelAreaDelete(int id) => 'seller/panel/areas/$id/delete';
   static const String panelKitchen = 'seller/panel/kitchen';
   static String panelKitchenStatus(int id) => 'seller/panel/kitchen/$id/status';
+  static String panelKitchenItemDelete(int orderId, int itemId) => 'seller/panel/kitchen/$orderId/item/$itemId/delete';
   static const String panelOrders = 'seller/panel/orders';
   static const String panelCustomers = 'seller/panel/customers';
   static const String panelCash = 'seller/panel/cash';
@@ -174,4 +175,3 @@ class UrlContainer {
   static const String inventorySupplierStore = 'seller/inventory/suppliers/store';
   static String inventorySupplierDelete(int id) => 'seller/inventory/suppliers/delete/$id';
 }
-

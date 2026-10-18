@@ -120,11 +120,13 @@ class SellerRepo {
 
   Future<ResponseModel> createProduct(int storeId, Map<String, dynamic> data, {File? image}) async {
     String url = '${UrlContainer.baseUrl}seller/products/$storeId/store';
+    if (image == null) return await _request(url, Method.postMethod, data, auth: true);
     return await _requestMultipart(url, data, image: image);
   }
 
   Future<ResponseModel> updateProduct(int productId, Map<String, dynamic> data, {File? image}) async {
     String url = '${UrlContainer.baseUrl}seller/products/update/$productId';
+    if (image == null) return await _request(url, Method.postMethod, data, auth: true);
     return await _requestMultipart(url, data, image: image);
   }
 

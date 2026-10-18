@@ -402,12 +402,16 @@ class UserController extends Controller
         $lng       = (float) $request->lng;
         $radius    = (float) ($request->radius ?? 10);
         $serviceId = $request->filled('service_id') ? (int) $request->service_id : null;
+        $service = $serviceId ? Service::active()->find($serviceId) : null;
+        $matchingServiceIds = $service
+            ? Service::active()->where('vehicle_type', $service->vehicle_type)->pluck('id')->map(fn ($id) => (int) $id)->all()
+            : $serviceId;
 
         $drivers = \App\Services\H3\DriverGeoRedisService::findNearby(
             lat: $lat,
             lng: $lng,
             radiusKm: $radius,
-            serviceId: $serviceId,
+            serviceId: $matchingServiceIds,
             serviceType: ['ride', 'both'],
             limit: 30,
             fallbackToDb: true

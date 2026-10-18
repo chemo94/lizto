@@ -297,6 +297,7 @@ class ManageDriversController extends Controller {
             'mobile'    => 'required|string|max:40',
             'service'   => 'nullable|integer|exists:services,id',
             'service_type' => 'nullable|string|in:ride,delivery,both',
+            'passenger_capacity' => 'nullable|integer|min:1|max:12',
             'country'   => 'required|in:' . $countries,
         ]);
 
@@ -318,6 +319,22 @@ class ManageDriversController extends Controller {
         $driver->zip          = $request->zip;
         $driver->service_id   = $request->service ?? 0;
         $driver->service_type = $request->service_type ?? 'ride';
+        if ($driver->vehicle) {
+            $capacity = (int) $request->passenger_capacity;
+            $service = $request->service ? Service::find($request->service) : null;
+            if ($service && $request->filled('passenger_capacity') && $capacity < (int) ($service->min_vehicle_capacity ?? 1)) {
+                return back()->withErrors(['passenger_capacity' => 'La capacidad no cumple el mínimo del servicio seleccionado.'])->withInput();
+            }
+            if ($request->filled('service')) {
+                $driver->vehicle->service_id = (int) $request->service;
+            }
+            if ($request->filled('passenger_capacity')) {
+                $driver->vehicle->passenger_capacity = $capacity;
+            }
+            if ($request->filled('service') || $request->filled('passenger_capacity')) {
+                $driver->vehicle->save();
+            }
+        }
         $driver->country_name = @$country;
         $driver->dial_code    = $dialCode;
         $driver->country_code = $countryCode;

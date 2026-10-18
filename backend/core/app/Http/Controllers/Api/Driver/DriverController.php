@@ -37,10 +37,14 @@ class DriverController extends Controller
     {
         $driver = auth()->user();
 
-        if ($driver->online_status  == Status::YES && $driver->dv == Status::VERIFIED && $driver->vv == Status::VERIFIED) {
+        if ($driver->online_status == Status::YES && in_array($driver->service_type, ['ride', 'both'], true) && $driver->dv == Status::VERIFIED && $driver->vv == Status::VERIFIED) {
             $rides = Ride::where('pickup_zone_id', $driver->zone_id)
                 ->pending()
-                ->where('service_id', @$driver->service_id)
+                ->whereHas('service', function ($query) use ($driver) {
+                    $query->where('vehicle_type', $driver->service?->vehicle_type ?? 'auto')
+                        ->where('min_vehicle_capacity', '<=', (int) ($driver->vehicle?->passenger_capacity ?? 4));
+                })
+                ->where('number_of_passenger', '<=', (int) ($driver->vehicle?->passenger_capacity ?? 4))
                 ->whereDoesntHave('bids', function ($q) use ($driver) {
                     $q->where("driver_id", $driver->id)->whereNotIn('status', [Status::BID_CANCELED, Status::BID_REJECTED]);
                 })
@@ -464,6 +468,7 @@ class DriverController extends Controller
                 'year'           => 'nullable',
                 'color'          => 'nullable',
                 'vehicle_number' => ['nullable', Rule::unique('vehicles', 'vehicle_number')->ignore($existingVehicle->id ?? 0)],
+                'passenger_capacity' => 'nullable|integer|min:1|max:12',
                 'rules'          => 'nullable|array',
                 'rules.*'        => 'nullable|integer|exists:rider_rules,id',
                 'image'          => ['nullable', 'image', new FileTypeValidate(['jpg', 'jpeg', 'png'])]
@@ -477,6 +482,7 @@ class DriverController extends Controller
                 'year'           => 'required',
                 'color'          => 'required',
                 'vehicle_number' => ['required', Rule::unique('vehicles', 'vehicle_number')->ignore($existingVehicle->id ?? 0)],
+                'passenger_capacity' => 'required|integer|min:1|max:12',
                 'rules'          => 'required|array',
                 'rules.*'        => 'required|integer|exists:rider_rules,id',
                 'image'          => ['required', 'image', new FileTypeValidate(['jpg', 'jpeg', 'png'])]
@@ -503,6 +509,11 @@ class DriverController extends Controller
             if (!$service) {
                 $notify[] = 'Service currently unavailable';
                 return apiResponse("not_found", "error", $notify);
+            }
+
+            if (!$isDelivery && (int) $request->passenger_capacity < (int) ($service->min_vehicle_capacity ?? 1)) {
+                $notify[] = 'La capacidad indicada no cumple el mínimo requerido para este servicio.';
+                return apiResponse('validation_error', 'error', $notify);
             }
 
             $brand = Brand::active()->find($request->brand_id);
@@ -568,6 +579,7 @@ class DriverController extends Controller
             $vehicle->brand_id       = $brand->id ?? null;
             $vehicle->service_id     = $service->id ?? null;
             $vehicle->vehicle_number = $request->vehicle_number ?? null;
+            $vehicle->passenger_capacity = (int) ($request->passenger_capacity ?? 4);
         }
         
         $vehicle->form_data = $vehicleData;
@@ -797,9 +809,6 @@ class DriverController extends Controller
         $user                         = auth()->user();
         $user->current_lat            = $request->current_lat;
         $user->current_lot            = $request->input($lngKey);
-        if ($request->has('bearing')) {
-            $user->bearing = $request->bearing;
-        }
         $user->last_location_fetch_at = now();
         $user->save();
 
@@ -859,6 +868,19 @@ class DriverController extends Controller
             $request->has('bearing') ? (float) $request->bearing : null,
             $request->has('speed') ? (float) $request->speed : null,
             $ride ? (int) $ride->id : null,
+        );
+
+        // WebSocket nativo: alimentar la vista de "taxis cercanos" del pasajero.
+        // Se publica a nearby.{service_type} para que cualquier pasajero suscrito
+        // vea moverse en vivo a los conductores disponibles antes de pedir.
+        $serviceType = $user->service_type ?: 'ride';
+        \App\Services\RealtimePublisher::nearbyDriver(
+            (int) $user->id,
+            (float) $request->current_lat,
+            (float) $request->input($lngKey),
+            $request->has('bearing') ? (float) $request->bearing : null,
+            $request->has('speed') ? (float) $request->speed : null,
+            $serviceType,
         );
 
 

@@ -49,7 +49,14 @@ class CourierJobController extends Controller
         $radius = (float) ($request->radius ?? gs('delivery_coverage_radius') ?? 8);
 
         $deliveryQuery = DeliveryOrder::whereNull('driver_id')
-            ->whereIn('status', ['confirmed', 'preparing', 'ready'])
+            ->where('status', 'ready')
+            ->where(function ($query) use ($driver) {
+                $query->whereNull('dispatch_mode')
+                    ->orWhere(function ($targeted) use ($driver) {
+                        $targeted->whereIn('dispatch_mode', ['seller_nearby', 'seller_expanded'])
+                            ->where('courier_id', $driver->id);
+                    });
+            })
             ->with('store', 'user', 'items.variation', 'items.addons');
 
         $favorQuery = Favor::where('status', 'searching_courier')
@@ -170,7 +177,14 @@ class CourierJobController extends Controller
                 $query->where('driver_id', $driver->id)
                     ->orWhere(function ($available) {
                         $available->whereNull('driver_id')
-                            ->whereIn('status', ['confirmed', 'preparing', 'ready']);
+                            ->where('status', 'ready')
+                            ->where(function ($visibility) use ($driver) {
+                                $visibility->whereNull('dispatch_mode')
+                                    ->orWhere(function ($targeted) use ($driver) {
+                                        $targeted->whereIn('dispatch_mode', ['seller_nearby', 'seller_expanded'])
+                                            ->where('courier_id', $driver->id);
+                                    });
+                            });
                     });
             })
             ->with('store', 'user', 'items.variation', 'items.addons')
@@ -247,13 +261,23 @@ class CourierJobController extends Controller
             return apiResponse('bid_placed', 'success', ['Oferta enviada'], ['bid' => $bid]);
         }
 
-        // The courier search starts as soon as the seller confirms the order.
-        $job = DeliveryOrder::whereIn('status', ['confirmed', 'preparing', 'ready'])
-            ->whereNull('driver_id')->findOrFail($id);
+        // A delivery order becomes available only after the seller marks it ready.
+        $job = DeliveryOrder::where('status', 'ready')->whereNull('driver_id')
+            ->where(function ($query) use ($driver) {
+                $query->whereNull('dispatch_mode')
+                    ->orWhere(function ($targeted) use ($driver) {
+                        $targeted->whereIn('dispatch_mode', ['seller_nearby', 'seller_expanded'])
+                            ->where('courier_id', $driver->id);
+                    });
+            })->findOrFail($id);
         $job->update([
             'driver_id'          => $driver->id,
             'status'             => 'on_way',
             'driver_assigned_at' => now(),
+            'courier_id' => null,
+            'dispatch_mode' => null,
+            'dispatch_timeout_at' => null,
+            'dispatch_attempted_driver_ids' => null,
         ]);
         \App\Services\CourierOfferTracker::respond($driver, $job, 'accepted');
 
@@ -276,6 +300,11 @@ class CourierJobController extends Controller
             ? Favor::where('status', 'searching_courier')->findOrFail($id)
             : DeliveryOrder::where('status', 'ready')->findOrFail($id);
 
+        if ($type === 'delivery' && in_array($job->dispatch_mode, ['seller_nearby', 'seller_expanded'], true)
+            && (int) $job->courier_id !== (int) $driver->id) {
+            return apiResponse('job_reserved_for_another_courier', 'error', ['Este pedido está siendo consultado con otro repartidor.']);
+        }
+
         \App\Services\CourierOfferTracker::respond($driver, $job, 'rejected');
 
         if ($type === 'favor' && (int) $job->courier_id === (int) $driver->id) {
@@ -287,6 +316,10 @@ class CourierJobController extends Controller
             } elseif (str_starts_with($mode, 'seller_')) {
                 \App\Services\SellerFavorDispatchService::dispatchNext($job->fresh());
             }
+        } elseif ($type === 'delivery' && (int) $job->courier_id === (int) $driver->id
+            && in_array($job->dispatch_mode, ['seller_nearby', 'seller_expanded'], true)) {
+            $job->update(['courier_id' => null, 'dispatch_timeout_at' => now()]);
+            \App\Services\SellerDeliveryOrderDispatchService::dispatchNext($job->fresh(['store', 'user']));
         }
 
         return apiResponse('job_rejected', 'success', [
@@ -505,16 +538,18 @@ class CourierJobController extends Controller
             $job = DeliveryOrder::where('driver_id', $driver->id)
                 ->whereIn('status', ['on_way', 'accepted', 'on_way_to_pickup'])
                 ->with('store')->findOrFail($id);
-            $storeName = $job->store?->name ?? 'tu zona';
             $job->update([
                 'driver_id' => null,
                 'status' => 'ready',
                 'driver_assigned_at' => null,
                 'cancel_reason' => 'Cancelado por repartidor: ' . $request->reason_code,
+                'courier_id' => null,
+                'dispatch_mode' => null,
+                'dispatch_timeout_at' => null,
             ]);
             $penalty = $this->registerCancellation($driver->id, $job->id, 'delivery', $request->reason_code, $request->reason_detail);
             event(new DeliveryOrderStatusUpdated($job->fresh('store', 'user')));
-            FcmService::sendToAllCouriers('Pedido disponible nuevamente', 'Un repartidor canceló. Hay un pedido listo en ' . $storeName, ['job_id' => (string) $job->id, 'order_no' => $job->order_no, 'job_type' => 'delivery']);
+            \App\Services\SellerDeliveryOrderDispatchService::start($job->fresh(['store', 'user']), [$driver->id]);
         }
 
         return apiResponse('job_cancelled', 'success', [

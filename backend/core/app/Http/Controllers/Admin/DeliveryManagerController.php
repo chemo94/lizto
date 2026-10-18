@@ -707,9 +707,9 @@ class DeliveryManagerController extends Controller
         }
 
         // Save schedules
-        if ($request->has('schedules')) {
+        if ($request->has('schedules_configured') || $request->has('schedules')) {
             $store->schedules()->delete();
-            foreach ($request->schedules as $day => $slots) {
+            foreach ($request->input('schedules', []) as $day => $slots) {
                 foreach ($slots as $slot) {
                     if (!empty($slot['open']) && !empty($slot['close'])) {
                         StoreSchedule::create([

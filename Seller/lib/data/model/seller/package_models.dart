@@ -50,16 +50,20 @@ class SellerSubscriptionModel {
   int? storeId;
   SellerPackageModel? package;
   String? status;
+  String? startsAt;
   String? purchasedAt;
   String? expiresAt;
   String? packageName;
 
   SellerSubscriptionModel({
-    this.id, this.storeId, this.package, this.status, this.purchasedAt, this.expiresAt, this.packageName,
+    this.id, this.storeId, this.package, this.status, this.startsAt, this.purchasedAt, this.expiresAt, this.packageName,
   });
 
-  DateTime? get expiresAtDate {
-    final s = expiresAt;
+  DateTime? get startsAtDate => _parseDate(startsAt);
+
+  DateTime? get expiresAtDate => _parseDate(expiresAt);
+
+  static DateTime? _parseDate(String? s) {
     if (s == null || s.isEmpty) return null;
     return DateTime.tryParse(s) ?? DateTime.tryParse(s.replaceFirst(' ', 'T'));
   }
@@ -69,6 +73,7 @@ class SellerSubscriptionModel {
     storeId: json['store_id'] is int ? json['store_id'] : int.tryParse(json['store_id']?.toString() ?? ''),
     package: json['package'] != null ? SellerPackageModel.fromJson(json['package']) : null,
     status: json['status']?.toString(),
+    startsAt: json['starts_at']?.toString(),
     purchasedAt: json['purchased_at']?.toString(),
     expiresAt: json['expires_at']?.toString(),
     packageName: json['package_name']?.toString() ?? json['package']?['name']?.toString(),

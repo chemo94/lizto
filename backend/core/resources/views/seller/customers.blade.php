@@ -10,8 +10,6 @@
 </style>
 <div class="s-content">
     @php
-        $frequentCustomers = $customers->where('total_orders','>=',5)->count();
-        $avgCustomerTicket = $customers->sum('total_orders') > 0 ? $customers->sum('total_spent') / $customers->sum('total_orders') : 0;
         $customerEditData = $customers->map(function ($customer) {
             return [
                 'key' => $customer->identity_key,
@@ -25,7 +23,7 @@
     @endphp
     <section class="customers-head"><div><div class="crumb"><i class="las la-home"></i> Seller &nbsp;/&nbsp; Clientes</div><h2><i class="las la-user-friends"></i> Gestión de clientes</h2><p>Conoce, segmenta y fortalece la relación con tu base de clientes.</p></div><div class="customers-head-actions"><button type="button" onclick="window.print()"><i class="las la-file-export"></i> Exportar</button></div></section>
     <div class="customer-kpis">
-        <div class="customer-kpi"><i class="las la-users" style="background:#8b5cf6"></i><b>{{ $customers->count() }}</b><small>Total clientes</small></div>
+        <div class="customer-kpi"><i class="las la-users" style="background:#8b5cf6"></i><b>{{ $summary->total_customers ?? 0 }}</b><small>Total clientes</small></div>
         <div class="customer-kpi"><i class="las la-user-check" style="background:#10b981"></i><b style="color:#10b981">{{ $customerStats['active'] }}</b><small>Activos (90 días)</small></div>
         <div class="customer-kpi"><i class="las la-user-plus" style="background:#3b82f6"></i><b style="color:#3b82f6">{{ $customerStats['new_today'] }}</b><small>Nuevos hoy</small></div>
         <div class="customer-kpi"><i class="las la-crown" style="background:#f59e0b"></i><b style="color:#f59e0b">{{ $customerStats['vip'] }}</b><small>Clientes frecuentes</small></div>
@@ -34,12 +32,12 @@
     </div>
     <div class="customer-analytics">
         <div class="s-card customer-chart-card"><h3 class="s-card-title"><i class="las la-chart-line" style="color:#8b5cf6"></i> Crecimiento de clientes (12 meses)</h3><div class="customer-chart-wrap"><canvas id="customerGrowthChart"></canvas></div></div>
-        <div class="s-card customer-top-card"><h3 class="s-card-title"><i class="las la-trophy" style="color:#f59e0b"></i> Top clientes</h3><div class="customer-top-list">@forelse($customers->sortByDesc('total_spent')->take(5)->values() as $index => $top)<div class="customer-top-item"><span class="customer-top-rank">{{ $index + 1 }}</span><span class="customer-top-avatar">{{ strtoupper(substr($top->customer_name ?: 'A',0,1)) }}</span><span class="customer-top-copy"><b>{{ $top->customer_name ?: 'Anónimo' }}</b><small>{{ $top->total_orders }} pedidos</small></span><span class="customer-top-spent">S/ {{ number_format($top->total_spent,0) }}</span></div>@empty<div class="s-empty"><p>Sin clientes todavía</p></div>@endforelse</div></div>
+        <div class="s-card customer-top-card"><h3 class="s-card-title"><i class="las la-trophy" style="color:#f59e0b"></i> Top clientes</h3><div class="customer-top-list">@forelse($topCustomers as $index => $top)<div class="customer-top-item"><span class="customer-top-rank">{{ $index + 1 }}</span><span class="customer-top-avatar">{{ strtoupper(substr($top->customer_name ?: 'A',0,1)) }}</span><span class="customer-top-copy"><b>{{ $top->customer_name ?: 'Anónimo' }}</b><small>{{ $top->total_orders }} pedidos</small></span><span class="customer-top-spent">S/ {{ number_format($top->total_spent,0) }}</span></div>@empty<div class="s-empty"><p>Sin clientes todavía</p></div>@endforelse</div></div>
     </div>
     <div class="s-card customers-table-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
             <h3 class="s-card-title" style="margin:0"><i class="las la-users"></i> Historial de Clientes</h3>
-            <span class="s-badge s-badge-blue">{{ $customers->count() }} clientes</span>
+            <span class="s-badge s-badge-blue" id="customersTotal">{{ $customers->total() }} clientes</span>
         </div>
         @if(false && $customers->count())
         <!-- Quick KPIs -->
@@ -58,7 +56,7 @@
             </div>
         </div>
         @endif
-        <div class="customers-toolbar"><div><b style="font-size:12px;color:#172033">Todos los clientes</b><span class="s-badge s-badge-purple" style="margin-left:6px">{{ $customers->count() }}</span></div><input class="customers-search" id="customersSearch" type="search" placeholder="Buscar cliente, DNI, RUC o teléfono..."></div>
+        <div class="customers-toolbar"><div><b style="font-size:12px;color:#172033">Todos los clientes</b><span class="s-badge s-badge-purple" id="customersPageCount" style="margin-left:6px">{{ $customers->count() }} de {{ $customers->total() }}</span></div><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><input class="customers-search" id="customersSearch" type="search" value="{{ request('search') }}" placeholder="Buscar cliente, DNI, RUC o teléfono..."><label style="font-size:11px;color:var(--s-text-3)">Mostrar <select id="customersPerPage" class="s-input" style="width:76px;height:36px;padding:0 8px">@foreach([10,15,25,50,100] as $size)<option value="{{ $size }}" @selected((int)request('per_page',15)===$size)>{{ $size }}</option>@endforeach</select></label></div></div>
         <div style="overflow-x:auto;padding:0 18px 18px">
         <table class="s-table">
             <thead>
@@ -74,52 +72,10 @@
                     <th></th>
                 </tr>
             </thead>
-            <tbody>
-                @forelse($customers as $c)
-                <tr class="customer-data-row">
-                    <td>
-                        <div style="display:flex;align-items:center;gap:10px">
-                            <div style="width:36px;height:36px;border-radius:50%;background:var(--s-accent-light);display:grid;place-items:center;font-size:14px;font-weight:800;color:var(--s-accent-dark);flex-shrink:0;text-transform:uppercase">
-                                {{ substr($c->customer_name ?: 'A', 0, 1) }}
-                            </div>
-                            <div>
-                                <b style="color:var(--s-text)">{{ $c->customer_name ?: 'Anónimo' }}</b>
-                                @if($c->total_orders >= 5)
-                                <span class="s-badge s-badge-amber" style="font-size:9px;margin-left:6px">⭐ Frecuente</span>
-                                @endif
-                            </div>
-                        </div>
-                    </td>
-                    <td style="color:var(--s-text-2);font-size:12px;white-space:nowrap">{{ $c->customer_doc ?: '—' }}</td>
-                    <td style="color:var(--s-text-3);font-size:13px">{{ $c->customer_phone ?: '—' }}</td>
-                    <td style="color:var(--s-text-3);font-size:11px;min-width:180px;max-width:260px">{{ $c->customer_address ?: '—' }}</td>
-                    <td>
-                        <span class="s-badge {{ $c->total_orders >= 5 ? 's-badge-amber' : ($c->total_orders >= 2 ? 's-badge-blue' : 's-badge-gray') }}">
-                            {{ $c->total_orders }} pedidos
-                        </span>
-                    </td>
-                    <td><b style="color:var(--s-accent-dark)">S/ {{ number_format($c->total_spent, 2) }}</b></td>
-                    <td style="color:var(--s-text-2)">
-                        S/ {{ $c->total_orders > 0 ? number_format($c->total_spent / $c->total_orders, 2) : '0.00' }}
-                    </td>
-                    <td style="font-size:12px;color:var(--s-text-3);white-space:nowrap">
-                        {{ $c->last_order ? \Carbon\Carbon::parse($c->last_order)->format('d/m/Y H:i') : '—' }}
-                    </td>
-                    <td><button type="button" class="customer-edit-btn" onclick="openCustomerEdit({{ $loop->index }})" title="Editar cliente"><i class="las la-pen"></i></button></td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="9">
-                        <div class="s-empty">
-                            <i class="las la-user-friends"></i>
-                            <p>Sin clientes registrados aún</p>
-                        </div>
-                    </td>
-                </tr>
-                @endforelse
-            </tbody>
+            <tbody id="customerHistoryRows">@include('seller.partials.customer_history_rows', ['customers' => $customers])</tbody>
         </table>
         </div>
+        <div id="customerHistoryPagination" style="padding:0 18px 18px;display:flex;justify-content:center">{{ $customers->links() }}</div>
     </div>
 </div>
 <div class="customer-modal" id="customerEditModal" onclick="if(event.target===this)closeCustomerEdit()">
@@ -209,12 +165,51 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     var search = document.getElementById('customersSearch');
-    if (!search) return;
-    search.addEventListener('input', function() {
-        var query = search.value.trim().toLowerCase();
-        document.querySelectorAll('.customer-data-row').forEach(function(row) {
-            row.style.display = !query || row.textContent.toLowerCase().includes(query) ? '' : 'none';
-        });
+    var perPage = document.getElementById('customersPerPage');
+    var requestTimer;
+    function loadCustomerPage(url, updateHistory) {
+        var card = document.querySelector('.customers-table-card');
+        if (card) card.style.opacity = '.55';
+        fetch(url, {headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}})
+            .then(function(response) { if (!response.ok) throw new Error('No se pudo cargar el historial.'); return response.json(); })
+            .then(function(data) {
+                document.getElementById('customerHistoryRows').innerHTML = data.rows;
+                document.getElementById('customerHistoryPagination').innerHTML = data.pagination;
+                document.getElementById('customersTotal').textContent = data.total + ' clientes';
+                var visibleCount = document.querySelectorAll('#customerHistoryRows .customer-data-row').length;
+                document.getElementById('customersPageCount').textContent = visibleCount + ' de ' + data.total;
+                CUSTOMER_DATA = data.editData || [];
+                if (card) card.style.opacity = '1';
+                if (updateHistory) history.pushState({}, '', url);
+            })
+            .catch(function() {
+                if (card) card.style.opacity = '1';
+                if (window.Swal && window.Swal.fire) window.Swal.fire({icon:'error',title:'Error',text:'No se pudo actualizar el historial de clientes.'});
+            });
+    }
+    function buildCustomerUrl(page) {
+        var url = new URL(window.location.href);
+        url.searchParams.set('search', search ? search.value.trim() : '');
+        url.searchParams.set('per_page', perPage ? perPage.value : '15');
+        if (page) url.searchParams.set('page', page); else url.searchParams.delete('page');
+        return url.toString();
+    }
+    if (search) search.addEventListener('input', function() {
+        clearTimeout(requestTimer);
+        requestTimer = setTimeout(function() { loadCustomerPage(buildCustomerUrl(null), true); }, 300);
+    });
+    if (perPage) perPage.addEventListener('change', function() { loadCustomerPage(buildCustomerUrl(null), true); });
+    document.getElementById('customerHistoryPagination').addEventListener('click', function(event) {
+        var link = event.target.closest('a[href]');
+        if (!link) return;
+        event.preventDefault();
+        loadCustomerPage(link.href, true);
+    });
+    window.addEventListener('popstate', function() {
+        var url = new URL(window.location.href);
+        if (search) search.value = url.searchParams.get('search') || '';
+        if (perPage) perPage.value = url.searchParams.get('per_page') || '15';
+        loadCustomerPage(url.toString(), false);
     });
 });
 </script>

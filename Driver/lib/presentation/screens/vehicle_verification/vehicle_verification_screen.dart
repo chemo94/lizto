@@ -98,6 +98,7 @@ class _VehicleVerificationScreenState extends State<VehicleVerificationScreen> {
                                           isSelected: isSelected,
                                           image: _buildImageUrl(service.image, basePath: controller.serviceImagePath),
                                           name: service.name ?? '',
+                                          serviceType: service.vehicleType == 'moto' ? 'Moto' : 'Auto',
                                           onTap: () => controller.selectService(service),
                                         );
                                       },
@@ -180,6 +181,17 @@ class _VehicleVerificationScreenState extends State<VehicleVerificationScreen> {
                                     }
                                     return null;
                                   },
+                                ),
+                                spaceDown(Dimensions.space20),
+
+                                _buildSectionTitle('Capacidad de pasajeros'),
+                                spaceDown(Dimensions.space10),
+                                CustomTextField(
+                                  hintText: 'Ejemplo: 4',
+                                  labelText: 'Cantidad máxima de pasajeros',
+                                  controller: controller.passengerCapacityController,
+                                  textInputType: TextInputType.number,
+                                  onChanged: (value) => controller.setPassengerCapacity(value),
                                 ),
                                 spaceDown(Dimensions.space20),
 
@@ -288,8 +300,7 @@ class _VehicleVerificationScreenState extends State<VehicleVerificationScreen> {
                                 if (controller.formList.where((m) {
                                   final label = (m.label ?? '').toLowerCase();
                                   final name = (m.name ?? '').toLowerCase();
-                                  final isYear = label.contains('año') || label.contains('ano') || label.contains('year') ||
-                                                 name.contains('año') || name.contains('ano') || name.contains('year');
+                                  final isYear = label.contains('año') || label.contains('ano') || label.contains('year') || name.contains('año') || name.contains('ano') || name.contains('year');
                                   return !(isYear && controller.yearList.isNotEmpty);
                                 }).isNotEmpty) ...[
                                   CustomAppCard(
@@ -308,8 +319,7 @@ class _VehicleVerificationScreenState extends State<VehicleVerificationScreen> {
                                               GlobalFormModel? model = controller.formList[index];
                                               final label = (model.label ?? '').toLowerCase();
                                               final name = (model.name ?? '').toLowerCase();
-                                              final isYear = label.contains('año') || label.contains('ano') || label.contains('year') ||
-                                                             name.contains('año') || name.contains('ano') || name.contains('year');
+                                              final isYear = label.contains('año') || label.contains('ano') || label.contains('year') || name.contains('año') || name.contains('ano') || name.contains('year');
                                               if (isYear && controller.yearList.isNotEmpty) {
                                                 return const SizedBox.shrink();
                                               }

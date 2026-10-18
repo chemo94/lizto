@@ -5,6 +5,7 @@ import 'package:lizto_store/core/utils/my_color.dart';
 import 'package:lizto_store/core/utils/style.dart';
 import 'package:lizto_store/data/controller/seller/seller_controller.dart';
 import 'package:lizto_store/presentation/screens/seller/seller_favor_tracking_screen.dart';
+import 'package:lizto_store/presentation/screens/seller/subscription_guard.dart';
 
 class SellerFavorSearchScreen extends StatefulWidget {
   final int favorId;
@@ -26,9 +27,14 @@ class _SellerFavorSearchScreenState extends State<SellerFavorSearchScreen> with 
   @override
   void initState() {
     super.initState();
-    _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat(reverse: true);
-    _refresh();
-    _poller = Timer.periodic(const Duration(seconds: 3), (_) => _refresh());
+    _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final allowed = await SubscriptionGuard.guardModuleEntry(context);
+      if (!allowed || !mounted) return;
+      _pulse.repeat(reverse: true);
+      _refresh();
+      _poller = Timer.periodic(const Duration(seconds: 3), (_) => _refresh());
+    });
   }
 
   @override

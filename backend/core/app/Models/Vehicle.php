@@ -15,7 +15,8 @@ class Vehicle extends Model
         'brand_id'   => 'integer',
         'color_id'   => 'integer',
         'year_id'    => 'integer',
-        'model_id'   => 'integer'
+        'model_id'   => 'integer',
+        'passenger_capacity' => 'integer'
     ];
 
     protected $appends = [

@@ -608,6 +608,8 @@
     <link rel="shortcut icon" href="{{ siteFavicon() }}" type="image/x-icon">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="{{ asset('assets/global/css/bootstrap.min.css') }}" rel="stylesheet">
+    <link href="{{ asset('assets/global/css/sweetalert2.min.css') }}" rel="stylesheet">
+    <link href="{{ asset('assets/global/css/lizto-swal.css') }}" rel="stylesheet">
     <link href="{{ asset('assets/global/css/all.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('assets/global/css/line-awesome.min.css') }}">
     <style>
@@ -1397,6 +1399,14 @@
     .s-side-scroll::-webkit-scrollbar-thumb { background:#dce3eb; }
     .s-nav-section { padding-top:15px; }
     .s-nav-label { padding:0 15px 7px; color:#a6b1c1; font-size:8px; letter-spacing:1.15px; }
+    .s-nav-accordion-toggle { width:100%; padding:12px 15px 8px!important; border:0; background:transparent; display:flex; align-items:center; justify-content:space-between; text-align:left; cursor:pointer; font-size:10px!important; font-weight:700!important; letter-spacing:1.1px!important; color:#94a3b8!important; text-transform:uppercase; }
+    .s-nav-accordion-toggle i { font-size:13px; color:#a6b1c1; transition:transform .24s ease,color .18s ease; }
+    .s-nav-accordion.is-open > .s-nav-accordion-toggle i { transform:rotate(180deg); color:#f97316; }
+    .s-nav-collapse { display:grid; grid-template-rows:0fr; transition:grid-template-rows .26s cubic-bezier(.4,0,.2,1); }
+    .s-nav-accordion.is-open > .s-nav-collapse { grid-template-rows:1fr; }
+    .s-nav-collapse-inner { min-height:0; overflow:hidden; }
+    .s-side.collapsed .s-nav-collapse { grid-template-rows:1fr; }
+    @media(prefers-reduced-motion:reduce){.s-nav-collapse,.s-nav-accordion-toggle i{transition:none}}
     .s-nav a { margin:2px 9px; padding:7px 9px; min-height:42px; border:0; border-radius:10px; color:#657184; font-size:11px; }
     .s-nav a::before { content:''; position:absolute; left:-9px; top:7px; bottom:7px; width:3px; border-radius:0 4px 4px 0; background:transparent; }
     .s-nav a .s-nav-icon { width:29px; height:29px; background:#f3f6fa; color:#94a3b8; }
@@ -1597,6 +1607,17 @@
                 }
             }
         @endphp
+        @php
+            $sellerNavActiveGroup = 'home';
+            if (request()->routeIs('seller.pos', 'seller.pos.workspace', 'seller.pos.billing', 'seller.pos.kitchen')) $sellerNavActiveGroup = 'pos';
+            elseif (request()->routeIs('seller.orders*', 'seller.pos.tables', 'seller.pos.floorplan', 'seller.pos.reservations.*')) $sellerNavActiveGroup = 'orders';
+            elseif (request()->routeIs('seller.products*', 'seller.categories', 'seller.customers', 'seller.crm.*')) $sellerNavActiveGroup = 'catalog';
+            elseif (request()->routeIs('seller.pos.staff', 'seller.pos.hr.*', 'seller.pos.staff.reports')) $sellerNavActiveGroup = 'team';
+            elseif (request()->routeIs('seller.cash', 'seller.registers', 'seller.pos.bank_accounts', 'seller.expenses', 'seller.invoicing', 'seller.invoice.*')) $sellerNavActiveGroup = 'finance';
+            elseif (request()->routeIs('seller.reports*', 'seller.declarations')) $sellerNavActiveGroup = 'reports';
+            elseif (request()->routeIs('seller.inventory.*', 'seller.logistics.*')) $sellerNavActiveGroup = 'inventory';
+            elseif (request()->routeIs('seller.delivery', 'seller.notifications', 'seller.qrmenu', 'seller.external.order', 'seller.api.settings')) $sellerNavActiveGroup = 'channels';
+        @endphp
         <div class="s-side-scroll">
             @if($store?->isDeliveryOnlyMode())
             <div class="s-nav-section s-nav">
@@ -1606,234 +1627,144 @@
                 </a>
             </div>
             @else
-            <!-- PRINCIPAL -->
-            @if(!$staffUser || $staffUser->hasPermission('pos_orders') || $staffUser->hasPermission('kitchen') || $staffUser->hasPermission('billing'))
-            <div class="s-nav-section s-nav">
-                <span class="s-nav-label">Principal</span>
-                @if(!$isKitchenOnly)
-                <a href="{{ route('seller.delivery.request') }}" data-tip="Solicitar Envío" class="{{ request()->routeIs('seller.delivery.request') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-motorcycle"></i></span> <span class="s-nav-text">Solicitar Envío</span>
-                </a>
-                <a href="{{ route('seller.dashboard') }}" data-tip="Dashboard" class="{{ request()->routeIs('seller.dashboard') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-chart-pie"></i></span> <span class="s-nav-text">Dashboard</span>
-                </a>
-                @endif
-                @if(!$staffUser || $staffUser->hasPermission('pos_orders'))
-                <a href="{{ route('seller.pos') }}" data-tip="Punto de Venta" class="{{ request()->routeIs('seller.pos', 'seller.pos.workspace') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-cash-register"></i></span> <span class="s-nav-text">Punto de Venta</span>
-                </a>
-                @endif
-                @if(!$staffUser || $staffUser->hasPermission('billing'))
-                <a href="{{ route('seller.pos.billing') }}" data-tip="Cobrar" class="{{ request()->routeIs('seller.pos.billing') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-hand-holding-usd"></i></span> <span class="s-nav-text">Cobrar</span>
-                </a>
-                @endif
-                @if((($store->store_type ?? '') === 'restaurant') && (!$staffUser || $staffUser->hasPermission('kitchen')))
-                <a href="{{ route('seller.pos.kitchen') }}" data-tip="Cocina" class="{{ request()->routeIs('seller.pos.kitchen') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-utensils"></i></span> <span class="s-nav-text">Cocina</span>
-                </a>
-                @endif
+            <!-- INICIO -->
+            @if((!$staffUser || $staffUser->hasPermission('pos_orders') || $staffUser->hasPermission('kitchen') || $staffUser->hasPermission('billing')) && !$isKitchenOnly)
+            <div class="s-nav-section s-nav s-nav-accordion {{ $sellerNavActiveGroup === 'home' ? 'is-open' : '' }}">
+                <button class="s-nav-label s-nav-accordion-toggle" type="button" aria-expanded="{{ $sellerNavActiveGroup === 'home' ? 'true' : 'false' }}" aria-controls="seller-nav-home"><span>Inicio</span><i class="las la-angle-down" aria-hidden="true"></i></button>
+                <div class="s-nav-collapse" id="seller-nav-home"><div class="s-nav-collapse-inner">
+                    <a href="{{ route('seller.delivery.request') }}" data-tip="Solicitar Envío" class="{{ request()->routeIs('seller.delivery.request') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-motorcycle"></i></span><span class="s-nav-text">Solicitar Envío</span></a>
+                    <a href="{{ route('seller.dashboard') }}" data-tip="Dashboard" class="{{ request()->routeIs('seller.dashboard') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-chart-pie"></i></span><span class="s-nav-text">Dashboard</span></a>
+                </div></div>
             </div>
             @endif
 
-            <!-- GESTIÓN -->
-            @if(!$staffUser || $isAccountingStaff || $staffUser->hasPermission('pos_orders') || $staffUser->hasPermission('products') || $staffUser->hasPermission('hr'))
-            <div class="s-nav-section s-nav">
-                <span class="s-nav-label">Gestión</span>
-                @if(!$staffUser || $staffUser->hasPermission('pos_orders'))
-                 @php
-                     $pendingAppOrdersCount = 0;
-                     if (isset($store->id)) {
-                         $pendingAppOrdersCount = \App\Models\DeliveryOrder::where('store_id', $store->id)
-                             ->whereNotIn('status', ['delivered', 'cancelled'])
-                             ->count();
-                     }
-                 @endphp
-                 <a href="{{ route('seller.orders') }}" data-tip="Pedidos" class="{{ request()->routeIs('seller.orders') ? 'active' : '' }}" style="position: relative;">
-                     <span class="s-nav-icon" style="position: relative;">
-                         <i class="las la-receipt"></i>
-                         @if($pendingAppOrdersCount > 0)
-                             <span style="position: absolute; top: -2px; right: -2px; width: 8px; height: 8px; background-color: #ef4444; border-radius: 50%; display: inline-block;"></span>
-                         @endif
-                     </span> 
-                     <span class="s-nav-text" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                         Pedidos
-                         @if($pendingAppOrdersCount > 0)
-                             <span style="background-color: #ef4444; color: #fff; font-size: 11px; font-weight: bold; padding: 2px 7px; border-radius: 10px; margin-left: 8px; line-height: 1;">{{ $pendingAppOrdersCount }}</span>
-                         @endif
-                     </span>
-                 </a>
-                @endif
-                @if(!$staffUser || $staffUser->hasPermission('products'))
-                <a href="{{ route('seller.products') }}" data-tip="Productos" class="{{ request()->routeIs('seller.products') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-boxes"></i></span> <span class="s-nav-text">Productos</span>
-                </a>
-                <a href="{{ route('seller.products.bulk') }}" data-tip="Carga Masiva" class="{{ request()->routeIs('seller.products.bulk') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-cloud-upload-alt"></i></span> <span class="s-nav-text">Carga Masiva</span>
-                </a>
-                <a href="{{ route('seller.categories') }}" data-tip="Categorías" class="{{ request()->routeIs('seller.categories') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-tags"></i></span> <span class="s-nav-text">Categorías</span>
-                </a>
-                @endif
-                @if(!$isAccountingStaff)<a href="{{ route('seller.customers') }}" data-tip="Clientes" class="{{ request()->routeIs('seller.customers') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-users"></i></span> <span class="s-nav-text">Clientes</span>
-                </a>@endif
-                @if(($store->store_type ?? '') === 'restaurant' || $isAccountingStaff)
-                    @if(!$staffUser || $staffUser->hasPermission('pos_orders'))
-                    <a href="{{ route('seller.pos.tables') }}" data-tip="Mesas" class="{{ request()->routeIs('seller.pos.tables') ? 'active' : '' }}">
-                        <span class="s-nav-icon"><i class="las la-th"></i></span> <span class="s-nav-text">Mesas</span>
-                    </a>
-                    <a href="{{ route('seller.pos.floorplan') }}" data-tip="Salón y Mesas" class="{{ request()->routeIs('seller.pos.floorplan') ? 'active' : '' }}">
-                        <span class="s-nav-icon"><i class="las la-map-marked-alt"></i></span> <span class="s-nav-text">Salón y Mesas</span>
-                    </a>
-                    <a href="{{ route('seller.pos.reservations.list') }}" data-tip="Reservas" class="{{ request()->routeIs('seller.pos.reservations.list') ? 'active' : '' }}">
-                        <span class="s-nav-icon"><i class="las la-calendar-check"></i></span> <span class="s-nav-text">Reservas</span>
-                    </a>
+            <!-- PUNTO DE VENTA -->
+            @if(!$staffUser || $staffUser->hasPermission('pos_orders') || $staffUser->hasPermission('kitchen') || $staffUser->hasPermission('billing'))
+            <div class="s-nav-section s-nav s-nav-accordion {{ $sellerNavActiveGroup === 'pos' ? 'is-open' : '' }}">
+                <button class="s-nav-label s-nav-accordion-toggle" type="button" aria-expanded="{{ $sellerNavActiveGroup === 'pos' ? 'true' : 'false' }}" aria-controls="seller-nav-pos"><span>Punto de venta</span><i class="las la-angle-down" aria-hidden="true"></i></button>
+                <div class="s-nav-collapse" id="seller-nav-pos"><div class="s-nav-collapse-inner">
+                    @if(!$staffUser || $staffUser->hasPermission('pos_orders'))<a href="{{ route('seller.pos') }}" data-tip="Punto de Venta" class="{{ request()->routeIs('seller.pos', 'seller.pos.workspace') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-cash-register"></i></span><span class="s-nav-text">POS / Nueva venta</span></a>@endif
+                    @if(!$staffUser || $staffUser->hasPermission('billing'))<a href="{{ route('seller.pos.billing') }}" data-tip="Cobrar" class="{{ request()->routeIs('seller.pos.billing') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-hand-holding-usd"></i></span><span class="s-nav-text">Cobros</span></a>@endif
+                    @if(($store->store_type ?? '') === 'restaurant' && (!$staffUser || $staffUser->hasPermission('kitchen')))<a href="{{ route('seller.pos.kitchen') }}" data-tip="Cocina" class="{{ request()->routeIs('seller.pos.kitchen') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-utensils"></i></span><span class="s-nav-text">Cocina</span></a>@endif
+                </div></div>
+            </div>
+            @endif
+
+            <!-- PEDIDOS Y SALÓN -->
+            @if(!$staffUser || $staffUser->hasPermission('pos_orders'))
+            <div class="s-nav-section s-nav s-nav-accordion {{ $sellerNavActiveGroup === 'orders' ? 'is-open' : '' }}">
+                <button class="s-nav-label s-nav-accordion-toggle" type="button" aria-expanded="{{ $sellerNavActiveGroup === 'orders' ? 'true' : 'false' }}" aria-controls="seller-nav-orders"><span>Pedidos y salón</span><i class="las la-angle-down" aria-hidden="true"></i></button>
+                <div class="s-nav-collapse" id="seller-nav-orders"><div class="s-nav-collapse-inner">
+                    @php $pendingAppOrdersCount = isset($store->id) ? \App\Models\DeliveryOrder::where('store_id', $store->id)->whereNotIn('status', ['delivered', 'cancelled'])->count() : 0; @endphp
+                    <a href="{{ route('seller.orders') }}" data-tip="Pedidos" class="{{ request()->routeIs('seller.orders*') ? 'active' : '' }}" style="position:relative"><span class="s-nav-icon" style="position:relative"><i class="las la-receipt"></i>@if($pendingAppOrdersCount > 0)<span style="position:absolute;top:-2px;right:-2px;width:8px;height:8px;background:#ef4444;border-radius:50%"></span>@endif</span><span class="s-nav-text" style="display:flex;align-items:center;justify-content:space-between;width:100%">Pedidos @if($pendingAppOrdersCount > 0)<span style="background:#ef4444;color:#fff;font-size:11px;font-weight:bold;padding:2px 7px;border-radius:10px;margin-left:8px;line-height:1">{{ $pendingAppOrdersCount }}</span>@endif</span></a>
+                    @if(($store->store_type ?? '') === 'restaurant')
+                    <a href="{{ route('seller.pos.tables') }}" data-tip="Mesas" class="{{ request()->routeIs('seller.pos.tables') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-th"></i></span><span class="s-nav-text">Mesas</span></a>
+                    <a href="{{ route('seller.pos.floorplan') }}" data-tip="Salón y Mesas" class="{{ request()->routeIs('seller.pos.floorplan') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-map-marked-alt"></i></span><span class="s-nav-text">Salón y mesas</span></a>
+                    <a href="{{ route('seller.pos.reservations.list') }}" data-tip="Reservas" class="{{ request()->routeIs('seller.pos.reservations.list') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-calendar-check"></i></span><span class="s-nav-text">Reservas</span></a>
                     @endif
-                    @if(!$staffUser || $isAccountingStaff || $staffUser->hasPermission('hr'))
-                    <a href="{{ route('seller.pos.staff') }}" data-tip="Personal / RR.HH" class="{{ request()->routeIs('seller.pos.staff') ? 'active' : '' }}">
-                        <span class="s-nav-icon"><i class="las la-users-cog"></i></span> <span class="s-nav-text">Personal / RR.HH</span>
-                    </a>
+                </div></div>
+            </div>
+            @endif
+
+            <!-- CATÁLOGO Y CLIENTES -->
+            @if(!$staffUser || (!$isAccountingStaff && ($staffUser->hasPermission('pos_orders') || $staffUser->hasPermission('products') || $staffUser->hasPermission('hr'))) || $staffUser->hasPermission('products'))
+            <div class="s-nav-section s-nav s-nav-accordion {{ $sellerNavActiveGroup === 'catalog' ? 'is-open' : '' }}">
+                <button class="s-nav-label s-nav-accordion-toggle" type="button" aria-expanded="{{ $sellerNavActiveGroup === 'catalog' ? 'true' : 'false' }}" aria-controls="seller-nav-catalog"><span>Catálogo y clientes</span><i class="las la-angle-down" aria-hidden="true"></i></button>
+                <div class="s-nav-collapse" id="seller-nav-catalog"><div class="s-nav-collapse-inner">
+                    @if(!$staffUser || $staffUser->hasPermission('products'))
+                    <a href="{{ route('seller.products') }}" data-tip="Productos" class="{{ request()->routeIs('seller.products') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-boxes"></i></span><span class="s-nav-text">Productos</span></a>
+                    <a href="{{ route('seller.products.bulk') }}" data-tip="Carga Masiva" class="{{ request()->routeIs('seller.products.bulk') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-cloud-upload-alt"></i></span><span class="s-nav-text">Carga masiva</span></a>
+                    <a href="{{ route('seller.categories') }}" data-tip="Categorías" class="{{ request()->routeIs('seller.categories') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-tags"></i></span><span class="s-nav-text">Categorías</span></a>
+                    @endif
+                    @if(!$isAccountingStaff)<a href="{{ route('seller.customers') }}" data-tip="Clientes" class="{{ request()->routeIs('seller.customers') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-users"></i></span><span class="s-nav-text">Clientes</span></a>
+                    <a href="{{ route('seller.crm.customers') }}" data-tip="CRM Clientes" class="{{ request()->routeIs('seller.crm.customers', 'seller.crm.customer.profile') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-users-cog"></i></span><span class="s-nav-text">CRM de clientes</span></a>@endif
+                </div></div>
+            </div>
+            @endif
+
+            <!-- EQUIPO -->
+            @if((($store->store_type ?? '') === 'restaurant' || $isAccountingStaff) && (!$staffUser || $isAccountingStaff || $staffUser->hasPermission('hr')))
+            <div class="s-nav-section s-nav s-nav-accordion {{ $sellerNavActiveGroup === 'team' ? 'is-open' : '' }}">
+                <button class="s-nav-label s-nav-accordion-toggle" type="button" aria-expanded="{{ $sellerNavActiveGroup === 'team' ? 'true' : 'false' }}" aria-controls="seller-nav-team"><span>Equipo y personal</span><i class="las la-angle-down" aria-hidden="true"></i></button>
+                <div class="s-nav-collapse" id="seller-nav-team"><div class="s-nav-collapse-inner">
+                    @if(!$staffUser || $isAccountingStaff || $staffUser->hasPermission('hr'))<a href="{{ route('seller.pos.staff') }}" data-tip="Personal / RR.HH" class="{{ request()->routeIs('seller.pos.staff') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-users-cog"></i></span><span class="s-nav-text">Personal</span></a>@endif
                     @if($store->hasPremiumPackage() || $isAccountingStaff)
-                    <a href="{{ route('seller.pos.hr.attendance') }}" data-tip="Asistencia" class="{{ request()->routeIs('seller.pos.hr.attendance') ? 'active' : '' }}">
-                        <span class="s-nav-icon"><i class="las la-calendar-check"></i></span> <span class="s-nav-text">Asistencia</span>
-                    </a>
-                    <a href="{{ route('seller.pos.hr.payroll') }}" data-tip="Planillas" class="{{ request()->routeIs('seller.pos.hr.payroll') ? 'active' : '' }}">
-                        <span class="s-nav-icon"><i class="las la-wallet"></i></span> <span class="s-nav-text">Planillas</span>
-                    </a>
+                    <a href="{{ route('seller.pos.hr.attendance') }}" data-tip="Asistencia" class="{{ request()->routeIs('seller.pos.hr.attendance') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-calendar-check"></i></span><span class="s-nav-text">Asistencia</span></a>
+                    <a href="{{ route('seller.pos.hr.payroll') }}" data-tip="Planillas" class="{{ request()->routeIs('seller.pos.hr.payroll') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-wallet"></i></span><span class="s-nav-text">Planillas</span></a>
                     @endif
-                    @endif
-                    @if(!$isAccountingStaff && $store->hasPremiumPackage() && (!$staffUser || $staffUser->hasPermission('reports')))
-                    <a href="{{ route('seller.pos.staff.reports') }}" data-tip="Comisiones" class="{{ request()->routeIs('seller.pos.staff.reports') ? 'active' : '' }}">
-                        <span class="s-nav-icon"><i class="las la-percentage"></i></span> <span class="s-nav-text">Comisiones</span>
-                    </a>
-                    @endif
-                @endif
+                    @if(!$isAccountingStaff && $store->hasPremiumPackage() && (!$staffUser || $staffUser->hasPermission('reports')))<a href="{{ route('seller.pos.staff.reports') }}" data-tip="Comisiones" class="{{ request()->routeIs('seller.pos.staff.reports') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-percentage"></i></span><span class="s-nav-text">Comisiones</span></a>@endif
+                </div></div>
             </div>
             @endif
 
             <!-- FINANZAS -->
-            @if(!$staffUser || $isAccountingStaff || $staffUser->hasPermission('billing') || $staffUser->hasPermission('reports') || $staffUser->hasPermission('accounting') || $staffUser->hasPermission('settings'))
-            <div class="s-nav-section s-nav">
-                <span class="s-nav-label">Finanzas</span>
-                @if(!$staffUser || $staffUser->hasPermission('billing'))
-                <a href="{{ route('seller.cash') }}" data-tip="Caja y Bancos" class="{{ (request()->routeIs('seller.cash') || request()->routeIs('seller.pos.bank_accounts') || request()->routeIs('seller.registers')) ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-university"></i></span> <span class="s-nav-text">Caja y Bancos</span>
-                </a>
-                <a href="{{ route('seller.expenses') }}" data-tip="Gastos" class="{{ request()->routeIs('seller.expenses') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-receipt"></i></span> <span class="s-nav-text">Gastos</span>
-                </a>
-                @endif
-                @if(($canAccessInvoicing || $isAccountingStaff) && (!$staffUser || $isAccountingStaff || $staffUser->hasPermission('settings')))
-                <a href="{{ route('seller.invoicing') }}" data-tip="Facturación" class="{{ request()->routeIs('seller.invoicing') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-file-invoice"></i></span> <span class="s-nav-text">Facturación</span>
-                </a>
-                @endif
-                @if(!$isAccountingStaff)<a href="{{ route('seller.crm.customers') }}" data-tip="CRM Clientes" class="{{ (request()->routeIs('seller.crm.customers') || request()->routeIs('seller.crm.customer.profile')) ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-users-cog"></i></span> <span class="s-nav-text">CRM Clientes</span>
-                </a>@endif
-                @if(!$staffUser || $isAccountingStaff || $staffUser->hasPermission('reports'))
-                <a href="{{ route('seller.reports') }}" data-tip="Reportes" class="{{ request()->routeIs('seller.reports') && !request()->is('seller/reports/*') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-file-alt"></i></span> <span class="s-nav-text">Reportes</span>
-                </a>
-                @if((!$staffUser || $isAccountingStaff || $staffUser->hasPermission('reports')) && ($canAccessReports || $isAccountingStaff))
-                <a href="{{ route('seller.reports.advanced') }}" data-tip="Reportes Avanzados" class="{{ request()->routeIs('seller.reports.advanced') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-chart-bar"></i></span> <span class="s-nav-text">Reportes Avanzados</span>
-                </a>
-                @endif
-                @endif
-                @if((!$staffUser || $isAccountingStaff || $staffUser->hasPermission('accounting')) && ($canAccessReports || $isAccountingStaff))
-                <a href="{{ route('seller.declarations') }}" data-tip="Declaraciones SUNAT / SIRE" class="{{ request()->routeIs('seller.declarations') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-file-signature"></i></span> <span class="s-nav-text">Declaraciones</span>
-                </a>
-                @endif
+            @if(!$staffUser || $isAccountingStaff || $staffUser->hasPermission('billing') || $staffUser->hasPermission('settings'))
+            <div class="s-nav-section s-nav s-nav-accordion {{ $sellerNavActiveGroup === 'finance' ? 'is-open' : '' }}">
+                <button class="s-nav-label s-nav-accordion-toggle" type="button" aria-expanded="{{ $sellerNavActiveGroup === 'finance' ? 'true' : 'false' }}" aria-controls="seller-nav-finance"><span>Finanzas y facturación</span><i class="las la-angle-down" aria-hidden="true"></i></button>
+                <div class="s-nav-collapse" id="seller-nav-finance"><div class="s-nav-collapse-inner">
+                    @if(!$staffUser || $staffUser->hasPermission('billing'))
+                    <a href="{{ route('seller.cash') }}" data-tip="Caja y Bancos" class="{{ (request()->routeIs('seller.cash') || request()->routeIs('seller.pos.bank_accounts') || request()->routeIs('seller.registers')) ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-university"></i></span><span class="s-nav-text">Caja y bancos</span></a>
+                    <a href="{{ route('seller.expenses') }}" data-tip="Gastos" class="{{ request()->routeIs('seller.expenses') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-receipt"></i></span><span class="s-nav-text">Gastos</span></a>
+                    @endif
+                    @if(($canAccessInvoicing || $isAccountingStaff) && (!$staffUser || $isAccountingStaff || $staffUser->hasPermission('settings')))<a href="{{ route('seller.invoicing') }}" data-tip="Facturación" class="{{ request()->routeIs('seller.invoicing') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-file-invoice"></i></span><span class="s-nav-text">Facturación electrónica</span></a>@endif
+                </div></div>
+            </div>
+            @endif
+
+            <!-- REPORTES E IMPUESTOS -->
+            @if(!$staffUser || $isAccountingStaff || $staffUser->hasPermission('reports') || $staffUser->hasPermission('accounting'))
+            <div class="s-nav-section s-nav s-nav-accordion {{ $sellerNavActiveGroup === 'reports' ? 'is-open' : '' }}">
+                <button class="s-nav-label s-nav-accordion-toggle" type="button" aria-expanded="{{ $sellerNavActiveGroup === 'reports' ? 'true' : 'false' }}" aria-controls="seller-nav-reports"><span>Reportes e impuestos</span><i class="las la-angle-down" aria-hidden="true"></i></button>
+                <div class="s-nav-collapse" id="seller-nav-reports"><div class="s-nav-collapse-inner">
+                    @if(!$staffUser || $isAccountingStaff || $staffUser->hasPermission('reports'))
+                    <a href="{{ route('seller.reports') }}" data-tip="Reportes" class="{{ request()->routeIs('seller.reports') && !request()->is('seller/reports/*') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-file-alt"></i></span><span class="s-nav-text">Reportes</span></a>
+                    @if($canAccessReports || $isAccountingStaff)<a href="{{ route('seller.reports.advanced') }}" data-tip="Reportes Avanzados" class="{{ request()->routeIs('seller.reports.advanced') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-chart-bar"></i></span><span class="s-nav-text">Reportes avanzados</span></a>@endif
+                    @endif
+                    @if((!$staffUser || $isAccountingStaff || $staffUser->hasPermission('accounting')) && ($canAccessReports || $isAccountingStaff))<a href="{{ route('seller.declarations') }}" data-tip="Declaraciones SUNAT / SIRE" class="{{ request()->routeIs('seller.declarations') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-file-signature"></i></span><span class="s-nav-text">Declaraciones SUNAT / SIRE</span></a>@endif
+                </div></div>
             </div>
             @endif
 
             <!-- INVENTARIO Y LOGÍSTICA -->
             @if(($canAccessInventory || $isAccountingStaff) && (!$staffUser || $staffUser->hasPermission('inventory') || $isAccountingStaff))
-            <div class="s-nav-section s-nav">
-                <span class="s-nav-label">Inventario y Logística</span>
-                @if(!$isAccountingStaff)
-                <a href="{{ route('seller.inventory.items') }}" data-tip="Insumos / Productos" class="{{ request()->routeIs('seller.inventory.items') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-box"></i></span> <span class="s-nav-text">Insumos / Productos</span>
-                </a>
-                <a href="{{ route('seller.logistics.warehouses') }}" data-tip="Almacenes y Stock" class="{{ request()->routeIs('seller.logistics.warehouses') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-warehouse"></i></span> <span class="s-nav-text">Almacenes y Stock</span>
-                </a>
-                <a href="{{ route('seller.logistics.suppliers') }}" data-tip="Proveedores" class="{{ request()->routeIs('seller.logistics.suppliers') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-truck"></i></span> <span class="s-nav-text">Proveedores</span>
-                </a>
-                <a href="{{ route('seller.logistics.purchase_orders') }}" data-tip="Órdenes de Compra" class="{{ request()->routeIs('seller.logistics.purchase_orders') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-shopping-cart"></i></span> <span class="s-nav-text">Órdenes de Compra</span>
-                </a>
-                <a href="{{ route('seller.logistics.receptions') }}" data-tip="Recepciones" class="{{ request()->routeIs('seller.logistics.receptions') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-truck-loading"></i></span> <span class="s-nav-text">Recepciones</span>
-                </a>
-                <a href="{{ route('seller.inventory.purchases') }}" data-tip="Compras Directas" class="{{ request()->routeIs('seller.inventory.purchases') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-receipt"></i></span> <span class="s-nav-text">Compras Directas</span>
-                </a>
-                @if((($store->store_type ?? '') === 'restaurant'))
-                <a href="{{ route('seller.inventory.recipes') }}" data-tip="Recetas" class="{{ request()->routeIs('seller.inventory.recipes') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-book-open"></i></span> <span class="s-nav-text">Recetas</span>
-                </a>
-                @endif
-                <a href="{{ route('seller.logistics.transfers') }}" data-tip="Transferencias" class="{{ request()->routeIs('seller.logistics.transfers') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-exchange-alt"></i></span> <span class="s-nav-text">Transferencias</span>
-                </a>
-                <a href="{{ route('seller.inventory.wastes') }}" data-tip="Mermas" class="{{ request()->routeIs('seller.inventory.wastes') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-exclamation-triangle"></i></span> <span class="s-nav-text">Mermas</span>
-                </a>
-                @if(($store->store_type ?? '') !== 'restaurant')
-                <a href="{{ route('seller.inventory.sales') }}" data-tip="Ventas Directas" class="{{ request()->routeIs('seller.inventory.sales') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-shopping-bag"></i></span> <span class="s-nav-text">Ventas Directas</span>
-                </a>
-                @endif
-                @endif
-                <a href="{{ route('seller.inventory.kardex') }}" data-tip="Kardex" class="{{ request()->routeIs('seller.inventory.kardex') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-list-alt"></i></span> <span class="s-nav-text">Kardex</span>
-                </a>
-                @if(!$isAccountingStaff)
-                <a href="{{ route('seller.logistics.reports') }}" data-tip="Valoración y Costos" class="{{ request()->routeIs('seller.logistics.reports') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-chart-bar"></i></span> <span class="s-nav-text">Valoración y Costos</span>
-                </a>
-                <a href="{{ route('seller.inventory.tax-report') }}" data-tip="Reporte Tributario" class="{{ request()->routeIs('seller.inventory.tax-report') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-file-invoice-dollar"></i></span> <span class="s-nav-text">Reporte Tributario</span>
-                </a>
-                @endif
+            <div class="s-nav-section s-nav s-nav-accordion {{ $sellerNavActiveGroup === 'inventory' ? 'is-open' : '' }}">
+                <button class="s-nav-label s-nav-accordion-toggle" type="button" aria-expanded="{{ $sellerNavActiveGroup === 'inventory' ? 'true' : 'false' }}" aria-controls="seller-nav-inventory"><span>Inventario y logística</span><i class="las la-angle-down" aria-hidden="true"></i></button>
+                <div class="s-nav-collapse" id="seller-nav-inventory"><div class="s-nav-collapse-inner">
+                    @if(!$isAccountingStaff)
+                    <a href="{{ route('seller.inventory.items') }}" data-tip="Insumos / Productos" class="{{ request()->routeIs('seller.inventory.items') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-box"></i></span><span class="s-nav-text">Insumos y productos</span></a>
+                    <a href="{{ route('seller.logistics.warehouses') }}" data-tip="Almacenes y Stock" class="{{ request()->routeIs('seller.logistics.warehouses') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-warehouse"></i></span><span class="s-nav-text">Almacenes y stock</span></a>
+                    <a href="{{ route('seller.logistics.suppliers') }}" data-tip="Proveedores" class="{{ request()->routeIs('seller.logistics.suppliers') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-truck"></i></span><span class="s-nav-text">Proveedores</span></a>
+                    <a href="{{ route('seller.logistics.purchase_orders') }}" data-tip="Órdenes de Compra" class="{{ request()->routeIs('seller.logistics.purchase_orders') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-shopping-cart"></i></span><span class="s-nav-text">Órdenes de compra</span></a>
+                    <a href="{{ route('seller.logistics.receptions') }}" data-tip="Recepciones" class="{{ request()->routeIs('seller.logistics.receptions') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-truck-loading"></i></span><span class="s-nav-text">Recepciones</span></a>
+                    <a href="{{ route('seller.inventory.purchases') }}" data-tip="Compras Directas" class="{{ request()->routeIs('seller.inventory.purchases') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-receipt"></i></span><span class="s-nav-text">Compras directas</span></a>
+                    @if(($store->store_type ?? '') === 'restaurant')<a href="{{ route('seller.inventory.recipes') }}" data-tip="Recetas" class="{{ request()->routeIs('seller.inventory.recipes') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-book-open"></i></span><span class="s-nav-text">Recetas</span></a>@endif
+                    <a href="{{ route('seller.logistics.transfers') }}" data-tip="Transferencias" class="{{ request()->routeIs('seller.logistics.transfers') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-exchange-alt"></i></span><span class="s-nav-text">Transferencias</span></a>
+                    <a href="{{ route('seller.inventory.wastes') }}" data-tip="Mermas" class="{{ request()->routeIs('seller.inventory.wastes') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-exclamation-triangle"></i></span><span class="s-nav-text">Mermas</span></a>
+                    @if(($store->store_type ?? '') !== 'restaurant')<a href="{{ route('seller.inventory.sales') }}" data-tip="Ventas Directas" class="{{ request()->routeIs('seller.inventory.sales') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-shopping-bag"></i></span><span class="s-nav-text">Ventas directas</span></a>@endif
+                    @endif
+                    <a href="{{ route('seller.inventory.kardex') }}" data-tip="Kardex" class="{{ request()->routeIs('seller.inventory.kardex') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-list-alt"></i></span><span class="s-nav-text">Kardex</span></a>
+                    @if(!$isAccountingStaff)
+                    <a href="{{ route('seller.logistics.reports') }}" data-tip="Valoración y Costos" class="{{ request()->routeIs('seller.logistics.reports') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-chart-bar"></i></span><span class="s-nav-text">Valoración y costos</span></a>
+                    <a href="{{ route('seller.inventory.tax-report') }}" data-tip="Reporte Tributario" class="{{ request()->routeIs('seller.inventory.tax-report') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-file-invoice-dollar"></i></span><span class="s-nav-text">Reporte tributario</span></a>
+                    @endif
+                </div></div>
             </div>
             @endif
 
-            <!-- LOGÍSTICA & MARKETING -->
+            <!-- CANALES E INTEGRACIONES -->
             @if(!$isKitchenOnly && !$isAccountingStaff)
-            <div class="s-nav-section s-nav">
-                <span class="s-nav-label">Canales</span>
-                @if(!$staffUser || $staffUser->hasPermission('settings'))
-                <a href="{{ route('seller.delivery') }}" data-tip="Delivery Apps" class="{{ request()->routeIs('seller.delivery') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-motorcycle"></i></span> <span class="s-nav-text">Delivery Apps</span>
-                </a>
-                @endif
-                @if((!$staffUser || $staffUser->hasPermission('notifications')) && $canAccessNotifications)
-                <a href="{{ route('seller.notifications') }}" data-tip="Notificaciones" class="{{ request()->routeIs('seller.notifications') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-bell"></i></span> <span class="s-nav-text">Notificaciones</span>
-                </a>
-                @endif
-                @if(($store->store_type ?? '') === 'restaurant')
-                <a href="{{ route('seller.qrmenu') }}" data-tip="QR de Carta" class="{{ request()->routeIs('seller.qrmenu') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-qrcode"></i></span> <span class="s-nav-text">QR de Carta</span>
-                </a>
-                <a href="/seller/kiosk/" target="_blank" data-tip="Kiosco">
-                    <span class="s-nav-icon"><i class="las la-tablet-alt"></i></span> <span class="s-nav-text">Kiosco</span>
-                </a>
-                <a href="{{ route('seller.external.order') }}" data-tip="Pedido Externo" class="{{ request()->routeIs('seller.external.order') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-globe"></i></span> <span class="s-nav-text">Pedido Externo</span>
-                </a>
-                @endif
-                @if(!$staffUser || $staffUser->hasPermission('settings'))
-                <a href="{{ route('seller.api.settings') }}" data-tip="API" class="{{ request()->routeIs('seller.api.settings') ? 'active' : '' }}">
-                    <span class="s-nav-icon"><i class="las la-plug"></i></span> <span class="s-nav-text">API</span>
-                </a>
-                @endif
+            <div class="s-nav-section s-nav s-nav-accordion {{ $sellerNavActiveGroup === 'channels' ? 'is-open' : '' }}">
+                <button class="s-nav-label s-nav-accordion-toggle" type="button" aria-expanded="{{ $sellerNavActiveGroup === 'channels' ? 'true' : 'false' }}" aria-controls="seller-nav-channels"><span>Canales e integraciones</span><i class="las la-angle-down" aria-hidden="true"></i></button>
+                <div class="s-nav-collapse" id="seller-nav-channels"><div class="s-nav-collapse-inner">
+                    @if(!$staffUser || $staffUser->hasPermission('settings'))<a href="{{ route('seller.delivery') }}" data-tip="Delivery Apps" class="{{ request()->routeIs('seller.delivery') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-motorcycle"></i></span><span class="s-nav-text">Apps de delivery</span></a>@endif
+                    @if((!$staffUser || $staffUser->hasPermission('notifications')) && $canAccessNotifications)<a href="{{ route('seller.notifications') }}" data-tip="Notificaciones" class="{{ request()->routeIs('seller.notifications') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-bell"></i></span><span class="s-nav-text">Notificaciones</span></a>@endif
+                    @if(($store->store_type ?? '') === 'restaurant')
+                    <a href="{{ route('seller.qrmenu') }}" data-tip="QR de Carta" class="{{ request()->routeIs('seller.qrmenu') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-qrcode"></i></span><span class="s-nav-text">Carta QR</span></a>
+                    <a href="/seller/kiosk/" target="_blank" data-tip="Kiosco"><span class="s-nav-icon"><i class="las la-tablet-alt"></i></span><span class="s-nav-text">Kiosco</span></a>
+                    <a href="{{ route('seller.external.order') }}" data-tip="Pedido Externo" class="{{ request()->routeIs('seller.external.order') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-globe"></i></span><span class="s-nav-text">Pedidos externos</span></a>
+                    @endif
+                    @if(!$staffUser || $staffUser->hasPermission('settings'))<a href="{{ route('seller.api.settings') }}" data-tip="API" class="{{ request()->routeIs('seller.api.settings') ? 'active' : '' }}"><span class="s-nav-icon"><i class="las la-plug"></i></span><span class="s-nav-text">API e integraciones</span></a>@endif
+                </div></div>
             </div>
             @endif
             @endif
@@ -1849,9 +1780,12 @@
                 <i class="las la-crown"></i> <span class="s-nav-text">Planes</span>
             </a>
             @endif
-            <a href="{{ route('seller.logout') }}">
-                <i class="las la-sign-out-alt"></i> <span class="s-nav-text">Cerrar sesión</span>
-            </a>
+            <form method="POST" action="{{ route('seller.logout') }}" style="margin:0;">
+                @csrf
+                <button type="submit" style="width:100%;border:0;background:transparent;text-align:left;color:inherit;padding:10px 16px;cursor:pointer;">
+                    <i class="las la-sign-out-alt"></i> <span class="s-nav-text">Cerrar sesión</span>
+                </button>
+            </form>
         </div>
     </aside>
 
@@ -1999,6 +1933,9 @@
         <div class="s-alert s-alert-error" role="alert">
             <i class="las la-exclamation-circle" style="font-size:18px;flex-shrink:0"></i>
             <span>{{ session('error') }}</span>
+            @if(session('upgrade_url'))
+            <a href="{{ session('upgrade_url') }}" class="s-btn s-btn-primary s-btn-sm" style="margin-left:auto;white-space:nowrap">Cambiar o renovar plan</a>
+            @endif
         </div>
         @endif
 
@@ -2109,6 +2046,32 @@ function toggleSidebar() {
     });
 })();
 
+// Sidebar navigation accordion: open the group containing the current route
+// and keep at most one expanded while the sidebar is in its full-width mode.
+(function() {
+    var sidebar = document.getElementById('s-sidebar');
+    if (!sidebar) return;
+    var groups = Array.from(sidebar.querySelectorAll('.s-nav-accordion'));
+    if (!groups.length) return;
+
+    function setOpen(group, open) {
+        group.classList.toggle('is-open', open);
+        var button = group.querySelector('.s-nav-accordion-toggle');
+        if (button) button.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    var activeGroup = groups.find(function(group) { return group.querySelector('a.active'); }) || groups.find(function(group) { return group.classList.contains('is-open'); }) || groups[0];
+    groups.forEach(function(group) { setOpen(group, group === activeGroup); });
+
+    sidebar.addEventListener('click', function(event) {
+        var button = event.target.closest('.s-nav-accordion-toggle');
+        if (!button || !sidebar.contains(button) || sidebar.classList.contains('collapsed')) return;
+        var selectedGroup = button.closest('.s-nav-accordion');
+        var shouldOpen = !selectedGroup.classList.contains('is-open');
+        groups.forEach(function(group) { setOpen(group, group === selectedGroup && shouldOpen); });
+    });
+})();
+
 // Premium gate
 var STORE_PLAN_TYPE = '{{ $storePlanType }}';
 var STORE_IS_INACTIVE = {{ isset($store) && !$store->status ? 'true' : 'false' }};
@@ -2118,6 +2081,9 @@ document.addEventListener('click', function(e) {
     var link = e.target.closest('a[href]');
     if (!link) return;
     var href = link.getAttribute('href') || '';
+    // Cerrar sesión siempre debe estar disponible, incluso cuando el plan venció.
+    // Esta excepción debe ir antes del bloqueo general para planes gratuitos.
+    if (href.indexOf('/seller/logout') !== -1) return;
 
     // Block all navigation when store is inactive (except logout, pricing, delivery request, and WhatsApp)
     if (STORE_IS_INACTIVE) {
@@ -2291,6 +2257,8 @@ document.addEventListener('keydown', function(e) {
 </script>
 <script src="{{ asset('assets/global/js/jquery-3.7.1.min.js') }}"></script>
 <script src="{{ asset('assets/global/js/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ asset('assets/global/js/sweetalert2.all.min.js') }}"></script>
+<script src="{{ asset('assets/global/js/swal-compat.js') }}"></script>
 @stack('script-lib')
 @stack('script')
 @include('seller.partials.realtime_notifications')

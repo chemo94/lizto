@@ -49,6 +49,9 @@ class ProductController extends Controller
         if ($validator->fails()) {
             return apiResponse('validation_error', 'error', $validator->errors()->all());
         }
+        if (!$store->categories()->whereKey($request->store_category_id)->exists()) {
+            return apiResponse('validation_error', 'error', ['La categoría no pertenece a esta tienda.']);
+        }
 
         $product = new Product();
         $product->store_id          = $store->id;
@@ -60,7 +63,7 @@ class ProductController extends Controller
         $product->sort_order        = $request->sort_order ?? 0;
         $product->status            = isset($request->status) ? (int)$request->status : 1;
         $product->stock_type        = $request->stock_type ?? 'packaged';
-        $product->tax_type          = $request->tax_type ?? 'exonerado';
+        $product->tax_type          = $request->tax_type ?? 'gravado';
         $product->sunat_code        = $request->sunat_code ?: null;
 
         if ($request->hasFile('image')) {
@@ -102,7 +105,7 @@ class ProductController extends Controller
                 'name'       => $product->name,
                 'item_type'  => 'producto',
                 'unit'       => $request->input('unit', 'NIU'),
-                'tax_type'   => $request->input('tax_type', 'exonerado'),
+                'tax_type'   => $request->input('tax_type', 'gravado'),
                 'cost'       => $request->input('cost', 0),
                 'sale_price' => $product->price,
                 'stock'      => $request->input('initial_stock', 0),
@@ -165,6 +168,9 @@ class ProductController extends Controller
         if ($validator->fails()) {
             return apiResponse('validation_error', 'error', $validator->errors()->all());
         }
+        if (!$product->store->categories()->whereKey($request->store_category_id)->exists()) {
+            return apiResponse('validation_error', 'error', ['La categoría no pertenece a esta tienda.']);
+        }
 
         $product->store_category_id = $request->store_category_id;
         $product->name              = $request->name;
@@ -196,7 +202,7 @@ class ProductController extends Controller
         $product->save();
 
         // Sync variations
-        if ($request->variations && is_array($request->variations)) {
+        if ($request->has('variations') && is_array($request->variations)) {
             $product->variations()->delete();
             foreach ($request->variations as $v) {
                 $product->variations()->create([
@@ -208,7 +214,7 @@ class ProductController extends Controller
         }
 
         // Sync addons
-        if ($request->addons && is_array($request->addons)) {
+        if ($request->has('addons') && is_array($request->addons)) {
             $product->addons()->delete();
             foreach ($request->addons as $a) {
                 $product->addons()->create([
@@ -228,7 +234,7 @@ class ProductController extends Controller
                     'name'       => $product->name,
                     'item_type'  => 'producto',
                     'unit'       => $request->input('unit', 'NIU'),
-                    'tax_type'   => $request->input('tax_type', 'exonerado'),
+                    'tax_type'   => $request->input('tax_type', 'gravado'),
                     'cost'       => $request->input('cost', 0),
                     'sale_price' => $product->price,
                     'stock'      => $request->input('initial_stock', 0),
@@ -247,7 +253,7 @@ class ProductController extends Controller
                     $item->update([
                         'name'       => $product->name,
                         'unit'       => $request->input('unit', $item->unit ?? 'NIU'),
-                        'tax_type'   => $request->input('tax_type', $product->tax_type ?? 'exonerado'),
+                        'tax_type'   => $request->input('tax_type', $product->tax_type ?? 'gravado'),
                         'cost'       => $request->input('cost', $item->cost ?? 0),
                         'sale_price' => $product->price,
                         'min_stock'  => $request->input('min_stock', $item->min_stock ?? 5),

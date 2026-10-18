@@ -1,5 +1,5 @@
 @extends('seller.layouts.app')
-@section('panel')
+@section('seller-content')
 <div style="padding: 24px; max-width: 1200px; margin: 0 auto;">
     
     <!-- BACK BUTTON & HEADER -->

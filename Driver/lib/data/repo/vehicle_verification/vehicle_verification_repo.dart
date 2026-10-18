@@ -55,6 +55,7 @@ class VehicleVerificationRepo {
     required String yearValue,
     required String colorValue,
     required String vehicleNumber,
+    required String passengerCapacity,
     required List<String> ruleIds,
     File? vehicleImageFile,
     File? vehicleDocumentFile,
@@ -70,6 +71,7 @@ class VehicleVerificationRepo {
     fieldList.add({'year': yearValue});
     fieldList.add({'color': colorValue});
     fieldList.add({'vehicle_number': vehicleNumber});
+    fieldList.add({'passenger_capacity': passengerCapacity});
 
     // Custom required form field from backend: año_del_vehículo
     if (yearValue.isNotEmpty) {

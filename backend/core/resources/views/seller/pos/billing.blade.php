@@ -12,11 +12,13 @@
 
 @section('seller-content')
 <style>
-.billing-touch .s-table tbody td{padding-top:14px;padding-bottom:14px}.billing-touch .s-table tbody tr{transition:.15s}.billing-touch .s-table tbody tr:active{background:#fff7ed}.billing-touch .s-table td .s-btn{min-height:42px;padding:8px 12px;border-radius:9px;font-size:11px;touch-action:manipulation}.billing-touch .s-table td>div{flex-wrap:wrap}.billing-pay-dialog .s-input{min-height:48px;font-size:14px!important;border-radius:10px!important}.billing-pay-dialog select.s-input{padding-top:0!important;padding-bottom:0!important}.billing-pay-dialog input[type=checkbox],.billing-pay-dialog input[type=radio]{width:22px!important;height:22px!important;min-width:22px;accent-color:var(--s-primary)}.billing-pay-dialog label{line-height:1.3}.billing-pay-dialog .s-btn{min-height:48px;padding:10px 16px;border-radius:10px;font-size:13px;touch-action:manipulation}.billing-pay-dialog [id^="payment-row-"] button{min-width:44px;min-height:42px!important;padding:8px!important;border-radius:8px!important}.billing-pay-dialog [id^="payment-row-"] .s-input{min-height:46px!important;height:46px!important}.billing-pay-dialog #pay-submit-btn{min-height:54px;font-size:15px;font-weight:800}.billing-pay-dialog #pay-doc-result>div{min-height:46px;padding:11px 13px!important}.billing-touch .pagination .page-link{min-width:44px;min-height:44px;display:grid;place-items:center}@media(hover:none),(pointer:coarse){.billing-touch .module-hero{min-height:150px}.billing-touch .s-card{padding:20px}.billing-touch .s-table tbody td{font-size:13px}.billing-touch .s-table td .s-btn{min-height:48px;padding:10px 14px;font-size:12px}.billing-pay-dialog{width:min(720px,calc(100vw - 20px))!important;padding:22px!important}.billing-pay-dialog button:active,.billing-touch .s-btn:active{transform:scale(.97)}.billing-pay-dialog [style*="height: 28px"],.billing-pay-dialog [style*="height: 30px"]{height:48px!important;min-height:48px!important}.billing-pay-dialog [style*="width: 64px"]{width:86px!important}.billing-pay-dialog [style*="width: 100px"],.billing-pay-dialog [style*="width: 125px"],.billing-pay-dialog [style*="width: 180px"],.billing-pay-dialog [style*="width: 220px"]{width:100%!important}.billing-pay-dialog [style*="display: flex"]{row-gap:10px}.billing-pay-dialog [style*="position: absolute; top: 16px"]{width:46px;height:46px;top:8px!important;right:8px!important;border-radius:50%!important;background:#f8fafc!important}}
+.billing-touch .s-table tbody td{padding-top:14px;padding-bottom:14px}.billing-touch .s-table tbody tr{transition:.15s}.billing-touch .s-table tbody tr:active{background:#fff7ed}.billing-touch .s-table td .s-btn{min-height:42px;padding:8px 12px;border-radius:9px;font-size:11px;touch-action:manipulation}.billing-touch .s-table td>div{flex-wrap:wrap}.billing-pay-dialog .s-input{min-height:48px;font-size:14px!important;border-radius:10px!important}.billing-pay-dialog select.s-input{padding-top:0!important;padding-bottom:0!important}.billing-pay-dialog input[type=checkbox],.billing-pay-dialog input[type=radio]{width:22px!important;height:22px!important;min-width:22px;accent-color:var(--s-primary)}.billing-pay-dialog label{line-height:1.3}.billing-pay-dialog .s-btn{min-height:48px;padding:10px 16px;border-radius:10px;font-size:13px;touch-action:manipulation}.billing-pay-dialog [id^="payment-row-"] button{min-width:44px;min-height:42px!important;padding:8px!important;border-radius:8px!important}.billing-pay-dialog [id^="payment-row-"] .s-input{min-height:46px!important;height:46px!important}.billing-pay-dialog #pay-submit-btn{min-height:54px;font-size:15px;font-weight:800}.billing-pay-dialog #pay-doc-result>div{min-height:46px;padding:11px 13px!important}.billing-touch .pagination .page-link{min-width:44px;min-height:44px;display:grid;place-items:center}.billing-pay-dialog{width:min(920px,calc(100vw - 40px))!important;padding:28px!important}.billing-pay-form-layout{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:14px 18px!important}.billing-pay-form-layout>*{min-width:0}.billing-pay-form-layout>:first-child,.billing-pay-form-layout>:nth-child(n+4){grid-column:1/-1}.billing-ticket-dialog{width:min(760px,calc(100vw - 32px));height:min(88vh,900px);display:flex;flex-direction:column;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(15,23,42,.28)}.billing-ticket-dialog iframe{width:100%;flex:1;border:0;background:#f8fafc}.billing-ticket-header,.billing-ticket-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px}.billing-ticket-header{border-bottom:1px solid var(--s-border)}.billing-ticket-footer{border-top:1px solid var(--s-border);justify-content:flex-end}.billing-ticket-dialog h3{margin:0;font-size:16px;font-weight:800;color:var(--s-text-primary)}@media(max-width:700px){.billing-pay-dialog{width:calc(100vw - 16px)!important;padding:18px!important}.billing-pay-form-layout{grid-template-columns:1fr}.billing-pay-form-layout>*{grid-column:1/-1}.billing-ticket-dialog{width:calc(100vw - 16px);height:92vh}.billing-ticket-header,.billing-ticket-footer{padding:12px}.billing-ticket-header h3{font-size:14px}}@media(hover:none),(pointer:coarse){.billing-touch .module-hero{min-height:150px}.billing-touch .s-card{padding:20px}.billing-touch .s-table tbody td{font-size:13px}.billing-touch .s-table td .s-btn{min-height:48px;padding:10px 14px;font-size:12px}.billing-pay-dialog{width:min(820px,calc(100vw - 20px))!important;padding:22px!important}.billing-pay-dialog button:active,.billing-touch .s-btn:active{transform:scale(.97)}.billing-pay-dialog [style*="height: 28px"],.billing-pay-dialog [style*="height: 30px"]{height:48px!important;min-height:48px!important}.billing-pay-dialog [style*="width: 64px"]{width:86px!important}.billing-pay-dialog [style*="width: 100px"],.billing-pay-dialog [style*="width: 125px"],.billing-pay-dialog [style*="width: 180px"],.billing-pay-dialog [style*="width: 220px"]{width:100%!important}.billing-pay-dialog [style*="display: flex"]{row-gap:10px}.billing-pay-dialog [style*="position: absolute; top: 16px"]{width:46px;height:46px;top:8px!important;right:8px!important;border-radius:50%!important;background:#f8fafc!important}}
 .billing-touch .s-table td .s-btn{min-width:42px}@media(hover:none),(pointer:coarse){.billing-touch .s-table td .s-btn{min-width:48px}}
+.billing-table-tools{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;background:#fff;border:1px solid var(--s-border);border-radius:10px 10px 0 0}.billing-table-tools>div:first-child{display:flex;align-items:center;gap:10px;color:var(--s-text-primary);font-size:13px}.billing-results-count{color:var(--s-text-muted);font-size:11px}.billing-table-filters{display:flex;align-items:center;gap:10px}.billing-search{display:flex;align-items:center;gap:7px;min-width:min(320px,45vw);height:34px;padding:0 10px;border:1px solid var(--s-border);border-radius:7px;color:var(--s-text-muted)}.billing-search input{width:100%;border:0;outline:0;background:transparent;font:inherit;font-size:12px;color:var(--s-text-primary)}.billing-page-size{display:flex;align-items:center;gap:6px;color:var(--s-text-muted);font-size:11px;white-space:nowrap}.billing-page-size select{height:32px;border:1px solid var(--s-border);border-radius:7px;background:white;padding:0 7px;color:var(--s-text-primary);font-size:12px}.billing-compact-table{border-collapse:separate;border-spacing:0}.billing-compact-table thead th{padding:9px 10px!important;background:#f8fafc;color:#64748b;font-size:10px!important;font-weight:700;text-transform:uppercase;letter-spacing:.035em;white-space:nowrap;border-bottom:1px solid var(--s-border)}.billing-compact-table tbody td{padding:8px 10px!important;font-size:11px!important;line-height:1.35}.billing-compact-table tbody tr:hover{background:#f8fafc}.billing-datatable .seller-work-card{padding:0;overflow:hidden}.billing-datatable .billing-pagination{padding:0 12px 12px}.billing-datatable.is-loading{opacity:.62;pointer-events:none;transition:opacity .12s}.billing-empty-state{display:flex;align-items:center;justify-content:center;gap:8px;padding:26px;background:#fff;border:1px solid var(--s-border);border-top:0;border-radius:0 0 10px 10px;color:var(--s-text-muted);font-size:13px}.billing-empty-state i{font-size:20px}@media(max-width:700px){.billing-table-tools{align-items:stretch;flex-direction:column}.billing-table-filters{width:100%}.billing-search{min-width:0;flex:1}.billing-page-size{font-size:0}.billing-page-size select{font-size:12px}}
+.billing-split-tools{border:1px solid var(--s-border);border-radius:12px;background:#f8fafc;overflow:hidden}.billing-split-tools>summary{display:flex;align-items:center;gap:12px;padding:13px 15px;list-style:none;cursor:pointer;color:var(--s-text-primary)}.billing-split-tools>summary::-webkit-details-marker{display:none}.billing-split-tools>summary>i:first-child{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:#eff6ff;color:#2563eb;font-size:18px}.billing-split-tools>summary span{display:flex;flex:1;flex-direction:column;gap:3px}.billing-split-tools>summary b{font-size:13px}.billing-split-tools>summary small{font-size:11px;color:var(--s-text-muted);font-weight:400}.billing-split-chevron{color:#94a3b8;transition:transform .2s}.billing-split-tools[open] .billing-split-chevron{transform:rotate(180deg)}.billing-split-content{padding:0 12px 12px}.billing-split-option{gap:12px!important}.billing-split-option-title{min-width:180px;flex:1;display:flex;flex-direction:column;gap:3px}.billing-split-option-title b{font-size:12px;color:var(--s-text-primary)}.billing-split-option-title small{font-size:11px;color:var(--s-text-muted)}.billing-split-control{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;color:var(--s-text-secondary);white-space:nowrap}.billing-split-action{min-height:38px!important;padding:8px 12px!important;font-size:12px!important;white-space:nowrap}.billing-split-feedback{flex-basis:100%;font-size:11px;color:var(--s-text-muted);padding-left:2px}.billing-split-tools[open] .billing-split-option{animation:billingSplitIn .16s ease-out}@keyframes billingSplitIn{from{opacity:.6;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}@media(max-width:700px){.billing-split-option-title{flex-basis:100%}.billing-split-control{flex:1}.billing-split-control .s-input{flex:1!important;width:auto!important}.billing-split-action{width:100%;justify-content:center}.billing-split-feedback{padding-left:0}}
 </style>
 <div class="s-content billing-touch">
-    @php $pendingBillingTotal = $pendingOrders->sum('total'); $paidBillingTotal = $paidOrders->sum('total'); @endphp
+    @php $pendingBillingTotal = $pendingOrders->sum('total'); $paidBillingTotal = $paidOrders->getCollection()->sum('total'); @endphp
     <section class="module-hero billing"><div><div class="module-crumb"><i class="las la-home"></i> Inicio &nbsp;/&nbsp; Finanzas &nbsp;/&nbsp; Cobros</div><h2><i class="las la-hand-holding-usd"></i> Cobros y Facturación POS</h2><p>Procesa cuentas pendientes, medios de pago y comprobantes electrónicos.</p></div><div class="module-hero-stats"><div><b>{{ $pendingOrders->count() }}</b><small>Por cobrar</small></div><div><b>S/ {{ number_format($pendingBillingTotal,0) }}</b><small>Saldo pendiente</small></div><div><b>S/ {{ number_format($paidBillingTotal,0) }}</b><small>Cobrado reciente</small></div></div></section>
     
     <div style="display: flex; flex-direction: column; gap: 24px;">
@@ -78,9 +80,9 @@
                             </td>
                             <td>
                                 <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
-                                    <a href="{{ route('seller.pos.order.ticket', $o->id) }}" target="_blank" class="s-btn s-btn-ghost s-btn-xs" style="color: var(--s-text-secondary); border: 1px solid var(--s-border);" title="Imprimir Pre-cuenta">
+                                    <button type="button" onclick="openBillingTicket('{{ route('seller.pos.order.ticket', $o->id) }}', '#{{ $o->order_no }}')" class="s-btn s-btn-ghost s-btn-xs" style="color: var(--s-text-secondary); border: 1px solid var(--s-border);" title="Ver pre-cuenta">
                                         <i class="las la-print" style="font-size: 16px;"></i> Pre-cuenta
-                                    </a>
+                                    </button>
                                     
                                     <button class="s-btn s-btn-success s-btn-xs" style="gap: 4px;" onclick="openPayModal({{ $o->id }}, {{ $o->total }}, '#{{ $o->order_no }}')">
                                         <i class="las la-wallet" style="font-size: 14px;"></i> Cobrar y Emitir
@@ -103,14 +105,25 @@
         </div>
 
         <!-- PAID ORDERS -->
+        <div id="billing-paid-orders-section" class="billing-datatable">
+        <div class="billing-table-tools">
+            <div>
+                <strong>Comprobantes y Pagos Recientes</strong>
+                <small class="billing-results-count">{{ $paidOrders->total() }} registros</small>
+            </div>
+            <div class="billing-table-filters">
+                <label class="billing-search"><i class="las la-search"></i><input type="search" name="billing_search" value="{{ $billingSearch }}" placeholder="Buscar pedido, cliente o comprobante…" aria-label="Buscar pagos"></label>
+                <label class="billing-page-size">Mostrar
+                    <select name="billing_per_page" aria-label="Registros por página">
+                        @foreach([10, 15, 25, 50] as $size)<option value="{{ $size }}" @selected($billingPerPage === $size)>{{ $size }}</option>@endforeach
+                    </select>
+                </label>
+            </div>
+        </div>
         @if($paidOrders->count())
         <div class="s-card seller-work-card">
-            <h3 style="margin-bottom: 20px; font-weight: 700; font-size: 16px; color: var(--s-text-primary); display: flex; align-items: center; gap: 8px;">
-                <i class="las la-check-circle" style="color: var(--s-success); font-size: 22px;"></i> Comprobantes y Pagos Recientes
-            </h3>
-
             <div class="s-table-wrapper" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                <table class="s-table" style="min-width: 750px;">
+                <table class="s-table billing-compact-table" style="min-width: 750px;">
                     <thead>
                         <tr>
                             <th>Nº Pedido</th>
@@ -161,8 +174,11 @@
                                     <a href="{{ route('seller.invoice.detail', $o->sunatInvoice->id) }}" class="s-btn s-btn-ghost s-btn-xs" title="Ver detalle" style="padding:4px 8px; min-height: 28px; width: 28px; display: inline-flex; align-items: center; justify-content: center;">
                                         <i class="las la-eye" style="font-size:16px;color:var(--s-primary);"></i>
                                     </a>
-                                    <a href="{{ route('seller.invoice.pdf', [$o->sunatInvoice->id, 'a4']) }}" class="s-btn s-btn-ghost s-btn-xs" title="Descargar PDF A4" style="padding:4px 8px; min-height: 28px; width: 28px; display: inline-flex; align-items: center; justify-content: center;">
+                                    <a href="{{ route('seller.invoice.pdf', [$o->sunatInvoice->id, 'a4']) }}?download=1" class="s-btn s-btn-ghost s-btn-xs" title="Descargar PDF A4" style="padding:4px 8px; min-height: 28px; width: 28px; display: inline-flex; align-items: center; justify-content: center;">
                                         <i class="las la-file-pdf" style="font-size:16px;color:#dc2626;"></i>
+                                    </a>
+                                    <a href="{{ route('seller.invoice.pdf', [$o->sunatInvoice->id, 'a5']) }}?download=1" class="s-btn s-btn-ghost s-btn-xs" title="Descargar PDF A5" style="padding:4px 8px; min-height: 28px; width: 28px; display: inline-flex; align-items: center; justify-content: center;">
+                                        <i class="las la-file-pdf" style="font-size:16px;color:#f59e0b;"></i>
                                     </a>
                                     <a href="{{ route('seller.invoice.pdf', [$o->sunatInvoice->id, 'ticket']) }}" class="s-btn s-btn-ghost s-btn-xs" title="Descargar Ticket" style="padding:4px 8px; min-height: 28px; width: 28px; display: inline-flex; align-items: center; justify-content: center;">
                                         <i class="las la-receipt" style="font-size:16px;color:var(--s-info);"></i>
@@ -189,15 +205,33 @@
                 </table>
             </div>
             @if ($paidOrders->hasPages())
-            <div style="margin-top: 20px; display: flex; justify-content: center;">
+            <div class="billing-pagination" style="margin-top: 12px; display: flex; justify-content: center;">
                 {{ $paidOrders->links() }}
             </div>
             @endif
         </div>
+        @else
+            <div class="billing-empty-state"><i class="las la-receipt"></i><span>No hay pagos que coincidan con la búsqueda.</span></div>
         @endif
+        </div>
 
     </div>
 
+</div>
+
+<!-- PRE-ACCOUNT TICKET MODAL -->
+<div id="billing-ticket-modal" class="s-modal" role="dialog" aria-modal="true" aria-labelledby="billing-ticket-title" style="display:none;position:fixed;inset:0;width:100vw;height:100vh;background:rgba(15,25,35,.65);z-index:100000;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);">
+    <div class="billing-ticket-dialog">
+        <div class="billing-ticket-header">
+            <h3 id="billing-ticket-title"><i class="las la-receipt" style="color:var(--s-primary);margin-right:6px"></i> Pre-cuenta <span id="billing-ticket-order"></span></h3>
+            <button type="button" class="s-btn s-btn-ghost s-btn-xs" onclick="closeBillingTicket()" aria-label="Cerrar pre-cuenta"><i class="las la-times"></i></button>
+        </div>
+        <iframe id="billing-ticket-frame" title="Vista previa de la pre-cuenta" src="about:blank"></iframe>
+        <div class="billing-ticket-footer">
+            <button type="button" class="s-btn s-btn-ghost" onclick="closeBillingTicket()">Cerrar</button>
+            <button type="button" class="s-btn s-btn-success" onclick="printBillingTicket()"><i class="las la-print"></i> Imprimir</button>
+        </div>
+    </div>
 </div>
 
 <!-- PAYMENT MODAL -->
@@ -213,7 +247,7 @@
             @csrf
             <input type="hidden" name="customer_name" id="pay-customer-name">
             <input type="hidden" name="customer_address" id="pay-customer-address">
-            <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px;">
+            <div class="billing-pay-form-layout" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px;">
                 <label style="display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer; padding:12px 14px; border:1px solid var(--s-border); border-radius:12px; background:var(--s-bg-light);">
                     <span style="display:flex; align-items:center; gap:10px;">
                         <span style="width:34px; height:34px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; background:rgba(21,155,18,.12); color:var(--s-primary);"><i class="las la-box"></i></span>
@@ -287,27 +321,21 @@
                             <option value="courtesy">Cortesía (Consumo Libre)</option>
                         </select>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: #fff; border: 1px dashed var(--s-border); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px;">
-                        <span style="font-size: 11px; font-weight: 800; color: var(--s-text-secondary); text-transform: uppercase;">Dividir cuenta</span>
-                        <input type="number" min="2" max="50" value="2" id="pay-split-people" class="s-input" style="width: 64px; height: 30px; padding: 2px 8px; font-size: 12px; font-weight: 800; text-align: center;">
-                        <span style="font-size: 12px; color: var(--s-text-muted);">partes</span>
-                        <select id="pay-split-method" class="s-input" style="width: 125px; height: 30px; padding: 2px 6px; font-size: 11px; border-radius: 6px;">
-                            <option value="cash">Efectivo</option>
-                            <option value="card">Tarjeta</option>
-                            <option value="yape">Yape</option>
-                            <option value="plin">Plin</option>
-                            <option value="transfer">Transferencia</option>
-                            <option value="credit">Crédito</option>
-                        </select>
-                        <button type="button" onclick="applyEqualSplit('pay')" class="s-btn s-btn-ghost s-btn-xs" style="height: 30px; border: 1px solid var(--s-border); font-weight: 800;">
-                            Aplicar 1 parte
-                        </button>
-                        <span id="pay-split-preview" style="font-size: 12px; color: var(--s-text-muted); font-weight: 700;"></span>
+                    <details class="billing-split-tools" id="pay-split-options">
+                    <summary><i class="las la-users"></i><span><b>¿Necesitas dividir la cuenta?</b><small>Opcional · reparte el total o asigna productos</small></span><i class="las la-angle-down billing-split-chevron"></i></summary>
+                    <div class="billing-split-content">
+                    <div class="billing-split-option" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: #fff; border: 1px dashed var(--s-border); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px;">
+                        <div class="billing-split-option-title"><b>Dividir el total</b><small>Asigna una parte del total por cada persona.</small></div>
+                        <label class="billing-split-control">Personas <input type="number" min="2" max="50" value="2" id="pay-split-people" class="s-input" style="width: 72px; height: 38px; padding: 2px 8px; font-size: 13px; font-weight: 800; text-align: center;"></label>
+                        <label class="billing-split-control">Método <select id="pay-split-method" class="s-input" style="width: 145px; height: 38px; padding: 2px 8px; font-size: 12px; border-radius: 8px;">
+                            <option value="cash">Efectivo</option><option value="card">Tarjeta</option><option value="yape">Yape</option><option value="plin">Plin</option><option value="transfer">Transferencia</option><option value="credit">Crédito</option>
+                        </select></label>
+                        <button type="button" onclick="applyEqualSplit('pay')" class="s-btn s-btn-primary billing-split-action"><i class="las la-plus"></i> Asignar una parte</button>
+                        <span id="pay-split-preview" class="billing-split-feedback">Elige cuántas personas comparten la cuenta.</span>
                     </div>
-                    <div style="background: #fff; border: 1px dashed var(--s-border); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px;">
+                    <div class="billing-split-option" style="background: #fff; border: 1px dashed var(--s-border); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px;">
                         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
-                            <span style="font-size: 11px; font-weight: 800; color: var(--s-text-secondary); text-transform: uppercase;">Por productos</span>
-                            <input type="text" id="pay-product-person" class="s-input" value="Persona 1" style="width: 100px; height: 30px; padding: 2px 8px; font-size: 12px; font-weight: 700;">
+                            <div class="billing-split-option-title"><b>Asignar productos</b><small>Selecciona las unidades que cubrirá este pago.</small></div>
                             <select id="pay-product-method" class="s-input" style="width: 125px; height: 30px; padding: 2px 6px; font-size: 11px; border-radius: 6px;">
                                 <option value="cash">Efectivo</option>
                                 <option value="card">Tarjeta</option>
@@ -316,13 +344,16 @@
                                 <option value="transfer">Transferencia</option>
                                 <option value="credit">Crédito</option>
                             </select>
-                            <button type="button" onclick="applyProductSplit('pay')" class="s-btn s-btn-ghost s-btn-xs" style="height: 30px; border: 1px solid var(--s-border); font-weight: 800;">
-                                Aplicar consumo
+                            <button type="button" onclick="applyProductSplit('pay')" class="s-btn s-btn-primary billing-split-action">
+                                <i class="las la-check"></i> Asignar productos a este pago
                             </button>
-                            <span id="pay-product-split-total" style="font-size: 12px; color: var(--s-primary); font-weight: 900;">S/ 0.00</span>
+                            <span id="pay-product-split-total" style="font-size: 12px; color: var(--s-primary); font-weight: 900;">Seleccionado: S/ 0.00</span>
                         </div>
                         <div id="pay-product-split-items" style="display: flex; flex-direction: column; gap: 6px; max-height: 150px; overflow-y: auto;"></div>
+                        <small id="pay-product-split-status" class="billing-split-feedback">El importe se sumará al método seleccionado.</small>
                     </div>
+                    </div>
+                    </details>
                     <div style="display: flex; flex-direction: column; gap: 12px;">
                         @php
                             $methods = [
@@ -420,11 +451,11 @@
             <button type="button" class="s-btn s-btn-success" onclick="printThermalTicket()" style="justify-content: center; height: 42px; font-weight: 700; grid-column: 1 / -1;">
                 <i class="las la-receipt" style="font-size: 18px;"></i> Imprimir Ticket Térmico (80mm)
             </button>
-            <a id="download-pdf-a4" href="#" target="_blank" class="s-btn s-btn-outline" style="justify-content: center; height: 42px; font-weight: 700; text-decoration: none; display: flex; align-items: center; color: var(--s-text-primary); border: 1px solid var(--s-border);">
-                <i class="las la-file-pdf" style="color: #dc2626; font-size: 18px;"></i> Formato PDF A4
+            <a id="download-pdf-a4" href="#" class="s-btn s-btn-outline" style="justify-content: center; height: 42px; font-weight: 700; text-decoration: none; display: flex; align-items: center; color: var(--s-text-primary); border: 1px solid var(--s-border);">
+                <i class="las la-file-pdf" style="color: #dc2626; font-size: 18px;"></i> Descargar PDF A4
             </a>
-            <a id="download-pdf-a5" href="#" target="_blank" class="s-btn s-btn-outline" style="justify-content: center; height: 42px; font-weight: 700; text-decoration: none; display: flex; align-items: center; color: var(--s-text-primary); border: 1px solid var(--s-border);">
-                <i class="las la-file-pdf" style="color: #dc2626; font-size: 18px;"></i> Formato PDF A5
+            <a id="download-pdf-a5" href="#" class="s-btn s-btn-outline" style="justify-content: center; height: 42px; font-weight: 700; text-decoration: none; display: flex; align-items: center; color: var(--s-text-primary); border: 1px solid var(--s-border);">
+                <i class="las la-file-pdf" style="color: #dc2626; font-size: 18px;"></i> Descargar PDF A5
             </a>
         </div>
         
@@ -440,6 +471,8 @@ let currentOrderTotal = 0;
 let currentOrderBaseTotal = 0;
 let currentOrderItems = [];
 let productSplitStarted = { pay: false };
+let equalSplitStarted = { pay: false };
+let equalSplitApplied = { pay: 0 };
 @php
 $billingPaymentData = $pendingOrders->mapWithKeys(function($order) {
     return [$order->id => $order->items->map(function($item) {
@@ -492,20 +525,37 @@ function applyEqualSplit(type) {
     let preview = document.getElementById(type + '-split-preview');
     if (!peopleInput || !methodSelect) return;
 
-    let people = Math.max(2, parseInt(peopleInput.value || '2', 10));
+    let people = Math.min(50, Math.max(2, parseInt(peopleInput.value || '2', 10)));
+    peopleInput.value = people;
+    if (equalSplitApplied[type] >= people) {
+        if (preview) preview.textContent = 'Ya asignaste las ' + people + ' partes. Completa el saldo pendiente con otro método si hace falta.';
+        return;
+    }
     let method = methodSelect.value || 'cash';
-    let perPerson = Math.floor((currentOrderTotal / people) * 100) / 100;
-    let remainder = +(currentOrderTotal - (perPerson * people)).toFixed(2);
-
-    showPaymentMethod(type, method);
+    if (!equalSplitStarted[type]) {
+        document.querySelectorAll('.split-' + type + '-input').forEach(input => { input.value = '0.00'; });
+        equalSplitStarted[type] = true;
+        productSplitStarted[type] = false;
+        peopleInput.disabled = true;
+    }
+    let totalCents = Math.round(currentOrderTotal * 100);
+    let baseCents = Math.floor(totalCents / people);
+    let extraCents = totalCents % people;
+    let perPerson = (baseCents + (equalSplitApplied[type] < extraCents ? 1 : 0)) / 100;
+    let row = document.getElementById('payment-row-' + type + '-' + method);
+    if (row) row.style.display = 'flex';
     let input = document.getElementById(type + '-input-' + method);
     if (input) {
-        input.value = perPerson.toFixed(2);
+        input.value = (parseFloat(input.value || '0') + perPerson).toFixed(2);
     }
-    if (preview) {
-        preview.textContent = 'S/ ' + perPerson.toFixed(2) + ' por parte' + (remainder > 0 ? ' (+ S/ ' + remainder.toFixed(2) + ' de ajuste)' : '');
-    }
+    equalSplitApplied[type] += 1;
+    updatePaymentDropdown(type);
     updateSplitTotal(type);
+    let entered = Array.from(document.querySelectorAll('.split-' + type + '-input')).reduce((sum, field) => sum + Math.max(0, parseFloat(field.value || '0')), 0);
+    let remaining = Math.max(0, currentOrderTotal - entered);
+    if (preview) {
+        preview.textContent = 'Parte ' + equalSplitApplied[type] + ' de ' + people + ': S/ ' + perPerson.toFixed(2) + ' · Pendiente: S/ ' + remaining.toFixed(2);
+    }
 }
 
 function renderProductSplit(type) {
@@ -544,7 +594,7 @@ function updateProductSplitTotal(type) {
         total += qty * parseFloat(input.dataset.unit || '0');
     });
     let label = document.getElementById(type + '-product-split-total');
-    if (label) label.textContent = 'S/ ' + total.toFixed(2);
+    if (label) label.textContent = 'Seleccionado: S/ ' + total.toFixed(2);
     return total;
 }
 
@@ -557,6 +607,18 @@ function applyProductSplit(type) {
     if (!productSplitStarted[type]) {
         document.querySelectorAll('.split-' + type + '-input').forEach(input => { input.value = '0.00'; });
         productSplitStarted[type] = true;
+        equalSplitStarted[type] = false;
+        equalSplitApplied[type] = 0;
+        let peopleInput = document.getElementById(type + '-split-people');
+        if (peopleInput) peopleInput.disabled = false;
+    }
+
+    let entered = Array.from(document.querySelectorAll('.split-' + type + '-input')).reduce((sum, field) => sum + Math.max(0, parseFloat(field.value || '0')), 0);
+    let remaining = Math.max(0, currentOrderTotal - entered);
+    if (total > remaining + 0.009) {
+        let status = document.getElementById(type + '-product-split-status');
+        if (status) status.textContent = 'El seleccionado supera el saldo pendiente de S/ ' + remaining.toFixed(2) + '. Reduce las unidades.';
+        return;
     }
 
     showPaymentMethod(type, method);
@@ -568,6 +630,8 @@ function applyProductSplit(type) {
     document.querySelectorAll('.product-split-' + type + '-qty').forEach(input => { input.value = '0'; });
     updateProductSplitTotal(type);
     updateSplitTotal(type);
+    let status = document.getElementById(type + '-product-split-status');
+    if (status) status.textContent = 'Pago asignado. Saldo por completar: S/ ' + Math.max(0, currentOrderTotal - entered - total).toFixed(2) + '.';
 }
 
 function escapeHtml(value) {
@@ -635,11 +699,55 @@ function updatePaymentDropdown(type) {
     }
 }
 
+function openBillingTicket(ticketUrl, orderNo) {
+    const modal = document.getElementById('billing-ticket-modal');
+    const frame = document.getElementById('billing-ticket-frame');
+    if (!modal || !frame) return;
+    document.getElementById('billing-ticket-order').textContent = orderNo || '';
+    frame.src = ticketUrl;
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeBillingTicket() {
+    const modal = document.getElementById('billing-ticket-modal');
+    const frame = document.getElementById('billing-ticket-frame');
+    if (modal) modal.style.display = 'none';
+    if (frame) frame.src = 'about:blank';
+    document.body.style.overflow = '';
+}
+
+function printBillingTicket() {
+    const frame = document.getElementById('billing-ticket-frame');
+    try {
+        if (frame && frame.contentWindow) frame.contentWindow.print();
+    } catch (error) {
+        window.showToast ? window.showToast('No se pudo abrir la impresión del ticket.', 'error') : console.error(error);
+    }
+}
+
+document.getElementById('billing-ticket-modal')?.addEventListener('click', function(event) {
+    if (event.target === this) closeBillingTicket();
+});
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape' && document.getElementById('billing-ticket-modal')?.style.display === 'flex') closeBillingTicket();
+});
+
 function openPayModal(orderId, total, orderNo){
     currentOrderBaseTotal = parseFloat(total);
     currentOrderTotal = currentOrderBaseTotal;
     currentOrderItems = orderPaymentItems[orderId] || [];
     productSplitStarted.pay = false;
+    equalSplitStarted.pay = false;
+    equalSplitApplied.pay = 0;
+    const splitOptions = document.getElementById('pay-split-options');
+    if (splitOptions) splitOptions.open = false;
+    const splitPeople = document.getElementById('pay-split-people');
+    if (splitPeople) { splitPeople.value = '2'; splitPeople.disabled = false; }
+    const splitPreview = document.getElementById('pay-split-preview');
+    if (splitPreview) splitPreview.textContent = 'Elige cuántas personas comparten la cuenta.';
+    const productStatus = document.getElementById('pay-product-split-status');
+    if (productStatus) productStatus.textContent = 'El importe se sumará al método seleccionado.';
     document.getElementById('pay-order-no').innerText = orderNo;
     document.getElementById('pay-total-display').innerText = currentOrderTotal.toFixed(2);
     document.getElementById('pay-include-tupper').checked = false;
@@ -885,8 +993,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     var a4Btn = document.getElementById('download-pdf-a4');
                     var a5Btn = document.getElementById('download-pdf-a5');
                     if (data.has_invoice && data.invoice_id) {
-                        var a4Url = '{{ route("seller.invoice.pdf", ["__INV_ID__", "a4"]) }}'.replace('__INV_ID__', data.invoice_id);
-                        var a5Url = '{{ route("seller.invoice.pdf", ["__INV_ID__", "a5"]) }}'.replace('__INV_ID__', data.invoice_id);
+                        var a4Url = '{{ route("seller.invoice.pdf", ["__INV_ID__", "a4"]) }}'.replace('__INV_ID__', data.invoice_id) + '?download=1';
+                        var a5Url = '{{ route("seller.invoice.pdf", ["__INV_ID__", "a5"]) }}'.replace('__INV_ID__', data.invoice_id) + '?download=1';
                         if (a4Btn) { a4Btn.href = a4Url; a4Btn.style.display = 'inline-flex'; }
                         if (a5Btn) { a5Btn.href = a5Url; a5Btn.style.display = 'inline-flex'; }
                     } else {
@@ -915,7 +1023,21 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (errMsgs.length > 0) msg += '\n' + errMsgs.join('\n');
                     }
 
-                    alert(msg);
+                    if (result.data && result.data.code === 'invoice_limit_reached' && window.Swal && window.Swal.fire) {
+                        window.Swal.fire({
+                            icon: 'warning',
+                            title: 'Límite de comprobantes alcanzado',
+                            text: msg,
+                            showCancelButton: true,
+                            confirmButtonText: 'Cambiar o renovar plan',
+                            cancelButtonText: 'Ahora no',
+                            confirmButtonColor: '#16a34a'
+                        }).then(function(choice) {
+                            if (choice.isConfirmed) window.location.assign(result.data.upgrade_url || '{{ route("seller.pricing") }}');
+                        });
+                    } else {
+                        alert(msg);
+                    }
                     submitBtn.disabled = false;
                     submitBtn.style.opacity = '1';
                     submitBtn.innerHTML = '<i class="las la-check-circle"></i> Confirmar Cobro';
@@ -932,6 +1054,75 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Actualiza únicamente la tabla de pagos. Laravel conserva la paginación real
+// en servidor; el navegador reemplaza el fragmento sin recargar el módulo.
+(function() {
+    var sectionId = 'billing-paid-orders-section';
+    var searchTimer;
+    var requestController;
+
+    function loadBillingTable(url, pushState) {
+        var activeSearch = document.activeElement && document.activeElement.matches('#' + sectionId + ' [name="billing_search"]');
+        var cursorPosition = activeSearch ? document.activeElement.selectionStart : null;
+        if (requestController) requestController.abort();
+        requestController = new AbortController();
+        var section = document.getElementById(sectionId);
+        if (section) section.classList.add('is-loading');
+
+        fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' },
+            signal: requestController.signal
+        }).then(function(response) {
+            if (!response.ok) throw new Error('No se pudo cargar la página de pagos.');
+            return response.text();
+        }).then(function(html) {
+            var parsed = new DOMParser().parseFromString(html, 'text/html');
+            var nextSection = parsed.getElementById(sectionId);
+            var currentSection = document.getElementById(sectionId);
+            if (!nextSection || !currentSection) throw new Error('No se encontró la tabla de pagos.');
+            currentSection.replaceWith(nextSection);
+            if (activeSearch) {
+                var searchInput = nextSection.querySelector('[name="billing_search"]');
+                if (searchInput) {
+                    searchInput.focus();
+                    if (cursorPosition !== null) searchInput.setSelectionRange(cursorPosition, cursorPosition);
+                }
+            }
+            if (pushState) window.history.pushState({}, '', url);
+        }).catch(function(error) {
+            if (error.name !== 'AbortError') console.error(error);
+        });
+    }
+
+    document.addEventListener('click', function(event) {
+        var link = event.target.closest('#' + sectionId + ' .billing-pagination a');
+        if (!link || link.target || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        loadBillingTable(link.href, true);
+    });
+
+    document.addEventListener('input', function(event) {
+        if (!event.target.matches('#' + sectionId + ' [name="billing_search"]')) return;
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(function() {
+            var url = new URL(window.location.href);
+            url.searchParams.delete('page');
+            url.searchParams.set('billing_search', event.target.value);
+            loadBillingTable(url.toString(), true);
+        }, 350);
+    });
+
+    document.addEventListener('change', function(event) {
+        if (!event.target.matches('#' + sectionId + ' [name="billing_per_page"]')) return;
+        var url = new URL(window.location.href);
+        url.searchParams.delete('page');
+        url.searchParams.set('billing_per_page', event.target.value);
+        loadBillingTable(url.toString(), true);
+    });
+
+    window.addEventListener('popstate', function() { loadBillingTable(window.location.href, false); });
+})();
 
 function printThermalTicket() {
     var iframe = document.getElementById('print-preview-iframe');

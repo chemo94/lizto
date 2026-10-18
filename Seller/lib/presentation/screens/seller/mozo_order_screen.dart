@@ -52,6 +52,8 @@ class _MozoOrderScreenState extends State<MozoOrderScreen> {
   }
 
   Future<void> _init() async {
+    final allowed = await SubscriptionGuard.guardModuleEntry(context);
+    if (!allowed || !mounted) return;
     await _loadProducts();
     if (_selectedTable != null) {
       await _loadActiveOrder();
@@ -65,12 +67,8 @@ class _MozoOrderScreenState extends State<MozoOrderScreen> {
       if (r.statusCode == 200) {
         var json = r.responseJson;
         if (json['status'] == 'success' && json['data'] != null) {
-          _products = (json['data']['products'] as List?)
-                  ?.map((x) => PanelProductModel.fromJson(x))
-                  .toList() ?? [];
-          _categories = (json['data']['categories'] as List?)
-                  ?.map((x) => {'id': x['id'], 'name': x['name']})
-                  .toList() ?? [];
+          _products = (json['data']['products'] as List?)?.map((x) => PanelProductModel.fromJson(x)).toList() ?? [];
+          _categories = (json['data']['categories'] as List?)?.map((x) => {'id': x['id'], 'name': x['name']}).toList() ?? [];
         }
       }
     } catch (e) {
@@ -108,10 +106,7 @@ class _MozoOrderScreenState extends State<MozoOrderScreen> {
     }
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
-      list = list.where((p) =>
-        (p.name?.toLowerCase().contains(q) ?? false) ||
-        (p.barcode?.contains(q) ?? false)
-      ).toList();
+      list = list.where((p) => (p.name?.toLowerCase().contains(q) ?? false) || (p.barcode?.contains(q) ?? false)).toList();
     }
     return list;
   }
@@ -146,9 +141,7 @@ class _MozoOrderScreenState extends State<MozoOrderScreen> {
               Text(
                 _selectedTable!.isOccupied ? 'Ocupada' : 'Libre',
                 style: regularSmall.copyWith(
-                  color: _selectedTable!.isOccupied
-                      ? const Color(0xFFFCD34D)
-                      : const Color(0xFF6EE7B7),
+                  color: _selectedTable!.isOccupied ? const Color(0xFFFCD34D) : const Color(0xFF6EE7B7),
                   fontSize: 11,
                 ),
               ),
@@ -315,10 +308,10 @@ class _MozoOrderScreenState extends State<MozoOrderScreen> {
                         child: Image.network(
                           product.image!,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _buildProductIcon(),
+                          errorBuilder: (_, __, ___) => _buildProductIcon(product.id),
                         ),
                       )
-                    : _buildProductIcon(),
+                    : _buildProductIcon(product.id),
               ),
             ),
             Padding(
@@ -346,9 +339,26 @@ class _MozoOrderScreenState extends State<MozoOrderScreen> {
     );
   }
 
-  Widget _buildProductIcon() {
-    return Center(
-      child: Icon(Icons.fastfood_rounded, size: 32, color: MyColor.neutral300),
+  Widget _buildProductIcon(int? productId) {
+    final hue = ((productId ?? 0) * 47) % 360.0;
+    final background = HSLColor.fromAHSL(1, hue, 0.78, 0.94).toColor();
+    final highlight = HSLColor.fromAHSL(1, hue, 0.72, 0.86).toColor();
+    final iconColor = HSLColor.fromAHSL(1, hue, 0.58, 0.42).toColor();
+
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [background, highlight],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(Dimensions.largeRadius)),
+      ),
+      child: Center(
+        child: Icon(Icons.fastfood_rounded, size: 32, color: iconColor),
+      ),
     );
   }
 
@@ -356,12 +366,6 @@ class _MozoOrderScreenState extends State<MozoOrderScreen> {
     int? selectedVariationId;
     String? selectedVariationName;
     double selectedPrice = product.price ?? 0;
-    if (product.variations.isNotEmpty) {
-      final firstVar = product.variations.first;
-      selectedVariationId = firstVar.id;
-      selectedVariationName = firstVar.name;
-      selectedPrice = (firstVar.price != null && firstVar.price! > 0) ? firstVar.price! : (product.price ?? 0);
-    }
     final Set<int> selectedAddonIds = {};
     final List<String> selectedAddonNames = [];
     double addonsTotal = 0;
@@ -401,120 +405,136 @@ class _MozoOrderScreenState extends State<MozoOrderScreen> {
                         style: boldLarge.copyWith(color: MyColor.primaryColor, fontSize: 20),
                       ),
                       const SizedBox(height: 20),
-
                       if (product.variations.isNotEmpty) ...[
-                        Text('Variaciones', style: boldDefault.copyWith(fontSize: 14)),
+                        Text('Variaciones (opcional)', style: boldDefault.copyWith(fontSize: 14)),
                         const SizedBox(height: 8),
-                        ...product.variations.map((v) => GestureDetector(
+                        GestureDetector(
                           onTap: () {
                             setModalState(() {
-                              selectedVariationId = v.id;
-                              selectedVariationName = v.name;
-                              selectedPrice = (v.price != null && v.price! > 0) ? v.price! : (product.price ?? 0);
+                              selectedVariationId = null;
+                              selectedVariationName = null;
+                              selectedPrice = product.price ?? 0;
                             });
                           },
                           child: Container(
                             margin: const EdgeInsets.only(bottom: 8),
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: selectedVariationId == v.id
-                                  ? MyColor.primaryColor.withValues(alpha: 0.1)
-                                  : MyColor.neutral50,
+                              color: selectedVariationId == null ? MyColor.primaryColor.withValues(alpha: 0.1) : MyColor.neutral50,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: selectedVariationId == v.id
-                                    ? MyColor.primaryColor
-                                    : MyColor.neutral200,
+                                color: selectedVariationId == null ? MyColor.primaryColor : MyColor.neutral200,
                               ),
                             ),
                             child: Row(
                               children: [
                                 Icon(
-                                  selectedVariationId == v.id
-                                      ? Icons.radio_button_checked
-                                      : Icons.radio_button_off,
-                                  color: selectedVariationId == v.id
-                                      ? MyColor.primaryColor
-                                      : MyColor.neutral500,
+                                  selectedVariationId == null ? Icons.radio_button_checked : Icons.radio_button_off,
+                                  color: selectedVariationId == null ? MyColor.primaryColor : MyColor.neutral500,
                                   size: 20,
                                 ),
                                 const SizedBox(width: 10),
-                                Expanded(child: Text(v.name ?? '', style: regularDefault)),
-                                Builder(builder: (_) {
-                                  final varPrice = v.price ?? 0;
-                                  final prodPrice = product.price ?? 0;
-                                  final diff = varPrice - prodPrice;
-                                  String text = 'S/ ${varPrice.toStringAsFixed(2)}';
-                                  if (diff.abs() > 0.01) {
-                                    text += ' (${diff > 0 ? "+S/ " : "-S/ "}${diff.abs().toStringAsFixed(2)})';
-                                  }
-                                  return Text(
-                                    text,
-                                    style: boldDefault.copyWith(color: MyColor.primaryColor),
-                                  );
-                                }),
+                                const Expanded(child: Text('Sin variación')),
+                                Text(
+                                  'S/ ${(product.price ?? 0).toStringAsFixed(2)}',
+                                  style: boldDefault.copyWith(color: MyColor.primaryColor),
+                                ),
                               ],
                             ),
                           ),
-                        )),
+                        ),
+                        ...product.variations.map((v) => GestureDetector(
+                              onTap: () {
+                                setModalState(() {
+                                  selectedVariationId = v.id;
+                                  selectedVariationName = v.name;
+                                  selectedPrice = (v.price != null && v.price! > 0) ? v.price! : (product.price ?? 0);
+                                });
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: selectedVariationId == v.id ? MyColor.primaryColor.withValues(alpha: 0.1) : MyColor.neutral50,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: selectedVariationId == v.id ? MyColor.primaryColor : MyColor.neutral200,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      selectedVariationId == v.id ? Icons.radio_button_checked : Icons.radio_button_off,
+                                      color: selectedVariationId == v.id ? MyColor.primaryColor : MyColor.neutral500,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(child: Text(v.name ?? '', style: regularDefault)),
+                                    Builder(builder: (_) {
+                                      final varPrice = v.price ?? 0;
+                                      final prodPrice = product.price ?? 0;
+                                      final diff = varPrice - prodPrice;
+                                      String text = 'S/ ${varPrice.toStringAsFixed(2)}';
+                                      if (diff.abs() > 0.01) {
+                                        text += ' (${diff > 0 ? "+S/ " : "-S/ "}${diff.abs().toStringAsFixed(2)})';
+                                      }
+                                      return Text(
+                                        text,
+                                        style: boldDefault.copyWith(color: MyColor.primaryColor),
+                                      );
+                                    }),
+                                  ],
+                                ),
+                              ),
+                            )),
                         const SizedBox(height: 16),
                       ],
-
                       if (product.addons.isNotEmpty) ...[
                         Text('Adicionales', style: boldDefault.copyWith(fontSize: 14)),
                         const SizedBox(height: 8),
                         ...product.addons.map((a) => GestureDetector(
-                          onTap: () {
-                            setModalState(() {
-                              if (selectedAddonIds.contains(a.id)) {
-                                selectedAddonIds.remove(a.id);
-                                selectedAddonNames.remove(a.name);
-                                addonsTotal -= a.price ?? 0;
-                              } else {
-                                selectedAddonIds.add(a.id!);
-                                selectedAddonNames.add(a.name ?? '');
-                                addonsTotal += a.price ?? 0;
-                              }
-                            });
-                          },
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: selectedAddonIds.contains(a.id)
-                                  ? MyColor.primaryColor.withValues(alpha: 0.1)
-                                  : MyColor.neutral50,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: selectedAddonIds.contains(a.id)
-                                    ? MyColor.primaryColor
-                                    : MyColor.neutral200,
+                              onTap: () {
+                                setModalState(() {
+                                  if (selectedAddonIds.contains(a.id)) {
+                                    selectedAddonIds.remove(a.id);
+                                    selectedAddonNames.remove(a.name);
+                                    addonsTotal -= a.price ?? 0;
+                                  } else {
+                                    selectedAddonIds.add(a.id!);
+                                    selectedAddonNames.add(a.name ?? '');
+                                    addonsTotal += a.price ?? 0;
+                                  }
+                                });
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: selectedAddonIds.contains(a.id) ? MyColor.primaryColor.withValues(alpha: 0.1) : MyColor.neutral50,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: selectedAddonIds.contains(a.id) ? MyColor.primaryColor : MyColor.neutral200,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      selectedAddonIds.contains(a.id) ? Icons.check_box : Icons.check_box_outline_blank,
+                                      color: selectedAddonIds.contains(a.id) ? MyColor.primaryColor : MyColor.neutral500,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(child: Text(a.name ?? '', style: regularDefault)),
+                                    Text(
+                                      '+ S/ ${(a.price ?? 0).toStringAsFixed(2)}',
+                                      style: boldDefault.copyWith(color: MyColor.primaryColor, fontSize: 13),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  selectedAddonIds.contains(a.id)
-                                      ? Icons.check_box
-                                      : Icons.check_box_outline_blank,
-                                  color: selectedAddonIds.contains(a.id)
-                                      ? MyColor.primaryColor
-                                      : MyColor.neutral500,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(child: Text(a.name ?? '', style: regularDefault)),
-                                Text(
-                                  '+ S/ ${(a.price ?? 0).toStringAsFixed(2)}',
-                                  style: boldDefault.copyWith(color: MyColor.primaryColor, fontSize: 13),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )),
+                            )),
                         const SizedBox(height: 16),
                       ],
-
                       Text('Notas', style: boldDefault.copyWith(fontSize: 14)),
                       const SizedBox(height: 8),
                       TextField(
@@ -547,9 +567,7 @@ class _MozoOrderScreenState extends State<MozoOrderScreen> {
                   child: ElevatedButton(
                     onPressed: () {
                       final finalPrice = selectedPrice + addonsTotal;
-                      final name = selectedVariationName != null
-                          ? '${product.name} ($selectedVariationName)'
-                          : product.name ?? '';
+                      final name = selectedVariationName != null ? '${product.name} ($selectedVariationName)' : product.name ?? '';
                       _addToCartFromModal(
                         product: product,
                         name: name,
@@ -583,8 +601,7 @@ class _MozoOrderScreenState extends State<MozoOrderScreen> {
 
   void _addToCart(PanelProductModel product) {
     setState(() {
-      final existingIndex = _cart.indexWhere((item) =>
-        item.productId == product.id && item.variationId == null && item.addonIds.isEmpty);
+      final existingIndex = _cart.indexWhere((item) => item.productId == product.id && item.variationId == null && item.addonIds.isEmpty);
 
       if (existingIndex >= 0) {
         _cart[existingIndex].quantity++;
@@ -832,8 +849,7 @@ class _MozoOrderScreenState extends State<MozoOrderScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(item.productName ?? '', style: regularDefault),
-                if (item.notes != null && item.notes!.isNotEmpty)
-                  Text(item.notes!, style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor), maxLines: 1),
+                if (item.notes != null && item.notes!.isNotEmpty) Text(item.notes!, style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor), maxLines: 1),
               ],
             ),
           ),
@@ -927,9 +943,7 @@ class _MozoOrderScreenState extends State<MozoOrderScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        item.isCourtesy
-                            ? 'S/ 0.00 (Cortesía)'
-                            : 'S/ ${item.price.toStringAsFixed(2)} c/u',
+                        item.isCourtesy ? 'S/ 0.00 (Cortesía)' : 'S/ ${item.price.toStringAsFixed(2)} c/u',
                         style: regularSmall.copyWith(color: MyColor.bodyMutedTextColor),
                       ),
                     ],
@@ -1155,9 +1169,7 @@ class _MozoOrderScreenState extends State<MozoOrderScreen> {
                             },
                             child: Container(
                               decoration: BoxDecoration(
-                                color: isSel
-                                    ? MyColor.primaryColor
-                                    : (t.isOccupied ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7)),
+                                color: isSel ? MyColor.primaryColor : (t.isOccupied ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7)),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(color: isSel ? MyColor.primaryColor : Colors.grey.shade300),
                               ),
@@ -1166,9 +1178,7 @@ class _MozoOrderScreenState extends State<MozoOrderScreen> {
                                 children: [
                                   Icon(
                                     Icons.table_restaurant_rounded,
-                                    color: isSel
-                                        ? Colors.white
-                                        : (t.isOccupied ? const Color(0xFFD97706) : const Color(0xFF16A34A)),
+                                    color: isSel ? Colors.white : (t.isOccupied ? const Color(0xFFD97706) : const Color(0xFF16A34A)),
                                     size: 20,
                                   ),
                                   const SizedBox(height: 4),
@@ -1299,14 +1309,16 @@ class _MozoOrderScreenState extends State<MozoOrderScreen> {
     try {
       final hasCourtesy = _cart.any((item) => item.isCourtesy) || _selectedOrderType == 'courtesy';
 
-      final items = _cart.map((item) => {
-        'product_id': item.productId,
-        'name': item.name,
-        'price': (item.isCourtesy || _selectedOrderType == 'courtesy') ? 0 : item.price,
-        'quantity': item.quantity,
-        'notes': item.notes,
-        'is_takeaway': item.isTakeaway,
-      }).toList();
+      final items = _cart
+          .map((item) => {
+                'product_id': item.productId,
+                'name': item.name,
+                'price': (item.isCourtesy || _selectedOrderType == 'courtesy') ? 0 : item.price,
+                'quantity': item.quantity,
+                'notes': item.notes,
+                'is_takeaway': item.isTakeaway,
+              })
+          .toList();
 
       final data = {
         if (_selectedOrderType == 'dine_in' && _selectedTable != null) 'table_id': _selectedTable!.id,

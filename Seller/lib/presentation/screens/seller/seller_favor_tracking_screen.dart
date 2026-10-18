@@ -9,6 +9,7 @@ import 'package:lizto_store/core/utils/style.dart';
 import 'package:lizto_store/data/controller/seller/seller_controller.dart';
 import 'package:lizto_store/data/services/directions_service.dart';
 import 'package:lizto_store/environment.dart';
+import 'package:lizto_store/presentation/screens/seller/subscription_guard.dart';
 
 class SellerFavorTrackingScreen extends StatefulWidget {
   final int favorId;
@@ -37,9 +38,13 @@ class _SellerFavorTrackingScreenState extends State<SellerFavorTrackingScreen> {
   @override
   void initState() {
     super.initState();
-    _loadCourierIcon();
-    _refresh();
-    _poller = Timer.periodic(const Duration(seconds: 3), (_) => _refresh());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final allowed = await SubscriptionGuard.guardModuleEntry(context);
+      if (!allowed || !mounted) return;
+      _loadCourierIcon();
+      _refresh();
+      _poller = Timer.periodic(const Duration(seconds: 3), (_) => _refresh());
+    });
   }
 
   Future<void> _loadCourierIcon() async {

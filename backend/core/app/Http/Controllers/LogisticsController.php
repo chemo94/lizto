@@ -39,10 +39,23 @@ class LogisticsController extends Controller
     public function __construct()
     {
         $this->middleware(function ($request, $next) {
-            if (!Session::has('seller_id')) return redirect()->route('seller.login');
+            $seller = \App\Models\Seller::where('status', 1)->find(Session::get('seller_id'));
+            if (!$seller) {
+                Session::forget(['seller_id', 'seller_staff_id']);
+                return redirect()->route('seller.login');
+            }
+            $staffId = Session::get('seller_staff_id');
+            if ($staffId) {
+                $staff = \App\Models\PosStaff::where('seller_id', $seller->id)->where('status', 'active')->find($staffId);
+                if (!$staff || (!$staff->isAdmin() && !$staff->hasPermission('inventory'))) {
+                    return $request->expectsJson()
+                        ? response()->json(['message' => 'No tienes permiso para gestionar logística.'], 403)
+                        : redirect()->route('seller.pos')->with('error', 'No tienes permiso para gestionar logística.');
+                }
+            }
             
             // Auto-creación de almacén por defecto si no existe
-            $sellerId = Session::get('seller_id');
+            $sellerId = $seller->id;
             if ($sellerId) {
                 $hasWarehouse = InvWarehouse::where('seller_id', $sellerId)->exists();
                 if (!$hasWarehouse) {

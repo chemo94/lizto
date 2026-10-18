@@ -35,11 +35,13 @@ class RideCreateForm extends StatelessWidget {
                 children: [
                   Expanded(
                     child: InkWell(
-                      onTap: controller.isPriceLocked ? null : () {
-                        CustomBottomSheet(
-                          child: const HomeSelectPaymentMethod(),
-                        ).customBottomSheet(context);
-                      },
+                      onTap: controller.isPriceLocked
+                          ? null
+                          : () {
+                              CustomBottomSheet(
+                                child: const HomeSelectPaymentMethod(),
+                              ).customBottomSheet(context);
+                            },
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
                         decoration: BoxDecoration(
@@ -92,14 +94,16 @@ class RideCreateForm extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: InkWell(
-                      onTap: controller.selectedService.id == '-99' ? null : () {
-                        if (controller.isPriceLocked == false) {
-                          controller.updateMainAmount(controller.mainAmount);
-                          CustomBottomSheet(child: const HomeOfferRateWidget()).customBottomSheet(context);
-                        } else {
-                          CustomSnackBar.error(errorList: [MyStrings.pleaseSelectAService]);
-                        }
-                      },
+                      onTap: controller.selectedService.id == '-99' || !controller.selectedService.allowOffer
+                          ? null
+                          : () {
+                              if (controller.isPriceLocked == false) {
+                                controller.updateMainAmount(controller.mainAmount);
+                                CustomBottomSheet(child: const HomeOfferRateWidget()).customBottomSheet(context);
+                              } else {
+                                CustomSnackBar.error(errorList: [MyStrings.pleaseSelectAService]);
+                              }
+                            },
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
                         decoration: BoxDecoration(
@@ -137,11 +141,13 @@ class RideCreateForm extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: InkWell(
-                      onTap: controller.selectedService.id == '-99' ? null : () {
-                        CustomBottomSheet(
-                          child: const PassengerBottomSheet(),
-                        ).customBottomSheet(context);
-                      },
+                      onTap: controller.selectedService.id == '-99'
+                          ? null
+                          : () {
+                              CustomBottomSheet(
+                                child: const PassengerBottomSheet(),
+                              ).customBottomSheet(context);
+                            },
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
                         decoration: BoxDecoration(

@@ -19,6 +19,10 @@ class ServiceController extends Controller {
             'image'                     => ['image', new FileTypeValidate(['jpg', 'jpeg', 'png'])],
             'name'                      => 'required|unique:services,name,' . $id,
             'subtitle'                  => 'required|string',
+            'vehicle_type'              => 'required|in:auto,moto',
+            'allow_offer'               => 'nullable|boolean',
+            'min_vehicle_capacity'      => 'required|integer|min:1|max:12',
+            'max_passengers'            => 'required|integer|min:1|max:12|gte:min_vehicle_capacity',
             'city_min_fare'             => 'required|numeric|gt:0',
             'city_max_fare'             => 'required|numeric|gt:city_min_fare',
             'city_recommend_fare'       => 'required|numeric|gte:city_min_fare|lte:city_max_fare',
@@ -55,6 +59,10 @@ class ServiceController extends Controller {
 
         $service->name                      = $request->name;
         $service->subtitle                  = $request->subtitle;
+        $service->vehicle_type              = $request->vehicle_type;
+        $service->allow_offer               = $request->boolean('allow_offer');
+        $service->min_vehicle_capacity      = $request->min_vehicle_capacity;
+        $service->max_passengers            = $request->max_passengers;
         $service->city_min_fare             = $request->city_min_fare;
         $service->city_max_fare             = $request->city_max_fare;
         $service->city_recommend_fare       = $request->city_recommend_fare;

@@ -120,8 +120,8 @@ class RideController extends Controller
             'destination_longitude' => 'required|numeric',
             'destination_location'  => 'required|string',
             'note'                  => 'nullable',
-            'number_of_passenger'   => 'required|integer',
-            'offer_amount'          => 'required|numeric',
+            'number_of_passenger'   => 'required|integer|min:1|max:12',
+            'offer_amount'          => 'nullable|numeric',
             'payment_type'          => ['required', Rule::in(Status::PAYMENT_TYPE_GATEWAY, Status::PAYMENT_TYPE_CASH)],
             'gateway_currency_id'   => $request->payment_type == Status::PAYMENT_TYPE_GATEWAY ? 'required|exists:gateway_currencies,id' : 'nullable',
         ]);
@@ -143,6 +143,22 @@ class RideController extends Controller
         if (!$service) {
             $notify[] = 'Este servicio no está disponible actualmente';
             return apiResponse("not_found", 'error', $notify);
+        }
+
+        $paymentAmountMultiplier = 1.0;
+        if ($request->payment_type == Status::PAYMENT_TYPE_GATEWAY && $request->filled('gateway_currency_id')) {
+            $gatewayCurrency = GatewayCurrency::with('method')->find($request->gateway_currency_id);
+            $gatewayName = preg_replace('/[^a-z]/', '', strtolower(($gatewayCurrency?->method?->alias ?? '') . ' ' . ($gatewayCurrency?->method?->name ?? '')));
+            if (str_contains($gatewayName, 'mercadopago')) {
+                $paymentAmountMultiplier = 1.05;
+            }
+        }
+
+        if ($service->allow_offer && !$request->filled('offer_amount')) {
+            return apiResponse('validation_error', 'error', ['Debes ingresar tu oferta para este servicio.']);
+        }
+        if ((int) $request->number_of_passenger > (int) ($service->max_passengers ?? 12)) {
+            return apiResponse('limit_error', 'error', ['La cantidad de pasajeros supera el máximo permitido para este servicio.']);
         }
 
         $zoneData = $this->getZone($request);
@@ -197,8 +213,14 @@ class RideController extends Controller
             return apiResponse('limit_error', 'error', $notify);
         }
 
-        if ($request->offer_amount < $data['min_amount'] || $request->offer_amount > $data['max_amount']) {
-            $notify[] = 'El monto ofrecido debe ser un mínimo de ' . showAmount($data['min_amount']) . ' y un máximo de ' . showAmount($data['max_amount']);
+        if (!$service->allow_offer) {
+            $request->merge(['offer_amount' => round((float) $data['recommend_amount'] * $paymentAmountMultiplier, 2)]);
+        }
+
+        $minimumOfferAmount = round((float) $data['min_amount'] * $paymentAmountMultiplier, 2);
+        $maximumOfferAmount = round((float) $data['max_amount'] * $paymentAmountMultiplier, 2);
+        if ($request->offer_amount < $minimumOfferAmount || $request->offer_amount > $maximumOfferAmount) {
+            $notify[] = 'El monto ofrecido debe ser un mínimo de ' . showAmount($minimumOfferAmount) . ' y un máximo de ' . showAmount($maximumOfferAmount);
             return apiResponse('limit_error', 'error', $notify);
         }
 
@@ -567,6 +589,18 @@ class RideController extends Controller
             'driver_total_ride' => $driverRideCount
         ]));
 
+        // WebSocket nativo: actualizar en tiempo real la pantalla del pasajero.
+        \App\Services\RealtimePublisher::rideEvent(
+            (int) $ride->id,
+            'BID_ACCEPT',
+            [
+                'ride'              => $ride,
+                'driver_total_ride' => $driverRideCount,
+            ],
+            (int) $ride->driver_id,
+            (int) $ride->user_id,
+        );
+
         notify($ride->driver, 'ACCEPT_RIDE', [
             'ride_id'         => $ride->uid,
             'amount'          => showAmount($ride->amount),
@@ -577,7 +611,7 @@ class RideController extends Controller
             'duration'        => $ride->duration,
             'distance'        => $ride->distance,
             'pickup_time'     => showDateTime(now()),
-        ]);
+        ], ['push']);
 
         $notify[] = 'Oferta aceptada exitosamente';
         return apiResponse('accepted', 'success', $notify, [

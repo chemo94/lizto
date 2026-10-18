@@ -47,7 +47,7 @@ class CreditNoteCancellation
 
             $store=\App\Models\Store::where('seller_id',$original->seller_id)->first();
 
-            if($store && $store->hasReachedInvoiceLimit()) throw new RuntimeException('Se alcanzó el límite de comprobantes electrónicos del plan.');
+            if($store && $store->hasReachedInvoiceLimit()) throw new RuntimeException('Se alcanzó el límite de comprobantes electrónicos del plan. Cambia o renueva tu plan en /seller/pricing para continuar.');
 
             $company=$original->company;
 
